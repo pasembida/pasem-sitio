@@ -2,6 +2,12 @@ import { getStore } from '@netlify/blobs';
 import crypto from 'node:crypto';
 
 const SECRET = process.env.SESSION_SECRET || 'pasem-secret-cambiar';
+function makeStore(name){
+  const siteID = process.env.NETLIFY_SITE_ID || process.env.SITE_ID;
+  const token  = process.env.NETLIFY_API_TOKEN || process.env.NETLIFY_AUTH_TOKEN;
+  if (siteID && token) return getStore({ name, siteID, token });
+  return getStore(name);
+}
 function b64url(buf){ return Buffer.from(buf).toString('base64').replace(/=+$/,'').replace(/\+/g,'-').replace(/\//g,'_'); }
 function verify(token){
   if(!token) return null;
@@ -23,7 +29,7 @@ export const handler = async (event) => {
   if(!p) return {statusCode:401,headers,body:JSON.stringify({error:'No autorizado'})};
   if(p.role!=='administracion') return {statusCode:403,headers,body:JSON.stringify({error:'Requiere rol administración'})};
 
-  const store=getStore('pasem-usuarios');
+  const store=makeStore('pasem-usuarios');
   const ok=()=>({statusCode:200,headers,body:JSON.stringify({ok:true})});
   try{
     if(event.httpMethod==='GET'){

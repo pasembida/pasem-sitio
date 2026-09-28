@@ -3,6 +3,12 @@ import crypto from 'node:crypto';
 
 const SECRET = process.env.SESSION_SECRET || 'pasem-secret-cambiar';
 
+function makeStore(name){
+  const siteID = process.env.NETLIFY_SITE_ID || process.env.SITE_ID;
+  const token  = process.env.NETLIFY_API_TOKEN || process.env.NETLIFY_AUTH_TOKEN;
+  if (siteID && token) return getStore({ name, siteID, token });
+  return getStore(name);
+}
 function b64url(buf){ return Buffer.from(buf).toString('base64').replace(/=+$/,'').replace(/\+/g,'-').replace(/\//g,'_'); }
 function sign(payload){
   const h=b64url(JSON.stringify({alg:'HS256',typ:'JWT'}));
@@ -25,9 +31,6 @@ function hashPw(password,salt){ salt=salt||crypto.randomBytes(16).toString('hex'
 function checkPw(password,salt,hash){ try{ const h=crypto.scryptSync(String(password),salt,64).toString('hex'); const a=Buffer.from(h),b=Buffer.from(hash); return a.length===b.length && crypto.timingSafeEqual(a,b); }catch(e){ return false; } }
 async function getUser(store,em){ try{ return await store.get(String(em).toLowerCase(),{type:'json'}); }catch(e){ return null; } }
 
-// Siembra/sincroniza al admin definido en variables de entorno.
-// Si el admin no existe, lo crea. Si existe pero su contrasena no coincide con
-// SEED_ADMIN_PASSWORD, la actualiza (asi la variable manda para el admin sembrado).
 async function ensureSeed(store){
   const em=(process.env.SEED_ADMIN_EMAIL||'').toLowerCase().trim();
   const pw=process.env.SEED_ADMIN_PASSWORD||'';
@@ -38,7 +41,6 @@ async function ensureSeed(store){
     await store.setJSON(em,{email:em,salt,hash,role:'administracion',createdAt:new Date().toISOString()});
     return;
   }
-  // si ya existe, sincroniza la contrasena del admin con la variable
   if(!checkPw(pw, ex.salt, ex.hash)){
     const {salt,hash}=hashPw(pw);
     ex.salt=salt; ex.hash=hash; ex.role='administracion';
@@ -48,7 +50,7 @@ async function ensureSeed(store){
 
 export const handler = async (event) => {
   const headers={'Content-Type':'application/json'};
-  const store=getStore('pasem-usuarios');
+  const store=makeStore('pasem-usuarios');
   try{
     if(event.httpMethod!=='POST') return {statusCode:405,headers,body:JSON.stringify({error:'Método no permitido'})};
     const body=JSON.parse(event.body||'{}');
