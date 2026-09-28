@@ -24,12 +24,26 @@ export function verify(token){
 function hashPw(password,salt){ salt=salt||crypto.randomBytes(16).toString('hex'); const hash=crypto.scryptSync(String(password),salt,64).toString('hex'); return {salt,hash}; }
 function checkPw(password,salt,hash){ try{ const h=crypto.scryptSync(String(password),salt,64).toString('hex'); const a=Buffer.from(h),b=Buffer.from(hash); return a.length===b.length && crypto.timingSafeEqual(a,b); }catch(e){ return false; } }
 async function getUser(store,em){ try{ return await store.get(String(em).toLowerCase(),{type:'json'}); }catch(e){ return null; } }
+
+// Siembra/sincroniza al admin definido en variables de entorno.
+// Si el admin no existe, lo crea. Si existe pero su contrasena no coincide con
+// SEED_ADMIN_PASSWORD, la actualiza (asi la variable manda para el admin sembrado).
 async function ensureSeed(store){
   const em=(process.env.SEED_ADMIN_EMAIL||'').toLowerCase().trim();
   const pw=process.env.SEED_ADMIN_PASSWORD||'';
   if(!em||!pw) return;
   const ex=await getUser(store,em);
-  if(!ex){ const {salt,hash}=hashPw(pw); await store.setJSON(em,{email:em,salt,hash,role:'administracion',createdAt:new Date().toISOString()}); }
+  if(!ex){
+    const {salt,hash}=hashPw(pw);
+    await store.setJSON(em,{email:em,salt,hash,role:'administracion',createdAt:new Date().toISOString()});
+    return;
+  }
+  // si ya existe, sincroniza la contrasena del admin con la variable
+  if(!checkPw(pw, ex.salt, ex.hash)){
+    const {salt,hash}=hashPw(pw);
+    ex.salt=salt; ex.hash=hash; ex.role='administracion';
+    await store.setJSON(em,ex);
+  }
 }
 
 export const handler = async (event) => {
