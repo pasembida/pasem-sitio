@@ -1,24 +1,34 @@
 import { getStore } from '@netlify/blobs';
 
-// Función protegida: solo responde si hay un usuario de Netlify Identity con sesión válida.
+// Roles efectivos: los guardados en el usuario + "administracion" si su correo
+// está en la variable de entorno ADMIN_EMAILS (para sembrar al primer admin).
+function effectiveRoles(user) {
+  let roles = (user.app_metadata && user.app_metadata.roles) || [];
+  const email = (user.email || '').toLowerCase();
+  const admins = (process.env.ADMIN_EMAILS || '')
+    .toLowerCase().split(',').map((s) => s.trim()).filter(Boolean);
+  if (admins.includes(email) && roles.indexOf('administracion') < 0) {
+    roles = roles.concat('administracion');
+  }
+  return roles;
+}
+
 export const handler = async (event, context) => {
   const headers = { 'Content-Type': 'application/json' };
-
-  // Netlify inyecta el usuario en context.clientContext.user cuando la petición
-  // incluye el token de Identity en el encabezado Authorization: Bearer <token>.
   const user = context.clientContext && context.clientContext.user;
-  if (!user) {
-    return { statusCode: 401, headers, body: JSON.stringify({ error: 'No autorizado' }) };
-  }
+  if (!user) return { statusCode: 401, headers, body: JSON.stringify({ error: 'No autorizado' }) };
+
+  const roles = effectiveRoles(user);
+  const isAdmin = roles.indexOf('administracion') >= 0;
+  const canUse = isAdmin || roles.indexOf('operacion') >= 0;
+  if (!canUse) return { statusCode: 403, headers, body: JSON.stringify({ error: 'Sin rol asignado' }) };
 
   const store = getStore('pasem-atenciones');
 
   try {
     if (event.httpMethod === 'GET') {
       const { blobs } = await store.list();
-      const items = await Promise.all(
-        blobs.map((b) => store.get(b.key, { type: 'json' }))
-      );
+      const items = await Promise.all(blobs.map((b) => store.get(b.key, { type: 'json' })));
       const clean = items.filter(Boolean);
       clean.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
       return { statusCode: 200, headers, body: JSON.stringify(clean) };
@@ -31,13 +41,14 @@ export const handler = async (event, context) => {
         ...data,
         id,
         createdAt: new Date().toISOString(),
-        capturadoPor: user.email || (user.user_metadata && user.user_metadata.full_name) || 'usuario'
+        capturadoPor: user.email || 'usuario'
       };
       await store.setJSON(id, record);
       return { statusCode: 200, headers, body: JSON.stringify(record) };
     }
 
     if (event.httpMethod === 'DELETE') {
+      if (!isAdmin) return { statusCode: 403, headers, body: JSON.stringify({ error: 'Solo administración puede eliminar' }) };
       const id = event.queryStringParameters && event.queryStringParameters.id;
       if (!id) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Falta id' }) };
       await store.delete(id);

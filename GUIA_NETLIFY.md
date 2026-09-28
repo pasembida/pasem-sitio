@@ -1,80 +1,76 @@
-# Guía para publicar el sitio PASEM con panel de Administración en Netlify
+# Guía — Sitio PASEM con Administración, Usuarios y Roles en Netlify
 
-Este proyecto es el sitio de PASEM **más** una sección de **Administración** protegida por
-inicio de sesión, con una **base de datos central** donde se guardan las atenciones
-autorizadas (todos los usuarios autorizados ven los mismos registros).
+El sitio incluye una sección **Administración** protegida por inicio de sesión, con:
+- **Captura de autorizaciones** (formato PASEM) que se guardan en una **base de datos central**
+  (todos los autorizados ven los mismos registros) y se pueden **exportar a CSV**.
+- **Apartado Usuarios** (solo para rol Administración) para **invitar, cambiar rol, resetear
+  contraseña y eliminar** usuarios, desde la propia página.
 
-Piezas incluidas:
-- `index.html` — el sitio completo + la sección **Administración**.
-- `netlify/functions/records.js` — función de servidor que guarda / lee / borra las atenciones.
-- `netlify.toml` — configuración de Netlify.
-- `package.json` — dependencia del almacenamiento (Netlify Blobs).
+**Roles:**
+- **administracion**: gestiona usuarios y hace todo con los registros (crear, ver, eliminar).
+- **operacion**: captura y consulta registros (no elimina, no ve el apartado Usuarios).
 
-> Importante: por usar funciones de servidor, este proyecto se publica **conectando un
-> repositorio de GitHub** (el método de "arrastrar archivos" no maneja funciones).
-
----
-
-## Paso 1 — Crear cuentas (si no las tienes)
-1. Cuenta gratuita en **GitHub**: https://github.com
-2. Cuenta gratuita en **Netlify**: https://app.netlify.com (puedes entrar con tu GitHub).
-
-## Paso 2 — Subir el proyecto a GitHub
-Opción sencilla (por la web):
-1. En GitHub: **New repository** → nombre p. ej. `pasem-sitio` → **Create repository**.
-2. En la página del repo: **Add file → Upload files**.
-3. Arrastra **todo el contenido de esta carpeta** respetando la estructura
-   (el archivo `index.html`, el archivo `netlify.toml`, `package.json`, y la carpeta
-   `netlify/` con `functions/records.js` dentro). 
-   - Consejo: arrastra la carpeta `netlify` completa para que conserve la ruta
-     `netlify/functions/records.js`.
-4. Escribe un mensaje y pulsa **Commit changes**.
-
-## Paso 3 — Conectar el repo con Netlify
-1. En Netlify: **Add new site → Import an existing project → GitHub**.
-2. Autoriza y elige el repositorio `pasem-sitio`.
-3. Deja los valores por defecto (no hay comando de build; *Publish directory* = `.`).
-4. **Deploy site**. En un minuto tendrás una URL tipo `https://algo-aleatorio.netlify.app`.
-
-## Paso 4 — Activar el inicio de sesión (Netlify Identity)
-1. En tu sitio → **Site configuration → Identity → Enable Identity**.
-2. En **Registration**: elige **Invite only** (solo por invitación), para que nadie ajeno
-   pueda crearse cuenta.
-3. En **Identity → Invite users**: escribe el correo de cada persona autorizada e invítala.
-   Cada quien recibirá un correo para poner su contraseña.
-4. (Recomendado) En **Identity → Emails** puedes personalizar los correos de invitación.
-
-> El botón "Iniciar sesión" de la sección Administración usa este Identity. Si un usuario
-> no fue invitado, no podrá entrar.
-
-## Paso 5 — Almacenamiento de datos (Netlify Blobs)
-No requiere configuración: **Netlify Blobs** se activa solo para las funciones. La primera
-vez que registres una atención se crea el almacén `pasem-atenciones` automáticamente.
-
-## Paso 6 — Probar
-1. Abre tu sitio, baja hasta **Administración** (o usa el enlace "Acceso administración"
-   del pie de página).
-2. **Iniciar sesión** con una cuenta invitada.
-3. Captura una atención y pulsa **Registrar atención**: aparecerá en la tabla.
-4. Abre el sitio en otra computadora / con otra cuenta autorizada: verás **los mismos** registros.
-5. **Exportar CSV** descarga todos los registros para abrirlos en Excel.
-
-## Cambiar el nombre del sitio / dominio
-- **Site configuration → Change site name** → p. ej. `pasem-seccion26`
-  (tu URL será `https://pasem-seccion26.netlify.app`).
-- Si tienes dominio propio: **Domain management → Add a domain**.
-
-## Actualizar el sitio más adelante
-Cada vez que cambie el `index.html` (o cualquier archivo), súbelo al repositorio de GitHub
-(**Add file → Upload files** y *Commit*). Netlify **vuelve a publicar solo** en segundos.
+Archivos del proyecto:
+- index.html — sitio + seccion Administracion (captura, tabla, usuarios).
+- netlify/functions/records.js — guarda/lee/borra autorizaciones (segun rol).
+- netlify/functions/usuarios.js — invita/roles/reset/borra usuarios (solo administracion).
+- netlify.toml, package.json — configuracion y dependencia de almacenamiento.
 
 ---
 
-## Notas
-- **Seguridad del acceso**: el inicio de sesión es real (Identity). Solo entra quien invites.
-- **Los datos** viven en Netlify Blobs (central y compartido). Haz respaldos periódicos con
-  **Exportar CSV**.
-- **PDF y formularios de Google** de la sección Formatos siguen siendo enlaces externos;
-  verifica que el PDF en Drive esté como "Cualquiera con el enlace → Lector".
-- Si algún día quieres **campos distintos** en la captura, se editan en `index.html`
-  (sección `id="administracion"`) y en la tabla; avísame y lo ajusto.
+## Paso 1 — Subir a GitHub (ya hecho)
+El repositorio ya tiene los archivos. Cuando cambie algo, sube el archivo nuevo con
+**Add file -> Upload files** y **Commit**; Netlify vuelve a publicar solo.
+
+## Paso 2 — Publicar en Netlify (ya hecho)
+El sitio ya esta en linea (p. ej. pasem.netlify.app).
+
+## Paso 3 — Activar el inicio de sesion (Netlify Identity)
+1. En tu sitio -> **Site configuration -> Identity -> Enable Identity**.
+2. **Registration** -> **Invite only** (solo por invitacion).
+
+## Paso 4 — Definir el PRIMER administrador (importante)
+Asignar roles requiere ya ser administrador, asi que el primero se "siembra" con una
+variable de entorno:
+1. Netlify -> **Site configuration -> Environment variables -> Add a variable**.
+2. Key: ADMIN_EMAILS   Value: tu correo (varios separados por comas).
+   Ejemplo: rodrigo@correo.com, jefatura@correo.com
+3. **Save**. Luego **Deploys -> Trigger deploy -> Deploy site** para que tome la variable.
+
+Cualquier correo listado en ADMIN_EMAILS entra como administracion automaticamente
+(aunque no tenga rol guardado). Desde Usuarios podra invitar y dar rol a los demas.
+
+## Paso 5 — Invitarte y entrar
+1. En **Identity -> Invite users**, invita tu propio correo (el mismo de ADMIN_EMAILS).
+2. Revisa tu correo y pon tu contrasena.
+3. Abre el sitio -> menu **Administracion** -> **Iniciar sesion**.
+4. Al entrar veras el formulario de captura y el apartado **Usuarios**.
+
+## Paso 6 — Gestionar usuarios (rol administracion)
+En **Usuarios y roles**:
+- **Invitar usuario**: correo + rol (Operacion / Administracion) + enviar. La persona
+  recibe correo para crear su contrasena; el rol queda asignado.
+- **Cambiar rol**: menu desplegable de cada usuario.
+- **Resetear contrasena**: envia el correo de restablecimiento.
+- **Eliminar**: quita al usuario.
+
+## Paso 7 — Uso diario (rol operacion)
+Quien tenga rol operacion entra, llena el formulario y pulsa **Registrar atencion**.
+Ve la tabla, pero no puede eliminar ni gestionar usuarios.
+
+## Almacenamiento
+Se usa **Netlify Blobs** (central, compartido). No requiere configuracion; el almacen
+"pasem-atenciones" se crea solo con el primer registro. Respalda con **Exportar CSV**.
+
+---
+
+## Solucion de problemas
+- "Iniciar sesion" no hace nada -> Identity no esta habilitado (Paso 3).
+- Entra pero dice "Sin rol asignado" -> asigna rol desde Usuarios, o pon el correo en
+  ADMIN_EMAILS si debe ser admin (re-despliega tras cambiar la variable).
+- Error al invitar/gestionar usuarios (403) -> la cuenta no es administracion.
+- Error 500 al guardar -> comparte el texto exacto y se revisa.
+
+## Seguridad
+- El acceso lo controla Netlify Identity; solo entra quien invites.
+- Las acciones sensibles (usuarios, eliminar) se validan en el servidor, no solo en pantalla.
