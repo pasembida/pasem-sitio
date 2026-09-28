@@ -1,76 +1,75 @@
-# Guía — Sitio PASEM con Administración, Usuarios y Roles en Netlify
+# Guía — Sitio PASEM con Administración (login propio, usuarios y roles)
 
-El sitio incluye una sección **Administración** protegida por inicio de sesión, con:
-- **Captura de autorizaciones** (formato PASEM) que se guardan en una **base de datos central**
-  (todos los autorizados ven los mismos registros) y se pueden **exportar a CSV**.
-- **Apartado Usuarios** (solo para rol Administración) para **invitar, cambiar rol, resetear
-  contraseña y eliminar** usuarios, desde la propia página.
-
-**Roles:**
+Acceso con **correo y contraseña** definidos por ti (sin correos de invitación ni tokens,
+sin depender de servicios externos). Roles:
 - **administracion**: gestiona usuarios y hace todo con los registros (crear, ver, eliminar).
 - **operacion**: captura y consulta registros (no elimina, no ve el apartado Usuarios).
 
 Archivos del proyecto:
-- index.html — sitio + seccion Administracion (captura, tabla, usuarios).
+- index.html — sitio + seccion Administracion (login, captura, tabla, usuarios).
+- netlify/functions/auth.js — inicio de sesion y cambio de contrasena.
 - netlify/functions/records.js — guarda/lee/borra autorizaciones (segun rol).
-- netlify/functions/usuarios.js — invita/roles/reset/borra usuarios (solo administracion).
+- netlify/functions/usuarios.js — crear/rol/contrasena/eliminar usuarios (solo admin).
 - netlify.toml, package.json — configuracion y dependencia de almacenamiento.
 
 ---
 
-## Paso 1 — Subir a GitHub (ya hecho)
-El repositorio ya tiene los archivos. Cuando cambie algo, sube el archivo nuevo con
-**Add file -> Upload files** y **Commit**; Netlify vuelve a publicar solo.
+## Paso 1 — Subir a GitHub
+Sube TODOS los archivos (index.html, netlify.toml, package.json y la carpeta netlify con
+sus tres funciones) reemplazando los anteriores. Con Add file -> Upload files y Commit.
 
-## Paso 2 — Publicar en Netlify (ya hecho)
-El sitio ya esta en linea (p. ej. pasem.netlify.app).
+## Paso 2 — Variables de entorno en Netlify (IMPORTANTE)
+En Netlify -> Site configuration -> Environment variables -> Add a variable. Crea TRES:
 
-## Paso 3 — Activar el inicio de sesion (Netlify Identity)
-1. En tu sitio -> **Site configuration -> Identity -> Enable Identity**.
-2. **Registration** -> **Invite only** (solo por invitacion).
+1. Key: SESSION_SECRET
+   Value: una frase larga y aleatoria (invéntala; solo se usa internamente).
+   Ejemplo: pasem-2026-clave-larga-9f3k2m7q1z
 
-## Paso 4 — Definir el PRIMER administrador (importante)
-Asignar roles requiere ya ser administrador, asi que el primero se "siembra" con una
-variable de entorno:
-1. Netlify -> **Site configuration -> Environment variables -> Add a variable**.
-2. Key: ADMIN_EMAILS   Value: tu correo (varios separados por comas).
-   Ejemplo: rodrigo@correo.com, jefatura@correo.com
-3. **Save**. Luego **Deploys -> Trigger deploy -> Deploy site** para que tome la variable.
+2. Key: SEED_ADMIN_EMAIL
+   Value: tu correo de administrador. Ej: rodrigoperez@bidaseguros.org
 
-Cualquier correo listado en ADMIN_EMAILS entra como administracion automaticamente
-(aunque no tenga rol guardado). Desde Usuarios podra invitar y dar rol a los demas.
+3. Key: SEED_ADMIN_PASSWORD
+   Value: la contrasena con la que entraras la primera vez (mínimo 6 caracteres).
 
-## Paso 5 — Invitarte y entrar
-1. En **Identity -> Invite users**, invita tu propio correo (el mismo de ADMIN_EMAILS).
-2. Revisa tu correo y pon tu contrasena.
-3. Abre el sitio -> menu **Administracion** -> **Iniciar sesion**.
-4. Al entrar veras el formulario de captura y el apartado **Usuarios**.
+Deja "All scopes" y "Same value for all deploy contexts". Guarda cada una.
+(Ya NO se usa ADMIN_EMAILS; puedes borrarla.)
 
-## Paso 6 — Gestionar usuarios (rol administracion)
-En **Usuarios y roles**:
-- **Invitar usuario**: correo + rol (Operacion / Administracion) + enviar. La persona
-  recibe correo para crear su contrasena; el rol queda asignado.
-- **Cambiar rol**: menu desplegable de cada usuario.
-- **Resetear contrasena**: envia el correo de restablecimiento.
-- **Eliminar**: quita al usuario.
+## Paso 3 — Desplegar
+Deploys -> Trigger deploy -> Clear cache and deploy site. Espera a que diga "Published".
+(La app crea sola tu usuario administrador con el correo y contrasena de arriba en el
+primer inicio de sesion.)
 
-## Paso 7 — Uso diario (rol operacion)
-Quien tenga rol operacion entra, llena el formulario y pulsa **Registrar atencion**.
-Ve la tabla, pero no puede eliminar ni gestionar usuarios.
+## Paso 4 — Entrar
+1. Abre el sitio -> menu Administracion -> escribe tu correo (SEED_ADMIN_EMAIL) y tu
+   contrasena (SEED_ADMIN_PASSWORD) -> Entrar.
+2. Veras el formulario de captura y el apartado Usuarios y roles.
 
-## Almacenamiento
-Se usa **Netlify Blobs** (central, compartido). No requiere configuracion; el almacen
-"pasem-atenciones" se crea solo con el primer registro. Respalda con **Exportar CSV**.
+## Paso 5 — Crear usuarios (rol administracion)
+En "Usuarios y roles":
+- Crear usuario: correo + rol + contrasena temporal -> Crear. Comparte esa contrasena con
+  la persona (puede cambiarla al entrar con "Cambiar mi contrasena").
+- Cambiar rol: menu desplegable de cada usuario.
+- Cambiar contrasena: define una nueva para ese usuario.
+- Eliminar: quita al usuario.
+
+## Paso 6 — Uso diario
+- Operacion: entra, llena el formulario y Registrar atencion. Ve la tabla (sin eliminar).
+- Administracion: ademas puede eliminar registros y gestionar usuarios.
+- Exportar CSV: descarga todos los registros para Excel.
+
+## Nota sobre Netlify Identity
+Ya NO se usa. Puedes dejar Identity desactivado. Esto evita los problemas de invitaciones
+por correo y de bloqueo del widget por extensiones del navegador.
 
 ---
 
-## Solucion de problemas
-- "Iniciar sesion" no hace nada -> Identity no esta habilitado (Paso 3).
-- Entra pero dice "Sin rol asignado" -> asigna rol desde Usuarios, o pon el correo en
-  ADMIN_EMAILS si debe ser admin (re-despliega tras cambiar la variable).
-- Error al invitar/gestionar usuarios (403) -> la cuenta no es administracion.
-- Error 500 al guardar -> comparte el texto exacto y se revisa.
-
 ## Seguridad
-- El acceso lo controla Netlify Identity; solo entra quien invites.
-- Las acciones sensibles (usuarios, eliminar) se validan en el servidor, no solo en pantalla.
+- Las contrasenas se guardan cifradas (hash scrypt), nunca en texto plano.
+- La sesion usa un token firmado (con SESSION_SECRET). Cambia ese valor si sospechas
+  que se filtro.
+- Las acciones sensibles se validan en el servidor (funciones), no solo en pantalla.
+
+## Solucion de problemas
+- "Correo o contrasena incorrectos" al primer intento -> revisa que SEED_ADMIN_EMAIL y
+  SEED_ADMIN_PASSWORD esten bien escritos y que hiciste un nuevo deploy tras crearlas.
+- Error 500 -> comparte el texto exacto y se revisa.

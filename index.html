@@ -163,7 +163,8 @@
 
   /* ===== Administración ===== */
   .admin-bar{display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:18px; flex-wrap:wrap;}
-  .admin-bar span{font-size:14px; color:var(--ink);}
+  .admin-bar .who{font-size:14px; color:var(--ink);}
+  .admin-bar .acts{display:flex; gap:8px; flex-wrap:wrap;}
   .admin-form fieldset{border:1px solid var(--border); border-radius:10px; padding:14px 18px 18px; margin:0 0 16px;}
   .admin-form legend{font-family:var(--serif); color:var(--ochre); font-size:13px; text-transform:uppercase; letter-spacing:.6px; padding:0 6px;}
   .fgrid{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
@@ -188,11 +189,11 @@
   .btn-mini{background:none; border:1px solid var(--border); color:var(--brown-deep); border-radius:8px; padding:5px 10px; cursor:pointer; font-size:13px;}
   .btn-mini:hover{background:var(--cream-2);}
   #records-status,#users-status{font-size:14px; color:var(--ink); margin-bottom:8px;}
+  #login-msg{color:#B23A2E; font-size:13px; margin-top:8px; min-height:1em;}
   .admin-link{margin:14px 0 0; font-size:13px;}
   .admin-link a{color:var(--ink);}
   @media(max-width:860px){ .fgrid,.checks{grid-template-columns:1fr;} }
 </style>
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
 <body>
 <div id="app">
@@ -466,19 +467,21 @@
       <p>Área exclusiva para el personal autorizado del programa PASEM.</p>
     </div>
 
-    <div id="admin-gate" class="card" style="max-width:520px;">
-      <p style="margin:0 0 14px;">Esta sección requiere iniciar sesión con una cuenta autorizada.</p>
-      <button class="btn btn-primary" id="btn-login" type="button">Iniciar sesión</button>
+    <div id="admin-gate" class="card" style="max-width:420px;">
+      <h3 style="margin:0 0 14px;">Iniciar sesión</h3>
+      <div class="field"><label>Correo</label><input id="login-email" type="email" autocomplete="username"></div>
+      <div class="field" style="margin-top:12px;"><label>Contraseña</label><input id="login-pass" type="password" autocomplete="current-password"></div>
+      <div id="login-msg"></div>
+      <button class="btn btn-primary" id="btn-login" type="button" style="margin-top:14px;">Entrar</button>
     </div>
 
     <div id="admin-panel" style="display:none;">
       <div class="admin-bar">
-        <span id="admin-user"></span>
-        <button class="btn btn-ghost" id="btn-logout" type="button">Cerrar sesión</button>
-      </div>
-
-      <div id="admin-norole" class="card" style="display:none; max-width:680px;">
-        <p style="margin:0;">Tu cuenta aún no tiene un rol asignado. Pide a un administrador que te asigne el rol <strong>Administración</strong> u <strong>Operación</strong> para continuar.</p>
+        <span class="who" id="admin-user"></span>
+        <span class="acts">
+          <button class="btn btn-ghost" id="btn-changepass" type="button">Cambiar mi contraseña</button>
+          <button class="btn btn-ghost" id="btn-logout" type="button">Cerrar sesión</button>
+        </span>
       </div>
 
       <div id="records-block">
@@ -567,13 +570,15 @@
           <div class="fgrid">
             <div class="field"><label>Correo del usuario</label><input name="email" type="email" placeholder="persona@correo.com"></div>
             <div class="field"><label>Rol</label><select name="role"><option value="operacion">Operación</option><option value="administracion">Administración</option></select></div>
+            <div class="field full"><label>Contraseña temporal</label><input name="password" type="text" placeholder="mínimo 6 caracteres"></div>
           </div>
-          <button class="btn btn-primary" type="submit">Invitar usuario</button>
+          <button class="btn btn-primary" type="submit">Crear usuario</button>
+          <p style="font-size:12.5px; color:var(--ink); margin:10px 0 0;">Comparte la contraseña temporal con la persona; podrá cambiarla al entrar con «Cambiar mi contraseña».</p>
         </form>
         <div id="users-status"></div>
         <div class="table-wrap">
           <table id="users-table" class="dtable">
-            <thead><tr><th>Correo</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>Correo</th><th>Rol</th><th>Acciones</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
@@ -617,13 +622,13 @@
 </script>
 <script>
 (function(){
+  var AUTH='/.netlify/functions/auth';
   var RECORDS='/.netlify/functions/records';
   var USERS='/.netlify/functions/usuarios';
+  var TK='pasem_token', RL='pasem_role', EM='pasem_email';
   var gate=document.getElementById('admin-gate');
   var panel=document.getElementById('admin-panel');
   var userLbl=document.getElementById('admin-user');
-  var norole=document.getElementById('admin-norole');
-  var recordsBlock=document.getElementById('records-block');
   var usersBlock=document.getElementById('users-block');
   var form=document.getElementById('form-atencion');
   var statusEl=document.getElementById('records-status');
@@ -631,36 +636,63 @@
   var usersStatus=document.getElementById('users-status');
   var usersTbody=document.querySelector('#users-table tbody');
   var formUser=document.getElementById('form-user');
-  var records=[]; var isAdmin=false;
-  if(!window.netlifyIdentity){ return; }
-  var ni=window.netlifyIdentity;
-  ni.on('init', function(u){ u?onLogin(u):showGate(); });
-  ni.on('login', function(u){ onLogin(u); ni.close(); });
-  ni.on('logout', function(){ showGate(); });
-  ni.init();
-  document.getElementById('btn-login').addEventListener('click', function(){ ni.open('login'); });
-  document.getElementById('btn-logout').addEventListener('click', function(){ ni.logout(); });
+  var loginMsg=document.getElementById('login-msg');
+  var records=[];
+  function tok(){ try{return localStorage.getItem(TK);}catch(e){return null;} }
+  function role(){ try{return localStorage.getItem(RL)||'';}catch(e){return '';} }
+  function email(){ try{return localStorage.getItem(EM)||'';}catch(e){return '';} }
+  function setSession(t,r,e){ try{localStorage.setItem(TK,t);localStorage.setItem(RL,r);localStorage.setItem(EM,e);}catch(x){} }
+  function clearSession(){ try{localStorage.removeItem(TK);localStorage.removeItem(RL);localStorage.removeItem(EM);}catch(x){} }
+  function isAdmin(){ return role()==='administracion'; }
+  function roleLabel(r){ return r==='administracion'?'Administración':(r==='operacion'?'Operación':r||'—'); }
+  function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+
+  document.getElementById('btn-login').addEventListener('click', doLogin);
+  document.getElementById('login-pass').addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
+  document.getElementById('btn-logout').addEventListener('click', function(){ clearSession(); showGate(); });
+  document.getElementById('btn-changepass').addEventListener('click', changePass);
   document.getElementById('btn-refresh').addEventListener('click', loadRecords);
   document.getElementById('btn-export').addEventListener('click', exportCSV);
+
+  if(tok()){ showPanel(); } else { showGate(); }
+
   function showGate(){ gate.style.display=''; panel.style.display='none'; }
-  async function onLogin(user){
+  function showPanel(){
     gate.style.display='none'; panel.style.display='';
-    userLbl.textContent='Sesión iniciada: '+(user.email||'');
-    isAdmin=false;
-    try{ await loadUsers(); isAdmin=true; usersBlock.style.display=''; }
-    catch(e){ isAdmin=false; usersBlock.style.display='none'; }
-    await loadRecords();
+    userLbl.textContent='Sesión: '+email()+' · '+roleLabel(role());
+    if(isAdmin()){ usersBlock.style.display=''; loadUsers(); } else { usersBlock.style.display='none'; }
+    loadRecords();
   }
-  async function token(){ var u=ni.currentUser(); return u? await u.jwt() : null; }
-  function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  async function doLogin(){
+    loginMsg.textContent='';
+    var em=document.getElementById('login-email').value.trim();
+    var pw=document.getElementById('login-pass').value;
+    if(!em||!pw){ loginMsg.textContent='Escribe tu correo y contraseña.'; return; }
+    try{
+      var r=await fetch(AUTH,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'login',email:em,password:pw})});
+      var d=await r.json();
+      if(!r.ok){ loginMsg.textContent=d.error||'No se pudo iniciar sesión.'; return; }
+      setSession(d.token,d.role,d.email); document.getElementById('login-pass').value=''; showPanel();
+    }catch(e){ loginMsg.textContent='Error de conexión: '+e.message; }
+  }
+  async function api(url,opts){
+    opts=opts||{}; opts.headers=Object.assign({},opts.headers||{},{Authorization:'Bearer '+tok()});
+    var r=await fetch(url,opts);
+    if(r.status===401){ clearSession(); showGate(); throw new Error('Sesión expirada. Vuelve a iniciar sesión.'); }
+    return r;
+  }
+  async function changePass(){
+    var np=prompt('Nueva contraseña (mínimo 6 caracteres):'); if(!np) return;
+    try{ var r=await api(AUTH,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'change',password:np})}); var d=await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status)); alert('Contraseña actualizada.'); }
+    catch(e){ alert('Error: '+e.message); }
+  }
+
+  // ---- Registros ----
   async function loadRecords(){
     statusEl.textContent='Cargando…';
     try{
-      var t=await token();
-      var r=await fetch(RECORDS,{headers:{Authorization:'Bearer '+t}});
-      if(r.status===403){ norole.style.display=''; recordsBlock.style.display='none'; statusEl.textContent=''; return; }
+      var r=await api(RECORDS);
       if(!r.ok) throw new Error('HTTP '+r.status);
-      norole.style.display='none'; recordsBlock.style.display='';
       records=await r.json(); renderRecords();
       statusEl.textContent=records.length+' atención(es) registrada(s).';
     }catch(e){ statusEl.textContent='Error al cargar: '+e.message; }
@@ -670,18 +702,18 @@
     records.forEach(function(rec){
       var tr=document.createElement('tr');
       var serv=(rec.servicios||[]).join(', ');
-      var del=isAdmin?'<button class="btn-del" data-id="'+esc(rec.id)+'">Eliminar</button>':'';
+      var del=isAdmin()?'<button class="btn-del" data-id="'+esc(rec.id)+'">Eliminar</button>':'';
       tr.innerHTML='<td>'+esc(rec.folio)+'</td><td>'+esc(rec.fechaEmision)+'</td><td>'+esc(rec.paciente)+'</td>'+
         '<td>'+esc(rec.numAfiliado)+'</td><td>'+esc(rec.tipoTramite)+'</td><td>'+esc(rec.tipoServicio)+'</td>'+
         '<td>'+esc(serv)+'</td><td>'+esc(rec.hospital)+'</td><td>'+esc(rec.fechaProc)+'</td>'+
         '<td>'+esc(rec.capturadoPor)+'</td><td>'+del+'</td>';
       tbody.appendChild(tr);
     });
-    if(isAdmin){ tbody.querySelectorAll('.btn-del').forEach(function(b){ b.addEventListener('click', function(){ delRecord(b.getAttribute('data-id')); }); }); }
+    if(isAdmin()){ tbody.querySelectorAll('.btn-del').forEach(function(b){ b.addEventListener('click', function(){ delRecord(b.getAttribute('data-id')); }); }); }
   }
   async function delRecord(id){
     if(!confirm('¿Eliminar este registro?')) return;
-    try{ var t=await token(); var r=await fetch(RECORDS+'?id='+encodeURIComponent(id),{method:'DELETE',headers:{Authorization:'Bearer '+t}}); if(!r.ok) throw new Error('HTTP '+r.status); loadRecords(); }
+    try{ var r=await api(RECORDS+'?id='+encodeURIComponent(id),{method:'DELETE'}); if(!r.ok) throw new Error('HTTP '+r.status); loadRecords(); }
     catch(e){ alert('Error al eliminar: '+e.message); }
   }
   form.addEventListener('submit', async function(e){
@@ -695,7 +727,7 @@
       estudiosDetalle:fd.get('estudiosDetalle'), observaciones:fd.get('observaciones'),
       cargo:fd.get('cargo'), fechaAutorizacion:fd.get('fechaAutorizacion') };
     var btn=form.querySelector('button[type=submit]'); var old=btn.textContent; btn.disabled=true; btn.textContent='Guardando…';
-    try{ var t=await token(); var r=await fetch(RECORDS,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+t},body:JSON.stringify(data)}); if(!r.ok) throw new Error('HTTP '+r.status); form.reset(); loadRecords(); alert('Atención registrada.'); }
+    try{ var r=await api(RECORDS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}); if(!r.ok) throw new Error('HTTP '+r.status); form.reset(); loadRecords(); alert('Atención registrada.'); }
     catch(err){ alert('Error al registrar: '+err.message); }
     finally{ btn.disabled=false; btn.textContent=old; }
   });
@@ -707,42 +739,43 @@
     var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
     var url=URL.createObjectURL(blob); var a=document.createElement('a'); a.href=url; a.download='atenciones_pasem.csv'; a.click(); URL.revokeObjectURL(url);
   }
+
+  // ---- Usuarios (solo administración) ----
   async function loadUsers(){
-    var t=await token();
-    var r=await fetch(USERS,{headers:{Authorization:'Bearer '+t}});
-    if(!r.ok){ throw new Error('HTTP '+r.status); }
-    var users=await r.json(); renderUsers(users);
-    usersStatus.textContent=users.length+' usuario(s).';
+    try{
+      var r=await api(USERS); if(!r.ok) throw new Error('HTTP '+r.status);
+      var users=await r.json(); renderUsers(users); usersStatus.textContent=users.length+' usuario(s).';
+    }catch(e){ usersStatus.textContent='Error: '+e.message; }
   }
   function renderUsers(users){
     usersTbody.innerHTML='';
     users.forEach(function(u){
       var tr=document.createElement('tr');
-      var sel='<select data-id="'+esc(u.id)+'" class="role-sel">'+
-        '<option value="operacion"'+(u.roles.indexOf('operacion')>=0?' selected':'')+'>Operación</option>'+
-        '<option value="administracion"'+(u.roles.indexOf('administracion')>=0?' selected':'')+'>Administración</option></select>';
-      tr.innerHTML='<td>'+esc(u.email)+'</td><td>'+sel+'</td><td>'+(u.confirmed?'Activo':'Invitado')+'</td>'+
-        '<td><button class="btn-mini" data-act="reset" data-email="'+esc(u.email)+'">Resetear contraseña</button> '+
-        '<button class="btn-del" data-act="del" data-id="'+esc(u.id)+'">Eliminar</button></td>';
+      var sel='<select data-email="'+esc(u.email)+'" class="role-sel">'+
+        '<option value="operacion"'+(u.role==='operacion'?' selected':'')+'>Operación</option>'+
+        '<option value="administracion"'+(u.role==='administracion'?' selected':'')+'>Administración</option></select>';
+      tr.innerHTML='<td>'+esc(u.email)+'</td><td>'+sel+'</td>'+
+        '<td><button class="btn-mini" data-act="pass" data-email="'+esc(u.email)+'">Cambiar contraseña</button> '+
+        '<button class="btn-del" data-act="del" data-email="'+esc(u.email)+'">Eliminar</button></td>';
       usersTbody.appendChild(tr);
     });
-    usersTbody.querySelectorAll('.role-sel').forEach(function(sl){ sl.addEventListener('change', function(){ setRole(sl.getAttribute('data-id'), sl.value); }); });
-    usersTbody.querySelectorAll('[data-act=reset]').forEach(function(b){ b.addEventListener('click', function(){ resetUser(b.getAttribute('data-email')); }); });
-    usersTbody.querySelectorAll('[data-act=del]').forEach(function(b){ b.addEventListener('click', function(){ delUser(b.getAttribute('data-id')); }); });
+    usersTbody.querySelectorAll('.role-sel').forEach(function(sl){ sl.addEventListener('change', function(){ setRole(sl.getAttribute('data-email'), sl.value); }); });
+    usersTbody.querySelectorAll('[data-act=pass]').forEach(function(b){ b.addEventListener('click', function(){ resetPass(b.getAttribute('data-email')); }); });
+    usersTbody.querySelectorAll('[data-act=del]').forEach(function(b){ b.addEventListener('click', function(){ delUser(b.getAttribute('data-email')); }); });
   }
   formUser.addEventListener('submit', async function(e){
     e.preventDefault();
-    var fd=new FormData(formUser); var email=fd.get('email'); var role=fd.get('role');
-    if(!email){ return; }
-    var btn=formUser.querySelector('button[type=submit]'); var old=btn.textContent; btn.disabled=true; btn.textContent='Invitando…';
-    try{ await postUsers({action:'invite', email:email, role:role}); formUser.reset(); loadUsers(); alert('Invitación enviada a '+email+'.'); }
-    catch(err){ alert('Error al invitar: '+err.message); }
+    var fd=new FormData(formUser); var em=fd.get('email'); var rol=fd.get('role'); var pw=fd.get('password');
+    if(!em||!pw){ alert('Escribe correo y contraseña temporal.'); return; }
+    var btn=formUser.querySelector('button[type=submit]'); var old=btn.textContent; btn.disabled=true; btn.textContent='Creando…';
+    try{ await postUsers({action:'create', email:em, role:rol, password:pw}); formUser.reset(); loadUsers(); alert('Usuario creado. Comparte la contraseña temporal con la persona.'); }
+    catch(err){ alert('Error al crear: '+err.message); }
     finally{ btn.disabled=false; btn.textContent=old; }
   });
-  async function postUsers(payload){ var t=await token(); var r=await fetch(USERS,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+t},body:JSON.stringify(payload)}); if(!r.ok){ var d={}; try{d=await r.json();}catch(_){} throw new Error(d.error||('HTTP '+r.status)); } return r.json(); }
-  async function setRole(id,role){ try{ await postUsers({action:'setrole', id:id, role:role}); loadUsers(); }catch(e){ alert('Error al cambiar rol: '+e.message); loadUsers(); } }
-  async function resetUser(email){ if(!confirm('¿Enviar correo para restablecer la contraseña de '+email+'?')) return; try{ await postUsers({action:'reset', email:email}); alert('Correo de restablecimiento enviado.'); }catch(e){ alert('Error: '+e.message); } }
-  async function delUser(id){ if(!confirm('¿Eliminar este usuario?')) return; try{ await postUsers({action:'delete', id:id}); loadUsers(); }catch(e){ alert('Error al eliminar: '+e.message); } }
+  async function postUsers(payload){ var r=await api(USERS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); if(!r.ok){ var d={}; try{d=await r.json();}catch(_){} throw new Error(d.error||('HTTP '+r.status)); } return r.json(); }
+  async function setRole(em,rol){ try{ await postUsers({action:'setrole', email:em, role:rol}); loadUsers(); }catch(e){ alert('Error al cambiar rol: '+e.message); loadUsers(); } }
+  async function resetPass(em){ var np=prompt('Nueva contraseña para '+em+' (mínimo 6 caracteres):'); if(!np) return; try{ await postUsers({action:'setpassword', email:em, password:np}); alert('Contraseña actualizada.'); }catch(e){ alert('Error: '+e.message); } }
+  async function delUser(em){ if(!confirm('¿Eliminar al usuario '+em+'?')) return; try{ await postUsers({action:'delete', email:em}); loadUsers(); }catch(e){ alert('Error al eliminar: '+e.message); } }
 })();
 </script>
 </body>
