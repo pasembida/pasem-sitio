@@ -1,0 +1,9 @@
+{
+  "name": "pasem-sitio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sitio PASEM - SNTE Seccion 26 (Telesecundaria) con panel de administracion en Netlify",
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  }
+}
