@@ -162,9 +162,14 @@
   }
 
   /* ===== Administración ===== */
-  .admin-bar{display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:18px; flex-wrap:wrap;}
+  .admin-bar{display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; flex-wrap:wrap;}
   .admin-bar .who{font-size:14px; color:var(--ink);}
   .admin-bar .acts{display:flex; gap:8px; flex-wrap:wrap;}
+  .tabs{display:flex; gap:4px; flex-wrap:wrap; border-bottom:1px solid var(--border); margin:2px 0 22px;}
+  .tab{background:none; border:none; padding:10px 16px; font-family:var(--sans); font-size:15px; font-weight:700; color:var(--ink); cursor:pointer; border-bottom:3px solid transparent; border-radius:8px 8px 0 0;}
+  .tab:hover{background:var(--cream-2);}
+  .tab.active{color:var(--brown-deep); border-bottom-color:var(--brown);}
+  .tabpane{display:none;} .tabpane.active{display:block;}
   .admin-form fieldset{border:1px solid var(--border); border-radius:10px; padding:14px 18px 18px; margin:0 0 16px;}
   .admin-form legend{font-family:var(--serif); color:var(--ochre); font-size:13px; text-transform:uppercase; letter-spacing:.6px; padding:0 6px;}
   .fgrid{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
@@ -188,10 +193,15 @@
   .btn-del:hover{background:#fbecea;}
   .btn-mini{background:none; border:1px solid var(--border); color:var(--brown-deep); border-radius:8px; padding:5px 10px; cursor:pointer; font-size:13px;}
   .btn-mini:hover{background:var(--cream-2);}
-  #records-status,#users-status{font-size:14px; color:var(--ink); margin-bottom:8px;}
+  #records-status,#users-status,#ben-status{font-size:14px; color:var(--ink); margin:6px 0 8px;}
   #login-msg{color:#B23A2E; font-size:13px; margin-top:8px; min-height:1em;}
-  .admin-link{margin:14px 0 0; font-size:13px;}
-  .admin-link a{color:var(--ink);}
+  .search-row{display:flex; gap:10px; flex-wrap:wrap; margin:6px 0 10px;}
+  .search-row input{flex:1 1 320px; font-size:15px; padding:11px 13px; border:1px solid var(--border); border-radius:8px;}
+  .dl-doc{display:flex; align-items:center; gap:16px; background:#fff; border:1px solid var(--border); border-radius:12px; padding:18px 20px; box-shadow:var(--shadow); max-width:660px; text-decoration:none;}
+  .dl-doc .ic{flex:0 0 46px; width:46px; height:46px; border-radius:9px; background:var(--cream-2); display:flex; align-items:center; justify-content:center; color:var(--green);}
+  .dl-doc .ic svg{width:24px;height:24px;}
+  .dl-doc .meta{flex:1;} .dl-doc .meta b{display:block; color:var(--brown-deep); font-family:var(--serif); font-size:16px;} .dl-doc .meta span{font-size:13px; color:var(--ink);}
+  .dl-doc .go{background:var(--brown); color:#fff; padding:9px 16px; border-radius:8px; font-weight:700; font-size:14px;}
   @media(max-width:860px){ .fgrid,.checks{grid-template-columns:1fr;} }
 </style>
 </head>
@@ -245,20 +255,25 @@
         </span>
       </div>
 
-      <div id="records-block">
+      <div class="tabs" id="tabs">
+        <button class="tab active" type="button" data-pane="registrar">Registrar atención</button>
+        <button class="tab" type="button" data-pane="consulta">Consulta de beneficiarios</button>
+        <button class="tab" type="button" data-pane="descargas">Descargas</button>
+        <button class="tab" type="button" data-pane="usuarios" id="tab-usuarios-btn" style="display:none;">Usuarios</button>
+      </div>
+
+      <!-- Registrar atención -->
+      <div class="tabpane active" id="pane-registrar">
         <form id="form-atencion" class="admin-form card">
-          <fieldset>
-            <legend>Control</legend>
+          <fieldset><legend>Control</legend>
             <div class="fgrid">
               <div class="field"><label>Folio de control</label><input name="folio" type="text"></div>
               <div class="field"><label>Fecha de emisión</label><input name="fechaEmision" type="date"></div>
               <div class="field full"><label>Tipo de trámite</label>
-                <select name="tipoTramite"><option value="">Selecciona…</option><option>Autorización de cirugía</option><option>Confirmación de servicio(s) del programa</option></select>
-              </div>
+                <select name="tipoTramite"><option value="">Selecciona…</option><option>Autorización de cirugía</option><option>Confirmación de servicio(s) del programa</option></select></div>
             </div>
           </fieldset>
-          <fieldset>
-            <legend>Datos del paciente / afiliado</legend>
+          <fieldset><legend>Datos del paciente / afiliado</legend>
             <div class="fgrid">
               <div class="field full"><label>Nombre completo del paciente</label><input name="paciente" type="text"></div>
               <div class="field"><label>Número de afiliado</label><input name="numAfiliado" type="text"></div>
@@ -267,8 +282,7 @@
               <div class="field"><label>Titular / trabajador afiliado</label><input name="titular" type="text"></div>
             </div>
           </fieldset>
-          <fieldset>
-            <legend>Datos del procedimiento o servicio</legend>
+          <fieldset><legend>Datos del procedimiento o servicio</legend>
             <div class="fgrid">
               <div class="field full"><label>Diagnóstico</label><input name="diagnostico" type="text"></div>
               <div class="field full"><label>Tipo de cirugía o servicio solicitado</label><input name="tipoServicio" type="text"></div>
@@ -278,8 +292,7 @@
               <div class="field"><label>Fecha programada del procedimiento</label><input name="fechaProc" type="date"></div>
             </div>
           </fieldset>
-          <fieldset>
-            <legend>Servicios PASEM a confirmar</legend>
+          <fieldset><legend>Servicios PASEM a confirmar</legend>
             <div class="checks">
               <label class="check"><input type="checkbox" name="servicios" value="Consulta médica general"> Consulta médica general</label>
               <label class="check"><input type="checkbox" name="servicios" value="Consulta de especialidad"> Consulta de especialidad</label>
@@ -291,12 +304,10 @@
             </div>
             <div class="field full" style="margin-top:12px;"><label>Estudios de laboratorio — especificar</label><input name="estudiosDetalle" type="text"></div>
           </fieldset>
-          <fieldset>
-            <legend>Observaciones / condiciones</legend>
+          <fieldset><legend>Observaciones / condiciones</legend>
             <div class="field full"><textarea name="observaciones"></textarea></div>
           </fieldset>
-          <fieldset>
-            <legend>Autorización</legend>
+          <fieldset><legend>Autorización</legend>
             <div class="fgrid">
               <div class="field"><label>Cargo / puesto</label><input name="cargo" type="text"></div>
               <div class="field"><label>Fecha de autorización</label><input name="fechaAutorizacion" type="date"></div>
@@ -324,9 +335,38 @@
         </div>
       </div>
 
-      <div id="users-block" style="display:none; margin-top:30px;">
+      <!-- Consulta de beneficiarios -->
+      <div class="tabpane" id="pane-consulta">
+        <h3 style="font-family:var(--serif); color:var(--brown-deep); margin:0 0 6px;">Consulta de beneficiarios</h3>
+        <p style="color:var(--ink); font-size:14px; margin:0 0 6px;">Busca por <strong>nombre</strong>, <strong>RFC</strong> o <strong>CURP</strong>. Las personas que aparecen en el listado <strong>cuentan con el beneficio</strong> del programa.</p>
+        <div class="search-row">
+          <input id="ben-q" type="text" placeholder="Nombre, RFC o CURP…">
+          <button class="btn btn-primary" id="ben-btn" type="button">Buscar</button>
+        </div>
+        <div id="ben-status"></div>
+        <div class="table-wrap">
+          <table id="ben-table" class="dtable">
+            <thead><tr><th>Nombre</th><th>RFC</th><th>CURP</th><th>Función</th><th>CCT</th><th>Centro de trabajo</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Descargas -->
+      <div class="tabpane" id="pane-descargas">
+        <h3 style="font-family:var(--serif); color:var(--brown-deep); margin:0 0 6px;">Descargas</h3>
+        <p style="color:var(--ink); font-size:14px; margin:0 0 14px;">Documentos del programa disponibles para el personal autorizado.</p>
+        <a class="dl-doc" href="/documentos/Formato_Autorizacion_Confirmacion_SNTE26.pdf" download>
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15h6M9 18h4"/></svg></span>
+          <span class="meta"><b>Formato de Autorización y/o Confirmación de Servicios Médicos</b><span>PDF · uso interno PASEM</span></span>
+          <span class="go">Descargar</span>
+        </a>
+      </div>
+
+      <!-- Usuarios -->
+      <div class="tabpane" id="pane-usuarios">
         <h3 style="font-family:var(--serif); color:var(--brown-deep); margin:0 0 6px;">Usuarios y roles</h3>
-        <p style="color:var(--ink); font-size:14px; margin:0 0 14px;"><strong>Administración</strong>: gestiona usuarios y registros. <strong>Operación</strong>: captura y consulta registros.</p>
+        <p style="color:var(--ink); font-size:14px; margin:0 0 14px;"><strong>Administración</strong>: gestiona usuarios y registros. <strong>Operación</strong>: captura, consulta y descarga.</p>
         <form id="form-user" class="admin-form card" style="margin-bottom:16px;">
           <div class="fgrid">
             <div class="field"><label>Correo del usuario</label><input name="email" type="email" placeholder="persona@correo.com"></div>
@@ -334,7 +374,6 @@
             <div class="field full"><label>Contraseña temporal</label><input name="password" type="text" placeholder="mínimo 6 caracteres"></div>
           </div>
           <button class="btn btn-primary" type="submit">Crear usuario</button>
-          <p style="font-size:12.5px; color:var(--ink); margin:10px 0 0;">Comparte la contraseña temporal con la persona; podrá cambiarla al entrar con «Cambiar mi contraseña».</p>
         </form>
         <div id="users-status"></div>
         <div class="table-wrap">
@@ -344,6 +383,7 @@
           </table>
         </div>
       </div>
+
     </div>
   </div>
 </section>
@@ -382,21 +422,14 @@
 </script>
 <script>
 (function(){
-  var AUTH='/.netlify/functions/auth';
-  var RECORDS='/.netlify/functions/records';
-  var USERS='/.netlify/functions/usuarios';
+  var AUTH='/.netlify/functions/auth', RECORDS='/.netlify/functions/records', USERS='/.netlify/functions/usuarios', BEN='/.netlify/functions/beneficiarios';
   var TK='pasem_token', RL='pasem_role', EM='pasem_email';
-  var gate=document.getElementById('admin-gate');
-  var panel=document.getElementById('admin-panel');
+  var gate=document.getElementById('admin-gate'), panel=document.getElementById('admin-panel');
   var userLbl=document.getElementById('admin-user');
-  var usersBlock=document.getElementById('users-block');
-  var form=document.getElementById('form-atencion');
-  var statusEl=document.getElementById('records-status');
-  var tbody=document.querySelector('#records-table tbody');
-  var usersStatus=document.getElementById('users-status');
-  var usersTbody=document.querySelector('#users-table tbody');
-  var formUser=document.getElementById('form-user');
+  var form=document.getElementById('form-atencion'), statusEl=document.getElementById('records-status'), tbody=document.querySelector('#records-table tbody');
+  var usersStatus=document.getElementById('users-status'), usersTbody=document.querySelector('#users-table tbody'), formUser=document.getElementById('form-user');
   var loginMsg=document.getElementById('login-msg');
+  var benTbody=document.querySelector('#ben-table tbody'), benStatus=document.getElementById('ben-status');
   var records=[];
   function tok(){ try{return localStorage.getItem(TK);}catch(e){return null;} }
   function role(){ try{return localStorage.getItem(RL)||'';}catch(e){return '';} }
@@ -413,6 +446,15 @@
   document.getElementById('btn-changepass').addEventListener('click', changePass);
   document.getElementById('btn-refresh').addEventListener('click', loadRecords);
   document.getElementById('btn-export').addEventListener('click', exportCSV);
+  document.getElementById('ben-btn').addEventListener('click', searchBen);
+  document.getElementById('ben-q').addEventListener('keydown', function(e){ if(e.key==='Enter') searchBen(); });
+  // pestañas
+  document.querySelectorAll('.tab').forEach(function(b){ b.addEventListener('click', function(){ activate(b.getAttribute('data-pane')); }); });
+  function activate(name){
+    document.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('active', t.getAttribute('data-pane')===name); });
+    document.querySelectorAll('.tabpane').forEach(function(p){ p.classList.toggle('active', p.id==='pane-'+name); });
+    if(name==='usuarios' && isAdmin()) loadUsers();
+  }
 
   if(tok()){ showPanel(); } else { showGate(); }
 
@@ -420,7 +462,8 @@
   function showPanel(){
     gate.style.display='none'; panel.style.display='';
     userLbl.textContent='Sesión: '+email()+' · '+roleLabel(role());
-    if(isAdmin()){ usersBlock.style.display=''; loadUsers(); } else { usersBlock.style.display='none'; }
+    document.getElementById('tab-usuarios-btn').style.display = isAdmin()?'':'none';
+    activate('registrar');
     loadRecords();
   }
   async function doLogin(){
@@ -447,76 +490,63 @@
     catch(e){ alert('Error: '+e.message); }
   }
 
-  // ---- Registros ----
+  // Registros
   async function loadRecords(){
     statusEl.textContent='Cargando…';
-    try{
-      var r=await api(RECORDS);
-      if(!r.ok) throw new Error('HTTP '+r.status);
-      records=await r.json(); renderRecords();
-      statusEl.textContent=records.length+' atención(es) registrada(s).';
-    }catch(e){ statusEl.textContent='Error al cargar: '+e.message; }
+    try{ var r=await api(RECORDS); if(!r.ok) throw new Error('HTTP '+r.status); records=await r.json(); renderRecords(); statusEl.textContent=records.length+' atención(es) registrada(s).'; }
+    catch(e){ statusEl.textContent='Error al cargar: '+e.message; }
   }
   function renderRecords(){
     tbody.innerHTML='';
     records.forEach(function(rec){
-      var tr=document.createElement('tr');
-      var serv=(rec.servicios||[]).join(', ');
+      var tr=document.createElement('tr'); var serv=(rec.servicios||[]).join(', ');
       var del=isAdmin()?'<button class="btn-del" data-id="'+esc(rec.id)+'">Eliminar</button>':'';
-      tr.innerHTML='<td>'+esc(rec.folio)+'</td><td>'+esc(rec.fechaEmision)+'</td><td>'+esc(rec.paciente)+'</td>'+
-        '<td>'+esc(rec.numAfiliado)+'</td><td>'+esc(rec.tipoTramite)+'</td><td>'+esc(rec.tipoServicio)+'</td>'+
-        '<td>'+esc(serv)+'</td><td>'+esc(rec.hospital)+'</td><td>'+esc(rec.fechaProc)+'</td>'+
-        '<td>'+esc(rec.capturadoPor)+'</td><td>'+del+'</td>';
+      tr.innerHTML='<td>'+esc(rec.folio)+'</td><td>'+esc(rec.fechaEmision)+'</td><td>'+esc(rec.paciente)+'</td><td>'+esc(rec.numAfiliado)+'</td><td>'+esc(rec.tipoTramite)+'</td><td>'+esc(rec.tipoServicio)+'</td><td>'+esc(serv)+'</td><td>'+esc(rec.hospital)+'</td><td>'+esc(rec.fechaProc)+'</td><td>'+esc(rec.capturadoPor)+'</td><td>'+del+'</td>';
       tbody.appendChild(tr);
     });
     if(isAdmin()){ tbody.querySelectorAll('.btn-del').forEach(function(b){ b.addEventListener('click', function(){ delRecord(b.getAttribute('data-id')); }); }); }
   }
-  async function delRecord(id){
-    if(!confirm('¿Eliminar este registro?')) return;
-    try{ var r=await api(RECORDS+'?id='+encodeURIComponent(id),{method:'DELETE'}); if(!r.ok) throw new Error('HTTP '+r.status); loadRecords(); }
-    catch(e){ alert('Error al eliminar: '+e.message); }
-  }
+  async function delRecord(id){ if(!confirm('¿Eliminar este registro?')) return; try{ var r=await api(RECORDS+'?id='+encodeURIComponent(id),{method:'DELETE'}); if(!r.ok) throw new Error('HTTP '+r.status); loadRecords(); }catch(e){ alert('Error al eliminar: '+e.message); } }
   form.addEventListener('submit', async function(e){
-    e.preventDefault();
-    var fd=new FormData(form);
-    var data={ folio:fd.get('folio'), fechaEmision:fd.get('fechaEmision'), tipoTramite:fd.get('tipoTramite'),
-      paciente:fd.get('paciente'), numAfiliado:fd.get('numAfiliado'), parentesco:fd.get('parentesco'),
-      plantel:fd.get('plantel'), titular:fd.get('titular'), diagnostico:fd.get('diagnostico'),
-      tipoServicio:fd.get('tipoServicio'), medico:fd.get('medico'), cedula:fd.get('cedula'),
-      hospital:fd.get('hospital'), fechaProc:fd.get('fechaProc'), servicios:fd.getAll('servicios'),
-      estudiosDetalle:fd.get('estudiosDetalle'), observaciones:fd.get('observaciones'),
-      cargo:fd.get('cargo'), fechaAutorizacion:fd.get('fechaAutorizacion') };
+    e.preventDefault(); var fd=new FormData(form);
+    var data={ folio:fd.get('folio'), fechaEmision:fd.get('fechaEmision'), tipoTramite:fd.get('tipoTramite'), paciente:fd.get('paciente'), numAfiliado:fd.get('numAfiliado'), parentesco:fd.get('parentesco'), plantel:fd.get('plantel'), titular:fd.get('titular'), diagnostico:fd.get('diagnostico'), tipoServicio:fd.get('tipoServicio'), medico:fd.get('medico'), cedula:fd.get('cedula'), hospital:fd.get('hospital'), fechaProc:fd.get('fechaProc'), servicios:fd.getAll('servicios'), estudiosDetalle:fd.get('estudiosDetalle'), observaciones:fd.get('observaciones'), cargo:fd.get('cargo'), fechaAutorizacion:fd.get('fechaAutorizacion') };
     var btn=form.querySelector('button[type=submit]'); var old=btn.textContent; btn.disabled=true; btn.textContent='Guardando…';
     try{ var r=await api(RECORDS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}); if(!r.ok) throw new Error('HTTP '+r.status); form.reset(); loadRecords(); alert('Atención registrada.'); }
-    catch(err){ alert('Error al registrar: '+err.message); }
-    finally{ btn.disabled=false; btn.textContent=old; }
+    catch(err){ alert('Error al registrar: '+err.message); } finally{ btn.disabled=false; btn.textContent=old; }
   });
   function exportCSV(){
     if(!records.length){ alert('No hay registros para exportar.'); return; }
     var cols=['id','createdAt','capturadoPor','folio','fechaEmision','tipoTramite','paciente','numAfiliado','parentesco','plantel','titular','diagnostico','tipoServicio','medico','cedula','hospital','fechaProc','servicios','estudiosDetalle','observaciones','cargo','fechaAutorizacion'];
     var rows=records.map(function(rec){ return cols.map(function(c){ var v=rec[c]; if(Array.isArray(v)) v=v.join('; '); v=(v==null?'':String(v)); if(/[",\n]/.test(v)) v='"'+v.replace(/"/g,'""')+'"'; return v; }).join(','); });
-    var csv=cols.join(',')+'\n'+rows.join('\n');
-    var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
+    var csv=cols.join(',')+'\n'+rows.join('\n'); var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
     var url=URL.createObjectURL(blob); var a=document.createElement('a'); a.href=url; a.download='atenciones_pasem.csv'; a.click(); URL.revokeObjectURL(url);
   }
 
-  // ---- Usuarios (solo administración) ----
-  async function loadUsers(){
+  // Beneficiarios
+  async function searchBen(){
+    var q=document.getElementById('ben-q').value.trim();
+    if(q.length<2){ benStatus.textContent='Escribe al menos 2 caracteres.'; benTbody.innerHTML=''; return; }
+    benStatus.textContent='Buscando…';
     try{
-      var r=await api(USERS); if(!r.ok) throw new Error('HTTP '+r.status);
-      var users=await r.json(); renderUsers(users); usersStatus.textContent=users.length+' usuario(s).';
-    }catch(e){ usersStatus.textContent='Error: '+e.message; }
+      var r=await api(BEN+'?q='+encodeURIComponent(q)); if(!r.ok) throw new Error('HTTP '+r.status);
+      var d=await r.json(); benTbody.innerHTML='';
+      d.results.forEach(function(x){ var tr=document.createElement('tr'); tr.innerHTML='<td>'+esc(x.nombre)+'</td><td>'+esc(x.rfc)+'</td><td>'+esc(x.curp)+'</td><td>'+esc(x.funcion)+'</td><td>'+esc(x.cct)+'</td><td>'+esc(x.ct)+'</td>'; benTbody.appendChild(tr); });
+      if(d.count===0) benStatus.textContent='Sin coincidencias. Esa persona no aparece en el listado de beneficiarios.';
+      else benStatus.textContent=d.count+' coincidencia(s)'+(d.count>=100?' (mostrando las primeras 100)':'')+'. Las personas listadas cuentan con el beneficio.';
+    }catch(e){ benStatus.textContent='Error: '+e.message; }
+  }
+
+  // Usuarios
+  async function loadUsers(){
+    try{ var r=await api(USERS); if(!r.ok) throw new Error('HTTP '+r.status); var users=await r.json(); renderUsers(users); usersStatus.textContent=users.length+' usuario(s).'; }
+    catch(e){ usersStatus.textContent='Error: '+e.message; }
   }
   function renderUsers(users){
     usersTbody.innerHTML='';
     users.forEach(function(u){
       var tr=document.createElement('tr');
-      var sel='<select data-email="'+esc(u.email)+'" class="role-sel">'+
-        '<option value="operacion"'+(u.role==='operacion'?' selected':'')+'>Operación</option>'+
-        '<option value="administracion"'+(u.role==='administracion'?' selected':'')+'>Administración</option></select>';
-      tr.innerHTML='<td>'+esc(u.email)+'</td><td>'+sel+'</td>'+
-        '<td><button class="btn-mini" data-act="pass" data-email="'+esc(u.email)+'">Cambiar contraseña</button> '+
-        '<button class="btn-del" data-act="del" data-email="'+esc(u.email)+'">Eliminar</button></td>';
+      var sel='<select data-email="'+esc(u.email)+'" class="role-sel"><option value="operacion"'+(u.role==='operacion'?' selected':'')+'>Operación</option><option value="administracion"'+(u.role==='administracion'?' selected':'')+'>Administración</option></select>';
+      tr.innerHTML='<td>'+esc(u.email)+'</td><td>'+sel+'</td><td><button class="btn-mini" data-act="pass" data-email="'+esc(u.email)+'">Cambiar contraseña</button> <button class="btn-del" data-act="del" data-email="'+esc(u.email)+'">Eliminar</button></td>';
       usersTbody.appendChild(tr);
     });
     usersTbody.querySelectorAll('.role-sel').forEach(function(sl){ sl.addEventListener('change', function(){ setRole(sl.getAttribute('data-email'), sl.value); }); });
@@ -524,13 +554,11 @@
     usersTbody.querySelectorAll('[data-act=del]').forEach(function(b){ b.addEventListener('click', function(){ delUser(b.getAttribute('data-email')); }); });
   }
   formUser.addEventListener('submit', async function(e){
-    e.preventDefault();
-    var fd=new FormData(formUser); var em=fd.get('email'); var rol=fd.get('role'); var pw=fd.get('password');
+    e.preventDefault(); var fd=new FormData(formUser); var em=fd.get('email'); var rol=fd.get('role'); var pw=fd.get('password');
     if(!em||!pw){ alert('Escribe correo y contraseña temporal.'); return; }
     var btn=formUser.querySelector('button[type=submit]'); var old=btn.textContent; btn.disabled=true; btn.textContent='Creando…';
     try{ await postUsers({action:'create', email:em, role:rol, password:pw}); formUser.reset(); loadUsers(); alert('Usuario creado. Comparte la contraseña temporal con la persona.'); }
-    catch(err){ alert('Error al crear: '+err.message); }
-    finally{ btn.disabled=false; btn.textContent=old; }
+    catch(err){ alert('Error al crear: '+err.message); } finally{ btn.disabled=false; btn.textContent=old; }
   });
   async function postUsers(payload){ var r=await api(USERS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); if(!r.ok){ var d={}; try{d=await r.json();}catch(_){} throw new Error(d.error||('HTTP '+r.status)); } return r.json(); }
   async function setRole(em,rol){ try{ await postUsers({action:'setrole', email:em, role:rol}); loadUsers(); }catch(e){ alert('Error al cambiar rol: '+e.message); loadUsers(); } }
