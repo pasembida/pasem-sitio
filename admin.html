@@ -276,6 +276,8 @@
           <fieldset><legend>Datos del paciente / afiliado</legend>
             <div class="fgrid">
               <div class="field full"><label>Nombre completo del paciente</label><input name="paciente" type="text"></div>
+              <div class="field"><label>CURP</label><input name="curp" type="text" maxlength="18" style="text-transform:uppercase"></div>
+              <div class="field"><label>RFC</label><input name="rfc" type="text" maxlength="13" style="text-transform:uppercase"></div>
               <div class="field"><label>Número de afiliado</label><input name="numAfiliado" type="text"></div>
               <div class="field"><label>Parentesco con el titular</label><input name="parentesco" type="text"></div>
               <div class="field"><label>Plantel / dependencia (SNTE 26)</label><input name="plantel" type="text"></div>
@@ -328,7 +330,7 @@
           <div id="records-status"></div>
           <div class="table-wrap">
             <table id="records-table" class="dtable">
-              <thead><tr><th>Folio</th><th>F. emisión</th><th>Paciente</th><th>Núm. afiliado</th><th>Trámite</th><th>Cirugía / servicio</th><th>Servicios</th><th>Hospital</th><th>F. proc.</th><th>Capturó</th><th>Notificado</th><th></th></tr></thead>
+              <thead><tr><th>Folio</th><th>F. emisión</th><th>Paciente</th><th>CURP</th><th>RFC</th><th>Núm. afiliado</th><th>Trámite</th><th>Cirugía / servicio</th><th>Servicios</th><th>Hospital</th><th>F. proc.</th><th>Capturó</th><th>Notificado</th><th></th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
@@ -505,7 +507,7 @@
       var acts='<button class="btn-mini" data-act="print" data-id="'+esc(rec.id)+'">Imprimir</button> '+
                '<button class="btn-mini" data-act="notify" data-id="'+esc(rec.id)+'">Notificar SNTE</button>'+
                (isAdmin()?' <button class="btn-del" data-act="del" data-id="'+esc(rec.id)+'">Eliminar</button>':'');
-      tr.innerHTML='<td>'+esc(rec.folio)+'</td><td>'+esc(rec.fechaEmision)+'</td><td>'+esc(rec.paciente)+'</td><td>'+esc(rec.numAfiliado)+'</td><td>'+esc(rec.tipoTramite)+'</td><td>'+esc(rec.tipoServicio)+'</td><td>'+esc(serv)+'</td><td>'+esc(rec.hospital)+'</td><td>'+esc(rec.fechaProc)+'</td><td>'+esc(rec.capturadoPor)+'</td><td>'+(rec.notifiedAt?esc(fmtDate(rec.notifiedAt)):'—')+'</td><td style="white-space:nowrap;">'+acts+'</td>';
+      tr.innerHTML='<td>'+esc(rec.folio)+'</td><td>'+esc(rec.fechaEmision)+'</td><td>'+esc(rec.paciente)+'</td><td>'+esc(rec.curp)+'</td><td>'+esc(rec.rfc)+'</td><td>'+esc(rec.numAfiliado)+'</td><td>'+esc(rec.tipoTramite)+'</td><td>'+esc(rec.tipoServicio)+'</td><td>'+esc(serv)+'</td><td>'+esc(rec.hospital)+'</td><td>'+esc(rec.fechaProc)+'</td><td>'+esc(rec.capturadoPor)+'</td><td>'+(rec.notifiedAt?esc(fmtDate(rec.notifiedAt)):'—')+'</td><td style="white-space:nowrap;">'+acts+'</td>';
       tbody.appendChild(tr);
     });
     tbody.querySelectorAll('[data-act=print]').forEach(function(b){ b.addEventListener('click', function(){ printRecord(recById(b.getAttribute('data-id'))); }); });
@@ -551,6 +553,7 @@
     '<div class="chk">'+box(conf)+' Confirmación de servicio(s) del programa</div>'+
     '<div class="bar">2. DATOS DEL PACIENTE / AFILIADO</div>'+
     '<table class="f"><tr><td colspan="2"><div class="lbl">Nombre completo del paciente</div><div class="v">'+val(rec.paciente)+'</div></td></tr>'+
+      '<tr><td style="width:50%"><div class="lbl">CURP</div><div class="v">'+val(rec.curp)+'</div></td><td><div class="lbl">RFC</div><div class="v">'+val(rec.rfc)+'</div></td></tr>'+
       '<tr><td style="width:50%"><div class="lbl">Número de afiliado</div><div class="v">'+val(rec.numAfiliado)+'</div></td><td><div class="lbl">Parentesco con el titular</div><div class="v">'+val(rec.parentesco)+'</div></td></tr>'+
       '<tr><td><div class="lbl">Plantel / dependencia (SNTE 26)</div><div class="v">'+val(rec.plantel)+'</div></td><td><div class="lbl">Titular / trabajador afiliado</div><div class="v">'+val(rec.titular)+'</div></td></tr></table>'+
     '<div class="bar">3. DATOS DEL PROCEDIMIENTO O SERVICIO</div>'+
@@ -588,6 +591,8 @@
       'Tipo de trámite: '+(rec.tipoTramite||'—'),'',
       'PACIENTE / AFILIADO',
       'Nombre del paciente: '+(rec.paciente||'—'),
+      'CURP: '+(rec.curp||'—'),
+      'RFC: '+(rec.rfc||'—'),
       'Número de afiliado: '+(rec.numAfiliado||'—'),
       'Parentesco con el titular: '+(rec.parentesco||'—'),
       'Plantel / dependencia: '+(rec.plantel||'—'),
@@ -607,7 +612,7 @@
       'Capturó: '+(rec.capturadoPor||'—'),
       'Folio interno: '+(rec.id||'—')
     ];
-    var subject=encodeURIComponent('PASEM — Atención '+(rec.folio||rec.id||''));
+    var subject=encodeURIComponent('PASEM — Atención: '+(rec.paciente||'(sin nombre)')+' — '+(rec.folio||rec.id||''));
     var body=encodeURIComponent(L.join('\r\n'));
     var a=document.createElement('a');
     a.href='mailto:rodrigoperez@bidaseguros.org?subject='+subject+'&body='+body;
@@ -617,14 +622,14 @@
   async function delRecord(id){ if(!confirm('¿Eliminar este registro?')) return; try{ var r=await api(RECORDS+'?id='+encodeURIComponent(id),{method:'DELETE'}); if(!r.ok) throw new Error('HTTP '+r.status); loadRecords(); }catch(e){ alert('Error al eliminar: '+e.message); } }
   form.addEventListener('submit', async function(e){
     e.preventDefault(); var fd=new FormData(form);
-    var data={ folio:fd.get('folio'), fechaEmision:fd.get('fechaEmision'), tipoTramite:fd.get('tipoTramite'), paciente:fd.get('paciente'), numAfiliado:fd.get('numAfiliado'), parentesco:fd.get('parentesco'), plantel:fd.get('plantel'), titular:fd.get('titular'), diagnostico:fd.get('diagnostico'), tipoServicio:fd.get('tipoServicio'), medico:fd.get('medico'), cedula:fd.get('cedula'), hospital:fd.get('hospital'), fechaProc:fd.get('fechaProc'), servicios:fd.getAll('servicios'), estudiosDetalle:fd.get('estudiosDetalle'), observaciones:fd.get('observaciones'), cargo:fd.get('cargo'), fechaAutorizacion:fd.get('fechaAutorizacion') };
+    var data={ folio:fd.get('folio'), fechaEmision:fd.get('fechaEmision'), tipoTramite:fd.get('tipoTramite'), paciente:fd.get('paciente'), curp:fd.get('curp'), rfc:fd.get('rfc'), numAfiliado:fd.get('numAfiliado'), parentesco:fd.get('parentesco'), plantel:fd.get('plantel'), titular:fd.get('titular'), diagnostico:fd.get('diagnostico'), tipoServicio:fd.get('tipoServicio'), medico:fd.get('medico'), cedula:fd.get('cedula'), hospital:fd.get('hospital'), fechaProc:fd.get('fechaProc'), servicios:fd.getAll('servicios'), estudiosDetalle:fd.get('estudiosDetalle'), observaciones:fd.get('observaciones'), cargo:fd.get('cargo'), fechaAutorizacion:fd.get('fechaAutorizacion') };
     var btn=form.querySelector('button[type=submit]'); var old=btn.textContent; btn.disabled=true; btn.textContent='Guardando…';
     try{ var r=await api(RECORDS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}); if(!r.ok) throw new Error('HTTP '+r.status); form.reset(); loadRecords(); alert('Atención registrada.'); }
     catch(err){ alert('Error al registrar: '+err.message); } finally{ btn.disabled=false; btn.textContent=old; }
   });
   function exportCSV(){
     if(!records.length){ alert('No hay registros para exportar.'); return; }
-    var cols=['id','createdAt','capturadoPor','folio','fechaEmision','tipoTramite','paciente','numAfiliado','parentesco','plantel','titular','diagnostico','tipoServicio','medico','cedula','hospital','fechaProc','servicios','estudiosDetalle','observaciones','cargo','fechaAutorizacion'];
+    var cols=['id','createdAt','capturadoPor','folio','fechaEmision','tipoTramite','paciente','curp','rfc','numAfiliado','parentesco','plantel','titular','diagnostico','tipoServicio','medico','cedula','hospital','fechaProc','servicios','estudiosDetalle','observaciones','cargo','fechaAutorizacion'];
     var rows=records.map(function(rec){ return cols.map(function(c){ var v=rec[c]; if(Array.isArray(v)) v=v.join('; '); v=(v==null?'':String(v)); if(/[",\n]/.test(v)) v='"'+v.replace(/"/g,'""')+'"'; return v; }).join(','); });
     var csv=cols.join(',')+'\n'+rows.join('\n'); var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
     var url=URL.createObjectURL(blob); var a=document.createElement('a'); a.href=url; a.download='atenciones_pasem.csv'; a.click(); URL.revokeObjectURL(url);
