@@ -328,7 +328,7 @@
           <div id="records-status"></div>
           <div class="table-wrap">
             <table id="records-table" class="dtable">
-              <thead><tr><th>Folio</th><th>F. emisión</th><th>Paciente</th><th>Núm. afiliado</th><th>Trámite</th><th>Cirugía / servicio</th><th>Servicios</th><th>Hospital</th><th>F. proc.</th><th>Capturó</th><th></th></tr></thead>
+              <thead><tr><th>Folio</th><th>F. emisión</th><th>Paciente</th><th>Núm. afiliado</th><th>Trámite</th><th>Cirugía / servicio</th><th>Servicios</th><th>Hospital</th><th>F. proc.</th><th>Capturó</th><th>Notificado</th><th></th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
@@ -496,15 +496,123 @@
     try{ var r=await api(RECORDS); if(!r.ok) throw new Error('HTTP '+r.status); records=await r.json(); renderRecords(); statusEl.textContent=records.length+' atención(es) registrada(s).'; }
     catch(e){ statusEl.textContent='Error al cargar: '+e.message; }
   }
+  function fmtDate(iso){ if(!iso) return '—'; try{ var d=new Date(iso); return d.toLocaleString('es-MX',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); }catch(e){ return iso; } }
+  function recById(id){ return records.filter(function(r){ return r.id===id; })[0]; }
   function renderRecords(){
     tbody.innerHTML='';
     records.forEach(function(rec){
       var tr=document.createElement('tr'); var serv=(rec.servicios||[]).join(', ');
-      var del=isAdmin()?'<button class="btn-del" data-id="'+esc(rec.id)+'">Eliminar</button>':'';
-      tr.innerHTML='<td>'+esc(rec.folio)+'</td><td>'+esc(rec.fechaEmision)+'</td><td>'+esc(rec.paciente)+'</td><td>'+esc(rec.numAfiliado)+'</td><td>'+esc(rec.tipoTramite)+'</td><td>'+esc(rec.tipoServicio)+'</td><td>'+esc(serv)+'</td><td>'+esc(rec.hospital)+'</td><td>'+esc(rec.fechaProc)+'</td><td>'+esc(rec.capturadoPor)+'</td><td>'+del+'</td>';
+      var acts='<button class="btn-mini" data-act="print" data-id="'+esc(rec.id)+'">Imprimir</button> '+
+               '<button class="btn-mini" data-act="notify" data-id="'+esc(rec.id)+'">Notificar SNTE</button>'+
+               (isAdmin()?' <button class="btn-del" data-act="del" data-id="'+esc(rec.id)+'">Eliminar</button>':'');
+      tr.innerHTML='<td>'+esc(rec.folio)+'</td><td>'+esc(rec.fechaEmision)+'</td><td>'+esc(rec.paciente)+'</td><td>'+esc(rec.numAfiliado)+'</td><td>'+esc(rec.tipoTramite)+'</td><td>'+esc(rec.tipoServicio)+'</td><td>'+esc(serv)+'</td><td>'+esc(rec.hospital)+'</td><td>'+esc(rec.fechaProc)+'</td><td>'+esc(rec.capturadoPor)+'</td><td>'+(rec.notifiedAt?esc(fmtDate(rec.notifiedAt)):'—')+'</td><td style="white-space:nowrap;">'+acts+'</td>';
       tbody.appendChild(tr);
     });
-    if(isAdmin()){ tbody.querySelectorAll('.btn-del').forEach(function(b){ b.addEventListener('click', function(){ delRecord(b.getAttribute('data-id')); }); }); }
+    tbody.querySelectorAll('[data-act=print]').forEach(function(b){ b.addEventListener('click', function(){ printRecord(recById(b.getAttribute('data-id'))); }); });
+    tbody.querySelectorAll('[data-act=notify]').forEach(function(b){ b.addEventListener('click', function(){ notifyRecord(recById(b.getAttribute('data-id'))); }); });
+    tbody.querySelectorAll('[data-act=del]').forEach(function(b){ b.addEventListener('click', function(){ delRecord(b.getAttribute('data-id')); }); });
+  }
+  function val(v){ return (v==null||v==='')?'&nbsp;':esc(v); }
+  function printRecord(rec){
+    if(!rec) return;
+    var snte=(document.querySelector('.logo-snte')||{}).src||'';
+    var bida=(document.querySelector('.logo-bida')||{}).src||'';
+    var S=rec.servicios||[]; function has(x){ return S.indexOf(x)>=0; }
+    function box(on){ return '<span class="bx">'+(on?'&#10003;':'')+'</span>'; }
+    var aut = rec.tipoTramite==='Autorización de cirugía';
+    var conf = (rec.tipoTramite||'').indexOf('Confirmación')===0;
+    var html=''+
+    '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Formato PASEM '+val(rec.folio)+'</title>'+
+    '<style>'+
+    '@page{size:letter;margin:14mm;} *{box-sizing:border-box;} body{font-family:Arial,Helvetica,sans-serif; color:#222; font-size:11px; margin:0;}'+
+    '.hd{display:flex; align-items:center; justify-content:space-between; gap:10px;}'+
+    '.hd img{height:58px;} .hd .ctr{text-align:center; flex:1;}'+
+    '.hd .ctr .p1{font-size:11px; color:#333;} .hd .ctr .p2{font-family:Arial; font-weight:900; font-size:26px; color:#E06A1E; letter-spacing:1px; line-height:1;} .hd .ctr .p3{font-size:9px; color:#333;}'+
+    '.rule{border:0; border-top:2px solid #E06A1E; margin:6px 0 10px;}'+
+    '.title{text-align:center; color:#1F3A5F; font-size:13px; font-weight:bold; margin:0 0 10px;}'+
+    '.bar{background:#1F3A5F; color:#fff; font-weight:bold; font-size:10.5px; padding:5px 8px; margin:10px 0 0;}'+
+    'table.f{width:100%; border-collapse:collapse;} table.f td{border:1px solid #9aa6b5; padding:4px 7px; vertical-align:top;}'+
+    '.lbl{font-size:8.5px; color:#1F3A5F; font-weight:bold; text-transform:uppercase; letter-spacing:.3px;}'+
+    '.v{font-size:12px; min-height:15px;}'+
+    '.chk{display:flex; align-items:center; gap:8px; padding:4px 8px; border:1px solid #9aa6b5; border-top:0;}'+
+    '.bx{display:inline-block; width:13px; height:13px; border:1.5px solid #1F3A5F; text-align:center; line-height:12px; font-size:11px; color:#1F3A5F;}'+
+    '.note{font-size:8.5px; color:#555; font-style:italic; margin-top:14px; border-top:1px solid #ccc; padding-top:6px;}'+
+    '.sign{margin-top:26px; display:flex; gap:30px;} .sign div{flex:1; border-top:1px solid #333; padding-top:4px; font-size:9px; text-align:center; color:#333;}'+
+    '</style></head><body>'+
+    '<div class="hd">'+(snte?'<img src="'+snte+'">':'<span></span>')+
+      '<div class="ctr"><div class="p1">Programa de Apoyo de Servicios Médicos</div><div class="p2">PASEM</div><div class="p3">Sección 26 del SNTE · San Luis Potosí</div></div>'+
+      (bida?'<img src="'+bida+'">':'<span></span>')+'</div>'+
+    '<hr class="rule">'+
+    '<div class="title">FORMATO DE AUTORIZACIÓN Y/O CONFIRMACIÓN DE SERVICIOS MÉDICOS</div>'+
+    '<table class="f"><tr><td style="width:50%"><div class="lbl">Folio de control</div><div class="v">'+val(rec.folio)+'</div></td>'+
+      '<td><div class="lbl">Fecha de emisión (dd/mm/aaaa)</div><div class="v">'+val(rec.fechaEmision)+'</div></td></tr></table>'+
+    '<div class="bar">1. TIPO DE TRÁMITE</div>'+
+    '<div class="chk">'+box(aut)+' Autorización de cirugía</div>'+
+    '<div class="chk">'+box(conf)+' Confirmación de servicio(s) del programa</div>'+
+    '<div class="bar">2. DATOS DEL PACIENTE / AFILIADO</div>'+
+    '<table class="f"><tr><td colspan="2"><div class="lbl">Nombre completo del paciente</div><div class="v">'+val(rec.paciente)+'</div></td></tr>'+
+      '<tr><td style="width:50%"><div class="lbl">Número de afiliado</div><div class="v">'+val(rec.numAfiliado)+'</div></td><td><div class="lbl">Parentesco con el titular</div><div class="v">'+val(rec.parentesco)+'</div></td></tr>'+
+      '<tr><td><div class="lbl">Plantel / dependencia (SNTE 26)</div><div class="v">'+val(rec.plantel)+'</div></td><td><div class="lbl">Titular / trabajador afiliado</div><div class="v">'+val(rec.titular)+'</div></td></tr></table>'+
+    '<div class="bar">3. DATOS DEL PROCEDIMIENTO O SERVICIO</div>'+
+    '<table class="f"><tr><td colspan="2"><div class="lbl">Diagnóstico</div><div class="v">'+val(rec.diagnostico)+'</div></td></tr>'+
+      '<tr><td colspan="2"><div class="lbl">Tipo de cirugía o servicio solicitado</div><div class="v">'+val(rec.tipoServicio)+'</div></td></tr>'+
+      '<tr><td style="width:50%"><div class="lbl">Médico tratante</div><div class="v">'+val(rec.medico)+'</div></td><td><div class="lbl">Cédula profesional</div><div class="v">'+val(rec.cedula)+'</div></td></tr>'+
+      '<tr><td><div class="lbl">Hospital / unidad médica o proveedor</div><div class="v">'+val(rec.hospital)+'</div></td><td><div class="lbl">Fecha programada del procedimiento</div><div class="v">'+val(rec.fechaProc)+'</div></td></tr></table>'+
+    '<div class="bar">4. SERVICIOS PASEM A CONFIRMAR</div>'+
+    '<div class="chk">'+box(has('Consulta médica general'))+' Consulta médica general</div>'+
+    '<div class="chk">'+box(has('Consulta de especialidad'))+' Consulta de especialidad</div>'+
+    '<div class="chk">'+box(has('Estudios de laboratorio'))+' Estudios de laboratorio — especificar: '+val(rec.estudiosDetalle)+'</div>'+
+    '<div class="chk">'+box(has('Hospitalización'))+' Hospitalización</div>'+
+    '<div class="chk">'+box(has('Cirugía ambulatoria'))+' Cirugía ambulatoria</div>'+
+    '<div class="chk">'+box(has('Cirugía mayor'))+' Cirugía mayor</div>'+
+    '<div class="chk">'+box(has('Urgencias'))+' Urgencias</div>'+
+    '<div class="bar">5. OBSERVACIONES / CONDICIONES DE LA AUTORIZACIÓN</div>'+
+    '<table class="f"><tr><td style="height:50px"><div class="v">'+val(rec.observaciones)+'</div></td></tr></table>'+
+    '<div class="bar">6. AUTORIZACIÓN</div>'+
+    '<div class="sign"><div>'+val(rec.capturadoPor)+'<br>Nombre y firma del administrador del programa</div>'+
+      '<div>'+val(rec.cargo)+'<br>Cargo / puesto</div><div>'+val(rec.fechaAutorizacion)+'<br>Fecha</div></div>'+
+    '<div class="note">Este documento es de uso interno del Programa PASEM, SNTE Sección 26, y no sustituye, por sí mismo, las condiciones generales del convenio vigente. Conservar una copia en el expediente del afiliado. &nbsp;·&nbsp; Folio interno: '+val(rec.id)+'</div>'+
+    '</body></html>';
+    var w=window.open('','_blank');
+    if(!w){ alert('Permite las ventanas emergentes para imprimir.'); return; }
+    w.document.open(); w.document.write(html); w.document.close(); w.focus();
+    setTimeout(function(){ try{ w.print(); }catch(e){} }, 500);
+  }
+  async function notifyRecord(rec){
+    if(!rec) return;
+    var L=[
+      'PROGRAMA DE APOYO DE SERVICIOS MÉDICOS (PASEM) — SNTE Sección 26',
+      'Notificación de atención registrada','',
+      'Folio de control: '+(rec.folio||'—'),
+      'Fecha de emisión: '+(rec.fechaEmision||'—'),
+      'Tipo de trámite: '+(rec.tipoTramite||'—'),'',
+      'PACIENTE / AFILIADO',
+      'Nombre del paciente: '+(rec.paciente||'—'),
+      'Número de afiliado: '+(rec.numAfiliado||'—'),
+      'Parentesco con el titular: '+(rec.parentesco||'—'),
+      'Plantel / dependencia: '+(rec.plantel||'—'),
+      'Titular / trabajador afiliado: '+(rec.titular||'—'),'',
+      'PROCEDIMIENTO / SERVICIO',
+      'Diagnóstico: '+(rec.diagnostico||'—'),
+      'Tipo de cirugía o servicio: '+(rec.tipoServicio||'—'),
+      'Médico tratante: '+(rec.medico||'—'),
+      'Cédula profesional: '+(rec.cedula||'—'),
+      'Hospital / proveedor: '+(rec.hospital||'—'),
+      'Fecha programada: '+(rec.fechaProc||'—'),'',
+      'Servicios a confirmar: '+((rec.servicios||[]).join(', ')||'—'),
+      'Estudios de laboratorio: '+(rec.estudiosDetalle||'—'),'',
+      'Observaciones: '+(rec.observaciones||'—'),'',
+      'Cargo / puesto: '+(rec.cargo||'—'),
+      'Fecha de autorización: '+(rec.fechaAutorizacion||'—'),
+      'Capturó: '+(rec.capturadoPor||'—'),
+      'Folio interno: '+(rec.id||'—')
+    ];
+    var subject=encodeURIComponent('PASEM — Atención '+(rec.folio||rec.id||''));
+    var body=encodeURIComponent(L.join('\r\n'));
+    var a=document.createElement('a');
+    a.href='mailto:rodrigoperez@bidaseguros.org?subject='+subject+'&body='+body;
+    a.style.display='none'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    try{ var r=await api(RECORDS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'notify',id:rec.id})}); if(r.ok){ loadRecords(); } }catch(e){}
   }
   async function delRecord(id){ if(!confirm('¿Eliminar este registro?')) return; try{ var r=await api(RECORDS+'?id='+encodeURIComponent(id),{method:'DELETE'}); if(!r.ok) throw new Error('HTTP '+r.status); loadRecords(); }catch(e){ alert('Error al eliminar: '+e.message); } }
   form.addEventListener('submit', async function(e){
