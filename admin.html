@@ -285,6 +285,19 @@
         <div class="table-wrap"><table class="dtable" id="exp-modal-table"><thead><tr><th>Archivo</th><th>Descripción</th><th>Fecha</th><th></th></tr></thead><tbody></tbody></table></div>
       </div></div>
 
+      <!-- Ventana de envío de correo (vista previa) -->
+      <div id="mail-modal" class="exp-modal"><div class="exp-box">
+        <div class="exp-head"><strong>Enviar notificación por correo</strong><button type="button" class="btn btn-ghost" id="mail-close">Cerrar</button></div>
+        <div class="fgrid">
+          <div class="field"><label>Para</label><input id="mail-to" type="text" readonly></div>
+          <div class="field"><label>Con copia (CC)</label><input id="mail-cc" type="text" readonly></div>
+        </div>
+        <div class="field" style="margin-top:10px;"><label>Asunto</label><input id="mail-subject" type="text"></div>
+        <div class="field" style="margin-top:10px;"><label>Mensaje (puedes editarlo antes de enviar)</label><textarea id="mail-body" style="min-height:240px"></textarea></div>
+        <div id="mail-status" style="font-size:13px;color:var(--ink);margin:8px 0;"></div>
+        <div style="display:flex;gap:8px;"><button class="btn btn-primary" id="mail-send" type="button">Enviar</button><button class="btn btn-ghost" id="mail-cancel" type="button">Cancelar</button></div>
+      </div></div>
+
       <div class="tabs" id="tabs">
         <button class="tab active" type="button" data-pane="solicitud">Solicitud de servicio</button>
         <button class="tab" type="button" data-pane="autorizacion">Autorización</button>
@@ -625,6 +638,33 @@
   var AUTH='/.netlify/functions/auth', RECORDS='/.netlify/functions/records', USERS='/.netlify/functions/usuarios', BEN='/.netlify/functions/beneficiarios', EXPED='/.netlify/functions/expediente';
   var SOLIC='/.netlify/functions/solicitudes', DEPS='/.netlify/functions/dependientes', TITU='/.netlify/functions/titulares';
   var STAGE_MAIL='telesecundariaseccion26@pasem.com';
+  var MAIL='/.netlify/functions/enviar-correo', MAIL_TO='telesecundariaseccion26@pasem.com', MAIL_CC='bidaseguros@bidaseguros.org';
+  var _mailOnSent=null;
+  function openMail(subject, bodyText, onSent){
+    document.getElementById('mail-to').value=MAIL_TO;
+    document.getElementById('mail-cc').value=MAIL_CC;
+    document.getElementById('mail-subject').value=subject||'';
+    document.getElementById('mail-body').value=bodyText||'';
+    document.getElementById('mail-status').textContent='';
+    _mailOnSent=onSent||null;
+    document.getElementById('mail-modal').classList.add('open');
+  }
+  function closeMail(){ document.getElementById('mail-modal').classList.remove('open'); }
+  if(document.getElementById('mail-close')) document.getElementById('mail-close').addEventListener('click', closeMail);
+  if(document.getElementById('mail-cancel')) document.getElementById('mail-cancel').addEventListener('click', closeMail);
+  if(document.getElementById('mail-modal')) document.getElementById('mail-modal').addEventListener('click', function(e){ if(e.target.id==='mail-modal') closeMail(); });
+  if(document.getElementById('mail-send')) document.getElementById('mail-send').addEventListener('click', async function(){
+    var st=document.getElementById('mail-status'); var btn=this; var old=btn.textContent; btn.disabled=true; btn.textContent='Enviando…'; st.textContent='';
+    try{
+      var payload={ to:MAIL_TO, cc:MAIL_CC, subject:document.getElementById('mail-subject').value, text:document.getElementById('mail-body').value };
+      var r=await api(MAIL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      var d={}; try{ d=await r.json(); }catch(_){ }
+      if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
+      st.textContent='Enviado ✅';
+      if(_mailOnSent){ try{ await _mailOnSent(); }catch(e){} }
+      setTimeout(closeMail, 900);
+    }catch(e){ st.textContent='Error al enviar: '+e.message; } finally{ btn.disabled=false; btn.textContent=old; }
+  });
   var ETAPAS={1:'Solicitud de atención',2:'Solicitud de documentación',3:'Autorización generada',4:'Servicio otorgado'};
   var TK='pasem_token', RL='pasem_role', EM='pasem_email';
   var gate=document.getElementById('admin-gate'), panel=document.getElementById('admin-panel');
@@ -858,12 +898,9 @@
       'Capturó: '+(rec.capturadoPor||'—'),
       'Folio interno: '+(rec.id||'—')
     ];
-    var subject=encodeURIComponent('PASEM — Atención: '+(rec.paciente||'(sin nombre)')+' — '+(rec.folio||rec.id||''));
-    var body=encodeURIComponent(L.join('\r\n'));
-    var a=document.createElement('a');
-    a.href='mailto:rodrigoperez@bidaseguros.org?subject='+subject+'&body='+body;
-    a.style.display='none'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    try{ var r=await api(RECORDS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'notify',id:rec.id})}); if(r.ok){ loadRecords(); } }catch(e){}
+    openMail('PASEM — Atención: '+(rec.paciente||'(sin nombre)')+' — '+(rec.folio||rec.id||''), L.join('\n'), async function(){
+      try{ var r=await api(RECORDS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'notify',id:rec.id})}); if(r.ok){ loadRecords(); } }catch(e){}
+    });
   }
   async function delRecord(id){ if(!confirm('¿Eliminar este registro?')) return; try{ var r=await api(RECORDS+'?id='+encodeURIComponent(id),{method:'DELETE'}); if(!r.ok) throw new Error('HTTP '+r.status); loadRecords(); }catch(e){ alert('Error al eliminar: '+e.message); } }
   form.addEventListener('submit', async function(e){
@@ -1034,9 +1071,9 @@
     var L=['PROGRAMA DE APOYO DE SERVICIOS MÉDICOS (PASEM) — SNTE Sección 26','Notificación de etapa '+etapa+': '+nombreEtapa,'',
       'Folio de control: '+(s.folio||'—'),'Folio ELEONOR: '+(s.folioEleonor||'—'),'Nombre: '+(s.nombre||'—'),'Certificado: '+(s.certificado||'—'),
       'CURP: '+(s.curp||'—'),'RFC: '+(s.rfc||'—'),'Tipo de trámite: '+(s.tipoTramite||'—'),'Comentarios: '+(s.comentarios||'—'),'','Folio interno: '+(s.id||'—')];
-    var subject=encodeURIComponent('PASEM — Etapa '+etapa+' ('+nombreEtapa+'): '+(s.nombre||''));
-    var a=document.createElement('a'); a.href='mailto:'+STAGE_MAIL+'?subject='+subject+'&body='+encodeURIComponent(L.join('\r\n')); a.style.display='none'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    try{ var r=await api(SOLIC,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'stage', id:s.id, etapa:String(etapa)})}); if(r.ok) loadSolic(); }catch(e){}
+    openMail('PASEM — Etapa '+etapa+' ('+nombreEtapa+'): '+(s.nombre||''), L.join('\n'), async function(){
+      try{ var r=await api(SOLIC,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'stage', id:s.id, etapa:String(etapa)})}); if(r.ok) loadSolic(); }catch(e){}
+    });
   }
   function loadToAuth(id){
     var s=solById(id); if(!s) return;
