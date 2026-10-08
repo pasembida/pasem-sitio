@@ -1,5 +1,7 @@
 import crypto from 'node:crypto';
 import DATA from './lib/beneficiarios.json';
+import { getStore } from '@netlify/blobs';
+function makeStore(name){ const siteID=process.env.NETLIFY_SITE_ID||process.env.SITE_ID; const token=process.env.NETLIFY_API_TOKEN||process.env.NETLIFY_AUTH_TOKEN; if(siteID&&token) return getStore({name,siteID,token}); return getStore(name); }
 
 const SECRET = process.env.SESSION_SECRET || 'pasem-secret-cambiar';
 function b64url(buf){ return Buffer.from(buf).toString('base64').replace(/=+$/,'').replace(/\+/g,'-').replace(/\//g,'_'); }
@@ -29,13 +31,21 @@ export const handler = async (event) => {
   if(q.length<2) return {statusCode:200,headers,body:JSON.stringify({total:DATA.length, count:0, results:[]})};
 
   const terms=q.split(/\s+/).filter(Boolean);
-  const matches=[];
-  for(let i=0;i<INDEX.length;i++){
-    const hay=INDEX[i];
-    let ok=true;
-    for(const t of terms){ if(hay.indexOf(t)<0){ ok=false; break; } }
-    if(ok){ matches.push(DATA[i]); if(matches.length>=100) break; }
+  function matchAll(hay){ for(const t of terms){ if(hay.indexOf(t)<0) return false; } return true; }
+  const results=[];
+  for(let i=0;i<INDEX.length && results.length<100;i++){
+    if(matchAll(INDEX[i])){ const x=DATA[i]; results.push({cert:x.ce,tipo:'Titular',nombre:x.n,rfc:x.r,curp:x.c,funcion:x.f,cct:x.cct,ct:x.t,nivel:x.nv}); }
   }
-  const results=matches.map(x=>({nombre:x.n,rfc:x.r,curp:x.c,funcion:x.f,cct:x.cct,ct:x.t,nivel:x.nv}));
+  // dependientes dados de alta
+  try{
+    const dstore=makeStore('pasem-dependientes');
+    const { blobs }=await dstore.list();
+    const deps=(await Promise.all(blobs.map(b=>dstore.get(b.key,{type:'json'})))).filter(Boolean);
+    for(const d of deps){
+      if(results.length>=150) break;
+      const hay=norm([d.cert,d.nombre,d.curp,d.rfc,d.titularCert,d.titularNombre,d.parentesco].join(' '));
+      if(matchAll(hay)){ results.push({cert:d.cert,tipo:'Dependiente',nombre:d.nombre,rfc:d.rfc,curp:d.curp,funcion:d.parentesco,cct:'',ct:'Titular: '+(d.titularNombre||d.titularCert),nivel:''}); }
+    }
+  }catch(e){}
   return {statusCode:200,headers,body:JSON.stringify({total:DATA.length, count:results.length, results})};
 };

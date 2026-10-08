@@ -266,23 +266,77 @@
       </div>
 
       <div class="tabs" id="tabs">
-        <button class="tab active" type="button" data-pane="registrar">Registrar atención</button>
+        <button class="tab active" type="button" data-pane="solicitud">Solicitud de servicio</button>
+        <button class="tab" type="button" data-pane="autorizacion">Autorización</button>
         <button class="tab" type="button" data-pane="consulta">Consulta de beneficiarios</button>
+        <button class="tab" type="button" data-pane="dependientes">Dependientes</button>
         <button class="tab" type="button" data-pane="descargas">Descargas</button>
         <button class="tab" type="button" data-pane="expediente">Expediente</button>
         <button class="tab" type="button" data-pane="usuarios" id="tab-usuarios-btn" style="display:none;">Usuarios</button>
       </div>
 
       <!-- Registrar atención -->
-      <div class="tabpane active" id="pane-registrar">
+      <!-- Solicitud de servicio -->
+      <div class="tabpane active" id="pane-solicitud">
+        <h3 style="font-family:var(--serif); color:var(--brown-deep); margin:0 0 6px;">1. Solicitud de servicio</h3>
+        <p style="color:var(--ink); font-size:14px; margin:0 0 14px;">Registra la solicitud inicial del afiliado. Después pasará al historial y luego a Autorización.</p>
+        <form id="form-solicitud" class="admin-form card" style="margin-bottom:18px;">
+          <fieldset><legend>Datos de la solicitud</legend>
+            <div class="fgrid">
+              <div class="field"><label>Folio de control</label><input name="folio" type="text"></div>
+              <div class="field"><label>Folio ELEONOR (opcional)</label><input name="folioEleonor" type="text"></div>
+              <div class="field full"><label>Nombre completo <span style="font-weight:400;color:var(--ink)">(busca en la base con la lupa)</span></label>
+                <div class="paciente-wrap">
+                  <input name="nombre" id="s-nombre" type="text" autocomplete="off">
+                  <button type="button" class="ben-ico" id="btn-sol-pick" title="Buscar en base de beneficiarios">🔍</button>
+                  <div class="ben-pick" id="sol-pick"></div>
+                </div>
+              </div>
+              <div class="field"><label>CURP</label><input name="curp" type="text" maxlength="18"></div>
+              <div class="field"><label>RFC</label><input name="rfc" type="text" maxlength="13"></div>
+              <div class="field"><label>No. de certificado</label><input name="certificado" type="text"></div>
+              <div class="field"><label>Tipo de trámite</label>
+                <select name="tipoTramite"><option value="">Selecciona…</option><option>CIRUGIA</option><option>APOYO PARTO O CESAREA</option><option>CONSULTA MEDICO GENERAL</option><option>CONSULTA ESPECIALISTA</option><option>ESTUDIO LABORATORIO</option></select></div>
+              <div class="field full"><label>Comentarios adicionales</label><textarea name="comentarios"></textarea></div>
+            </div>
+          </fieldset>
+          <button class="btn btn-primary" type="submit">Registrar solicitud</button>
+        </form>
+
+        <div class="admin-records-head">
+          <h3 style="margin:0;">Historial de solicitudes</h3>
+          <div class="actions"><button class="btn btn-ghost" id="sol-refresh" type="button">Actualizar</button></div>
+        </div>
+        <div id="sol-status"></div>
+        <div class="table-wrap">
+          <table id="sol-table" class="dtable">
+            <thead><tr><th>Folio</th><th>Fecha</th><th>Nombre</th><th>Certificado</th><th>Tipo</th><th>Etapa</th><th>Notificar etapa</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Autorización -->
+      <div class="tabpane" id="pane-autorizacion">
+        <h3 style="font-family:var(--serif); color:var(--brown-deep); margin:0 0 6px;">2. Registro de autorización</h3>
+        <div class="card" style="margin-bottom:16px;">
+          <div class="fgrid">
+            <div class="field"><label>Cargar solicitud</label>
+              <select id="auth-pick"><option value="">Selecciona una solicitud…</option></select></div>
+            <div class="field" style="align-self:end;"><button class="btn btn-ghost" id="btn-auth-load" type="button">Cargar datos de la solicitud</button></div>
+          </div>
+          <p id="auth-loaded" style="font-size:13px;color:var(--ochre);margin:8px 0 0;"></p>
+        </div>
         <form id="form-atencion" class="admin-form card">
+          <input type="hidden" name="solicitudId" id="f-solicitudId">
           <fieldset><legend>Control</legend>
             <div class="fgrid">
               <div class="field"><label>Folio de control</label><input name="folio" type="text"></div>
               <div class="field"><label>Folio ELEONOR (opcional)</label><input name="folioEleonor" type="text"></div>
               <div class="field"><label>Fecha de emisión</label><input name="fechaEmision" type="date"></div>
               <div class="field"><label>Tipo de trámite</label>
-                <select name="tipoTramite"><option value="">Selecciona…</option><option value="CIRUGIA">CIRUGÍA</option><option value="LABORATORIO">LABORATORIO</option><option value="CONSULTA MEDICO GENERAL">CONSULTA MÉDICO GENERAL</option><option value="CONSULTA MEDICO ESPECIALISTA">CONSULTA MÉDICO ESPECIALISTA</option></select></div>
+                <select name="tipoTramite"><option value="">Selecciona…</option><option>CIRUGIA</option><option>APOYO PARTO O CESAREA</option><option>CONSULTA MEDICO GENERAL</option><option>CONSULTA ESPECIALISTA</option><option>ESTUDIO LABORATORIO</option></select></div>
+              <input type="hidden" name="certificado" id="f-certificado">
             </div>
           </fieldset>
           <fieldset><legend>Datos del paciente / afiliado</legend>
@@ -366,7 +420,7 @@
         <div id="ben-status"></div>
         <div class="table-wrap">
           <table id="ben-table" class="dtable">
-            <thead><tr><th>Nombre</th><th>RFC</th><th>CURP</th><th>Función</th><th>CCT</th><th>Centro de trabajo</th></tr></thead>
+            <thead><tr><th>Certificado</th><th>Tipo</th><th>Nombre</th><th>RFC</th><th>CURP</th><th>Función</th><th>CCT</th><th>Centro de trabajo</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
@@ -381,6 +435,47 @@
           <span class="meta"><b>Formato de Autorización y/o Confirmación de Servicios Médicos</b><span>PDF · uso interno PASEM</span></span>
           <span class="go">Descargar</span>
         </a>
+      </div>
+
+      <!-- Dependientes -->
+      <div class="tabpane" id="pane-dependientes">
+        <h3 style="font-family:var(--serif); color:var(--brown-deep); margin:0 0 6px;">Alta de dependientes</h3>
+        <p style="color:var(--ink); font-size:14px; margin:0 0 14px;">Registra dependientes de un titular. El certificado se asigna automáticamente: certificado del titular + letra (A, B, C…).</p>
+        <form id="form-dep" class="admin-form card" style="margin-bottom:16px;">
+          <fieldset><legend>Titular</legend>
+            <div class="fgrid">
+              <div class="field full"><label>Buscar titular (nombre, CURP o certificado)</label>
+                <div class="paciente-wrap">
+                  <input id="dep-tit" type="text" autocomplete="off">
+                  <button type="button" class="ben-ico" id="btn-dep-pick" title="Buscar titular">🔍</button>
+                  <div class="ben-pick" id="dep-pick"></div>
+                </div>
+              </div>
+              <div class="field"><label>Certificado del titular</label><input name="titularCert" id="dep-cert" type="text" readonly></div>
+              <div class="field"><label>Nombre del titular</label><input name="titularNombre" id="dep-nom" type="text" readonly></div>
+            </div>
+          </fieldset>
+          <fieldset><legend>Datos del dependiente</legend>
+            <div class="fgrid">
+              <div class="field full"><label>Nombre completo del dependiente</label><input name="nombre" type="text"></div>
+              <div class="field"><label>Parentesco</label><select name="parentesco"><option value="">Selecciona…</option><option>CONYUGE</option><option>CONCUBINA</option><option>HIJO(A)</option><option>PADRES</option></select></div>
+              <div class="field"><label>CURP</label><input name="curp" type="text" maxlength="18"></div>
+              <div class="field"><label>RFC</label><input name="rfc" type="text" maxlength="13"></div>
+            </div>
+          </fieldset>
+          <button class="btn btn-primary" type="submit">Dar de alta dependiente</button>
+        </form>
+        <div class="search-row">
+          <input id="dep-q" type="text" placeholder="Buscar dependiente por nombre, CURP o certificado…">
+          <button class="btn btn-ghost" id="dep-refresh" type="button">Actualizar</button>
+        </div>
+        <div id="dep-status"></div>
+        <div class="table-wrap">
+          <table id="dep-table" class="dtable">
+            <thead><tr><th>Certificado</th><th>Dependiente</th><th>Parentesco</th><th>CURP</th><th>Titular</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
 
       <!-- Expediente -->
@@ -468,6 +563,9 @@
 <script>
 (function(){
   var AUTH='/.netlify/functions/auth', RECORDS='/.netlify/functions/records', USERS='/.netlify/functions/usuarios', BEN='/.netlify/functions/beneficiarios', EXPED='/.netlify/functions/expediente';
+  var SOLIC='/.netlify/functions/solicitudes', DEPS='/.netlify/functions/dependientes';
+  var STAGE_MAIL='telesecundariaseccion26@pasem.com';
+  var ETAPAS={1:'Solicitud de atención',2:'Solicitud de documentación',3:'Autorización generada',4:'Servicio otorgado'};
   var TK='pasem_token', RL='pasem_role', EM='pasem_email';
   var gate=document.getElementById('admin-gate'), panel=document.getElementById('admin-panel');
   var userLbl=document.getElementById('admin-user');
@@ -500,16 +598,19 @@
     document.querySelectorAll('.tabpane').forEach(function(p){ p.classList.toggle('active', p.id==='pane-'+name); });
     if(name==='usuarios' && isAdmin()) loadUsers();
     if(name==='expediente') loadExp();
+    if(name==='solicitud') loadSolic();
+    if(name==='autorizacion'){ loadRecords(); loadAuthPicker(); }
+    if(name==='dependientes') loadDeps();
   }
   // Mayúsculas sin acento en los campos de texto del formulario
   function up(s){ return String(s||'').toUpperCase().replace(/[ÁÀÄÂ]/g,'A').replace(/[ÉÈËÊ]/g,'E').replace(/[ÍÌÏÎ]/g,'I').replace(/[ÓÒÖÔ]/g,'O').replace(/[ÚÙÜÛ]/g,'U'); }
-  document.querySelectorAll('#form-atencion input[type=text], #form-atencion textarea').forEach(function(el){
+  document.querySelectorAll('#form-atencion input[type=text], #form-atencion textarea, #form-solicitud input[type=text], #form-solicitud textarea, #form-dep input[type=text]').forEach(function(el){
     el.addEventListener('input', function(){ var p=el.selectionStart; el.value=up(el.value); try{ el.setSelectionRange(p,p); }catch(e){} });
   });
   // "Datos del procedimiento" solo habilitado para CIRUGÍA
   var tipoSel=document.querySelector('#form-atencion select[name=tipoTramite]');
   var fsProc=document.getElementById('fs-proc');
-  function syncProc(){ var cir=(tipoSel.value==='CIRUGIA'); fsProc.disabled=!cir; }
+  function syncProc(){ var v=tipoSel.value; var on=(v==='CIRUGIA'||v==='APOYO PARTO O CESAREA'); fsProc.disabled=!on; }
   tipoSel.addEventListener('change', syncProc); syncProc();
   // Buscar paciente en la base de beneficiarios
   var fPac=document.getElementById('f-paciente'), benPick=document.getElementById('ben-pick');
@@ -534,10 +635,11 @@
     f.querySelector('[name=paciente]').value=up(x.nombre||'');
     f.querySelector('[name=curp]').value=up(x.curp||'');
     f.querySelector('[name=rfc]').value=up(x.rfc||'');
+    var na=f.querySelector('[name=numAfiliado]'); if(na) na.value=(x.cert||'');
     var pl=f.querySelector('[name=plantel]'); if(pl) pl.value=up(x.ct||'');
     benPick.classList.remove('open'); benPick.innerHTML='';
   }
-  document.addEventListener('click', function(e){ if(benPick && !benPick.contains(e.target) && e.target.id!=='btn-ben-pick' && e.target.id!=='f-paciente'){ benPick.classList.remove('open'); } });
+  document.addEventListener('click', function(e){ if(e.target.classList && e.target.classList.contains('ben-ico')) return; document.querySelectorAll('.ben-pick').forEach(function(pk){ if(!pk.contains(e.target)) pk.classList.remove('open'); }); });
 
   if(tok()){ showPanel(); } else { showGate(); }
 
@@ -546,8 +648,7 @@
     gate.style.display='none'; panel.style.display='';
     userLbl.textContent='Sesión: '+email()+' · '+roleLabel(role());
     document.getElementById('tab-usuarios-btn').style.display = isAdmin()?'':'none';
-    activate('registrar');
-    loadRecords();
+    activate('solicitud');
   }
   async function doLogin(){
     loginMsg.textContent='';
@@ -706,9 +807,15 @@
   async function delRecord(id){ if(!confirm('¿Eliminar este registro?')) return; try{ var r=await api(RECORDS+'?id='+encodeURIComponent(id),{method:'DELETE'}); if(!r.ok) throw new Error('HTTP '+r.status); loadRecords(); }catch(e){ alert('Error al eliminar: '+e.message); } }
   form.addEventListener('submit', async function(e){
     e.preventDefault(); var fd=new FormData(form);
-    var data={ folio:fd.get('folio'), folioEleonor:fd.get('folioEleonor'), fechaEmision:fd.get('fechaEmision'), tipoTramite:fd.get('tipoTramite'), paciente:fd.get('paciente'), curp:fd.get('curp'), rfc:fd.get('rfc'), numAfiliado:fd.get('numAfiliado'), parentesco:fd.get('parentesco'), plantel:fd.get('plantel'), titular:fd.get('titular'), diagnostico:fd.get('diagnostico'), tipoServicio:fd.get('tipoServicio'), medico:fd.get('medico'), cedula:fd.get('cedula'), hospital:fd.get('hospital'), fechaProc:fd.get('fechaProc'), servicios:fd.getAll('servicios'), estudiosDetalle:fd.get('estudiosDetalle'), observaciones:fd.get('observaciones'), autoriza:fd.get('autoriza'), cargo:fd.get('cargo'), fechaAutorizacion:fd.get('fechaAutorizacion') };
+    var data={ solicitudId:fd.get('solicitudId'), certificado:fd.get('certificado'), folio:fd.get('folio'), folioEleonor:fd.get('folioEleonor'), fechaEmision:fd.get('fechaEmision'), tipoTramite:fd.get('tipoTramite'), paciente:fd.get('paciente'), curp:fd.get('curp'), rfc:fd.get('rfc'), numAfiliado:fd.get('numAfiliado'), parentesco:fd.get('parentesco'), plantel:fd.get('plantel'), titular:fd.get('titular'), diagnostico:fd.get('diagnostico'), tipoServicio:fd.get('tipoServicio'), medico:fd.get('medico'), cedula:fd.get('cedula'), hospital:fd.get('hospital'), fechaProc:fd.get('fechaProc'), servicios:fd.getAll('servicios'), estudiosDetalle:fd.get('estudiosDetalle'), observaciones:fd.get('observaciones'), autoriza:fd.get('autoriza'), cargo:fd.get('cargo'), fechaAutorizacion:fd.get('fechaAutorizacion') };
     var btn=form.querySelector('button[type=submit]'); var old=btn.textContent; btn.disabled=true; btn.textContent='Guardando…';
-    try{ var r=await api(RECORDS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}); if(!r.ok) throw new Error('HTTP '+r.status); form.reset(); loadRecords(); alert('Atención registrada.'); }
+    try{
+      var r=await api(RECORDS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}); if(!r.ok) throw new Error('HTTP '+r.status);
+      var created=await r.json();
+      if(data.solicitudId){ try{ await api(SOLIC,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'authorize', id:data.solicitudId, atencionId:created.id})}); }catch(e){} }
+      form.reset(); document.getElementById('f-solicitudId').value=''; document.getElementById('f-certificado').value=''; var al=document.getElementById('auth-loaded'); if(al) al.textContent=''; syncProc(); loadRecords();
+      alert('Autorización registrada. La atención quedó en el registro'+(data.solicitudId?' y la solicitud pasó a «Autorización generada».':'.'));
+    }
     catch(err){ alert('Error al registrar: '+err.message); } finally{ btn.disabled=false; btn.textContent=old; }
   });
   function exportCSV(){
@@ -727,7 +834,7 @@
     try{
       var r=await api(BEN+'?q='+encodeURIComponent(q)); if(!r.ok) throw new Error('HTTP '+r.status);
       var d=await r.json(); benTbody.innerHTML='';
-      d.results.forEach(function(x){ var tr=document.createElement('tr'); tr.innerHTML='<td>'+esc(x.nombre)+'</td><td>'+esc(x.rfc)+'</td><td>'+esc(x.curp)+'</td><td>'+esc(x.funcion)+'</td><td>'+esc(x.cct)+'</td><td>'+esc(x.ct)+'</td>'; benTbody.appendChild(tr); });
+      d.results.forEach(function(x){ var tr=document.createElement('tr'); tr.innerHTML='<td><strong>'+esc(x.cert)+'</strong></td><td>'+esc(x.tipo||'')+'</td><td>'+esc(x.nombre)+'</td><td>'+esc(x.rfc)+'</td><td>'+esc(x.curp)+'</td><td>'+esc(x.funcion)+'</td><td>'+esc(x.cct)+'</td><td>'+esc(x.ct)+'</td>'; benTbody.appendChild(tr); });
       if(d.count===0) benStatus.textContent='Sin coincidencias. Esa persona no aparece en el listado de beneficiarios.';
       else benStatus.textContent=d.count+' coincidencia(s)'+(d.count>=100?' (mostrando las primeras 100)':'')+'. Las personas listadas cuentan con el beneficio.';
     }catch(e){ benStatus.textContent='Error: '+e.message; }
@@ -803,6 +910,132 @@
     catch(e){ alert('Error al descargar: '+e.message); }
   }
   async function delExp(id){ if(!confirm('¿Eliminar este documento?')) return; try{ var r=await api(EXPED,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id:id})}); if(!r.ok) throw new Error('HTTP '+r.status); loadExp(); }catch(e){ alert('Error: '+e.message); } }
+
+  // ===== Solicitud de servicio =====
+  var formSol=document.getElementById('form-solicitud'), solStatus=document.getElementById('sol-status'), solTbody=document.querySelector('#sol-table tbody');
+  var solicitudes=[];
+  if(document.getElementById('sol-refresh')) document.getElementById('sol-refresh').addEventListener('click', loadSolic);
+  if(formSol) formSol.addEventListener('submit', async function(e){
+    e.preventDefault(); var fd=new FormData(formSol);
+    if(!fd.get('nombre')){ alert('Escribe el nombre.'); return; }
+    var payload={ action:'create', folio:fd.get('folio'), folioEleonor:fd.get('folioEleonor'), nombre:fd.get('nombre'), curp:fd.get('curp'), rfc:fd.get('rfc'), certificado:fd.get('certificado'), tipoTramite:fd.get('tipoTramite'), comentarios:fd.get('comentarios') };
+    var btn=formSol.querySelector('button[type=submit]'), old=btn.textContent; btn.disabled=true; btn.textContent='Guardando…';
+    try{
+      var r=await api(SOLIC,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      if(!r.ok){ var d={}; try{ d=await r.json(); }catch(_){ } throw new Error(d.error||('HTTP '+r.status)); }
+      var s=await r.json(); formSol.reset(); loadSolic();
+      if(confirm('Solicitud registrada (Etapa 1: Solicitud de atención).\n¿Enviar la notificación de Etapa 1 por correo?')) notifyStage(s,1);
+    }catch(err){ alert('Error: '+err.message); } finally{ btn.disabled=false; btn.textContent=old; }
+  });
+  async function loadSolic(){ if(!solStatus) return; solStatus.textContent='Cargando…'; try{ var r=await api(SOLIC); if(!r.ok) throw new Error('HTTP '+r.status); solicitudes=await r.json(); renderSolic(); solStatus.textContent=solicitudes.length+' solicitud(es).'; }catch(e){ solStatus.textContent='Error: '+e.message; } }
+  function solById(id){ return solicitudes.filter(function(s){ return s.id===id; })[0]; }
+  function etapaActual(s){ var m=0; if(s&&s.etapas){ ['1','2','3','4'].forEach(function(k){ if(s.etapas[k]) m=Math.max(m,parseInt(k,10)); }); } return m; }
+  function renderSolic(){
+    solTbody.innerHTML='';
+    solicitudes.forEach(function(s){
+      var tr=document.createElement('tr');
+      var e=etapaActual(s); var etLbl=e?(e+'. '+ETAPAS[e]):'—';
+      var sel='<select class="st-sel" data-id="'+esc(s.id)+'"><option value="1">1. Solicitud de atención</option><option value="2">2. Solicitud de documentación</option><option value="3">3. Autorización generada</option><option value="4">4. Servicio otorgado</option></select> <button class="btn-mini" data-act="stage" data-id="'+esc(s.id)+'">Notificar</button>';
+      var act='<button class="btn-mini" data-act="toauth" data-id="'+esc(s.id)+'">Autorizar →</button>'+(isAdmin()?' <button class="btn-del" data-act="soldel" data-id="'+esc(s.id)+'">Eliminar</button>':'');
+      tr.innerHTML='<td>'+esc(s.folio)+'</td><td>'+esc(fmtDate(s.createdAt))+'</td><td>'+esc(s.nombre)+'</td><td>'+esc(s.certificado)+'</td><td>'+esc(s.tipoTramite)+'</td><td>'+esc(etLbl)+(s.autorizada?' ✓':'')+'</td><td style="white-space:nowrap">'+sel+'</td><td style="white-space:nowrap">'+act+'</td>';
+      solTbody.appendChild(tr);
+    });
+    solTbody.querySelectorAll('[data-act=stage]').forEach(function(b){ b.addEventListener('click', function(){ var id=b.getAttribute('data-id'); var selEl=solTbody.querySelector('.st-sel[data-id="'+id+'"]'); notifyStage(solById(id), parseInt(selEl.value,10)); }); });
+    solTbody.querySelectorAll('[data-act=toauth]').forEach(function(b){ b.addEventListener('click', function(){ loadToAuth(b.getAttribute('data-id')); }); });
+    solTbody.querySelectorAll('[data-act=soldel]').forEach(function(b){ b.addEventListener('click', function(){ delSol(b.getAttribute('data-id')); }); });
+  }
+  async function delSol(id){ if(!confirm('¿Eliminar esta solicitud?')) return; try{ var r=await api(SOLIC,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id:id})}); if(!r.ok) throw new Error('HTTP '+r.status); loadSolic(); }catch(e){ alert('Error: '+e.message); } }
+  async function notifyStage(s, etapa){
+    if(!s) return;
+    var nombreEtapa=ETAPAS[etapa]||('Etapa '+etapa);
+    var L=['PROGRAMA DE APOYO DE SERVICIOS MÉDICOS (PASEM) — SNTE Sección 26','Notificación de etapa '+etapa+': '+nombreEtapa,'',
+      'Folio de control: '+(s.folio||'—'),'Folio ELEONOR: '+(s.folioEleonor||'—'),'Nombre: '+(s.nombre||'—'),'Certificado: '+(s.certificado||'—'),
+      'CURP: '+(s.curp||'—'),'RFC: '+(s.rfc||'—'),'Tipo de trámite: '+(s.tipoTramite||'—'),'Comentarios: '+(s.comentarios||'—'),'','Folio interno: '+(s.id||'—')];
+    var subject=encodeURIComponent('PASEM — Etapa '+etapa+' ('+nombreEtapa+'): '+(s.nombre||''));
+    var a=document.createElement('a'); a.href='mailto:'+STAGE_MAIL+'?subject='+subject+'&body='+encodeURIComponent(L.join('\r\n')); a.style.display='none'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    try{ var r=await api(SOLIC,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'stage', id:s.id, etapa:String(etapa)})}); if(r.ok) loadSolic(); }catch(e){}
+  }
+  function loadToAuth(id){
+    var s=solById(id); if(!s) return;
+    activate('autorizacion');
+    var f=document.getElementById('form-atencion');
+    f.querySelector('[name=solicitudId]').value=s.id;
+    f.querySelector('[name=certificado]').value=s.certificado||'';
+    f.querySelector('[name=folio]').value=s.folio||'';
+    f.querySelector('[name=folioEleonor]').value=s.folioEleonor||'';
+    f.querySelector('[name=paciente]').value=s.nombre||'';
+    f.querySelector('[name=curp]').value=s.curp||'';
+    f.querySelector('[name=rfc]').value=s.rfc||'';
+    var na=f.querySelector('[name=numAfiliado]'); if(na) na.value=s.certificado||'';
+    var ts=f.querySelector('[name=tipoTramite]'); if(ts) ts.value=s.tipoTramite||'';
+    var ob=f.querySelector('[name=observaciones]'); if(ob && s.comentarios) ob.value=s.comentarios;
+    syncProc();
+    var al=document.getElementById('auth-loaded'); if(al) al.textContent='Solicitud cargada: '+(s.nombre||'')+' · '+(s.tipoTramite||'');
+    try{ document.getElementById('administracion').scrollIntoView(); }catch(e){}
+  }
+  async function loadAuthPicker(){
+    var sel=document.getElementById('auth-pick'); if(!sel) return;
+    try{ var r=await api(SOLIC); if(!r.ok) return; solicitudes=await r.json();
+      sel.innerHTML='<option value="">Selecciona una solicitud…</option>';
+      solicitudes.forEach(function(s){ var o=document.createElement('option'); o.value=s.id; o.textContent=(s.folio?('['+s.folio+'] '):'')+(s.nombre||'(sin nombre)')+' — '+(s.tipoTramite||'')+(s.autorizada?' (autorizada)':''); sel.appendChild(o); });
+    }catch(e){}
+  }
+  if(document.getElementById('btn-auth-load')) document.getElementById('btn-auth-load').addEventListener('click', function(){ var id=document.getElementById('auth-pick').value; if(id) loadToAuth(id); else alert('Elige una solicitud de la lista.'); });
+
+  // ===== Buscadores reutilizables en base de beneficiarios =====
+  async function benSearchInto(inputId, pickId, formEl, map){
+    var inp=document.getElementById(inputId), pick=document.getElementById(pickId);
+    var q=(inp.value||'').trim(); if(q.length<2){ alert('Escribe al menos 2 caracteres.'); return; }
+    pick.innerHTML='<div class="it">Buscando…</div>'; pick.classList.add('open');
+    try{ var r=await api(BEN+'?q='+encodeURIComponent(q)); var d=await r.json();
+      if(!d.results||!d.results.length){ pick.innerHTML='<div class="it">Sin coincidencias</div>'; return; }
+      pick.innerHTML='';
+      d.results.slice(0,15).forEach(function(x){ var it=document.createElement('div'); it.className='it';
+        it.innerHTML='<strong>'+esc(x.cert)+' — '+esc(x.nombre)+'</strong><small>CURP: '+esc(x.curp||'—')+' · RFC: '+esc(x.rfc||'—')+'</small>';
+        it.addEventListener('click', function(){ if(map.nombre) formEl.querySelector('[name='+map.nombre+']').value=up(x.nombre||''); if(map.curp) formEl.querySelector('[name='+map.curp+']').value=up(x.curp||''); if(map.rfc) formEl.querySelector('[name='+map.rfc+']').value=up(x.rfc||''); if(map.cert) formEl.querySelector('[name='+map.cert+']').value=(x.cert||''); pick.classList.remove('open'); pick.innerHTML=''; });
+        pick.appendChild(it); });
+    }catch(e){ pick.innerHTML='<div class="it">Error: '+esc(e.message)+'</div>'; }
+  }
+  if(document.getElementById('btn-sol-pick')) document.getElementById('btn-sol-pick').addEventListener('click', function(){ benSearchInto('s-nombre','sol-pick', formSol, {nombre:'nombre',curp:'curp',rfc:'rfc',cert:'certificado'}); });
+
+  // ===== Dependientes =====
+  var formDep=document.getElementById('form-dep'), depStatus=document.getElementById('dep-status'), depTbody=document.querySelector('#dep-table tbody');
+  if(document.getElementById('dep-refresh')) document.getElementById('dep-refresh').addEventListener('click', loadDeps);
+  if(document.getElementById('dep-q')) document.getElementById('dep-q').addEventListener('keydown', function(e){ if(e.key==='Enter') loadDeps(); });
+  if(document.getElementById('btn-dep-pick')) document.getElementById('btn-dep-pick').addEventListener('click', depTitularSearch);
+  async function depTitularSearch(){
+    var inp=document.getElementById('dep-tit'), pick=document.getElementById('dep-pick');
+    var q=(inp.value||'').trim(); if(q.length<2){ alert('Escribe al menos 2 caracteres.'); return; }
+    pick.innerHTML='<div class="it">Buscando…</div>'; pick.classList.add('open');
+    try{ var r=await api(BEN+'?q='+encodeURIComponent(q)); var d=await r.json();
+      if(!d.results||!d.results.length){ pick.innerHTML='<div class="it">Sin coincidencias</div>'; return; }
+      pick.innerHTML='';
+      d.results.slice(0,15).forEach(function(x){ var it=document.createElement('div'); it.className='it';
+        it.innerHTML='<strong>'+esc(x.cert)+' — '+esc(x.nombre)+'</strong><small>'+esc(x.tipo||'')+'</small>';
+        it.addEventListener('click', function(){ document.getElementById('dep-cert').value=x.cert||''; document.getElementById('dep-nom').value=x.nombre||''; pick.classList.remove('open'); pick.innerHTML=''; });
+        pick.appendChild(it); });
+    }catch(e){ pick.innerHTML='<div class="it">Error: '+esc(e.message)+'</div>'; }
+  }
+  if(formDep) formDep.addEventListener('submit', async function(e){
+    e.preventDefault(); var fd=new FormData(formDep);
+    if(!fd.get('titularCert')){ alert('Busca y selecciona el titular.'); return; }
+    if(!fd.get('nombre')){ alert('Escribe el nombre del dependiente.'); return; }
+    var payload={ action:'create', titularCert:fd.get('titularCert'), titularNombre:fd.get('titularNombre'), nombre:fd.get('nombre'), parentesco:fd.get('parentesco'), curp:fd.get('curp'), rfc:fd.get('rfc') };
+    var btn=formDep.querySelector('button[type=submit]'), old=btn.textContent; btn.disabled=true; btn.textContent='Guardando…';
+    try{
+      var r=await api(DEPS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      if(!r.ok){ var d={}; try{ d=await r.json(); }catch(_){ } throw new Error(d.error||('HTTP '+r.status)); }
+      var dep=await r.json(); formDep.reset(); document.getElementById('dep-cert').value=''; document.getElementById('dep-nom').value=''; loadDeps();
+      alert('Dependiente dado de alta con certificado '+dep.cert+'.');
+    }catch(err){ alert('Error: '+err.message); } finally{ btn.disabled=false; btn.textContent=old; }
+  });
+  async function loadDeps(){ if(!depStatus) return; depStatus.textContent='Cargando…'; try{ var q=(document.getElementById('dep-q').value||'').trim(); var r=await api(DEPS+(q?('?q='+encodeURIComponent(q)):'')); if(!r.ok) throw new Error('HTTP '+r.status); var items=await r.json(); renderDeps(items); depStatus.textContent=items.length+' dependiente(s).'; }catch(e){ depStatus.textContent='Error: '+e.message; } }
+  function renderDeps(items){
+    depTbody.innerHTML='';
+    items.forEach(function(d){ var tr=document.createElement('tr'); var del=isAdmin()?'<button class="btn-del" data-act="depdel" data-id="'+esc(d.id)+'">Eliminar</button>':''; tr.innerHTML='<td><strong>'+esc(d.cert)+'</strong></td><td>'+esc(d.nombre)+'</td><td>'+esc(d.parentesco)+'</td><td>'+esc(d.curp)+'</td><td>'+esc(d.titularNombre||d.titularCert)+'</td><td>'+del+'</td>'; depTbody.appendChild(tr); });
+    depTbody.querySelectorAll('[data-act=depdel]').forEach(function(b){ b.addEventListener('click', function(){ delDep(b.getAttribute('data-id')); }); });
+  }
+  async function delDep(id){ if(!confirm('¿Eliminar este dependiente?')) return; try{ var r=await api(DEPS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id:id})}); if(!r.ok) throw new Error('HTTP '+r.status); loadDeps(); }catch(e){ alert('Error: '+e.message); } }
 })();
 </script>
 </body>
