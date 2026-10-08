@@ -212,6 +212,13 @@
   .ben-pick .it:hover{background:var(--cream-2);}
   .ben-pick .it small{color:var(--ink); display:block; font-size:12px;}
   fieldset[disabled]{opacity:.5;}
+  .exp-modal{position:fixed; inset:0; background:rgba(20,40,45,.45); display:none; align-items:flex-start; justify-content:center; z-index:1000; padding:36px 16px; overflow:auto;}
+  .exp-modal.open{display:flex;}
+  .exp-box{background:#fff; border-radius:14px; width:100%; max-width:740px; padding:20px 22px; box-shadow:0 20px 60px rgba(0,0,0,.3);}
+  .exp-head{display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px;}
+  .exp-head strong{font-family:var(--serif); color:var(--brown-deep); font-size:18px;}
+  .exp-up{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:8px 0;}
+  .exp-up input[type=text]{flex:1; min-width:180px; padding:9px 11px; border:1px solid var(--border); border-radius:8px;}
   @media(max-width:860px){ .fgrid,.checks{grid-template-columns:1fr;} }
 </style>
 </head>
@@ -265,10 +272,24 @@
         </span>
       </div>
 
+      <!-- Ventana de expediente (documentos por beneficiario) -->
+      <div id="exp-modal" class="exp-modal"><div class="exp-box">
+        <div class="exp-head"><strong id="exp-title">Expediente</strong><button type="button" class="btn-ghost btn" id="exp-close">Cerrar</button></div>
+        <p style="font-size:13px;color:var(--ink);margin:0;">Documentos del beneficiario (PDF o imagen, máx. 4 MB). Todos quedan juntos en su expediente.</p>
+        <form id="exp-modal-form" class="exp-up">
+          <input type="file" id="exp-modal-file" accept=".pdf,image/*">
+          <input type="text" id="exp-modal-desc" placeholder="Descripción (opcional)">
+          <button class="btn btn-primary" type="submit">Subir</button>
+        </form>
+        <div id="exp-modal-status" style="font-size:13px;color:var(--ink);margin:6px 0;"></div>
+        <div class="table-wrap"><table class="dtable" id="exp-modal-table"><thead><tr><th>Archivo</th><th>Descripción</th><th>Fecha</th><th></th></tr></thead><tbody></tbody></table></div>
+      </div></div>
+
       <div class="tabs" id="tabs">
         <button class="tab active" type="button" data-pane="solicitud">Solicitud de servicio</button>
         <button class="tab" type="button" data-pane="autorizacion">Autorización</button>
         <button class="tab" type="button" data-pane="consulta">Consulta de beneficiarios</button>
+        <button class="tab" type="button" data-pane="altatitular">Alta titular</button>
         <button class="tab" type="button" data-pane="dependientes">Dependientes</button>
         <button class="tab" type="button" data-pane="descargas">Descargas</button>
         <button class="tab" type="button" data-pane="expediente">Expediente</button>
@@ -283,7 +304,7 @@
         <form id="form-solicitud" class="admin-form card" style="margin-bottom:18px;">
           <fieldset><legend>Datos de la solicitud</legend>
             <div class="fgrid">
-              <div class="field"><label>Folio de control</label><input name="folio" type="text"></div>
+              <div class="field"><label>Folio de control <span style="font-weight:400;color:var(--ink)">(automático)</span></label><input name="folio" type="text" readonly placeholder="Se genera al registrar"></div>
               <div class="field"><label>Folio ELEONOR (opcional)</label><input name="folioEleonor" type="text"></div>
               <div class="field full"><label>Nombre completo <span style="font-weight:400;color:var(--ink)">(busca en la base con la lupa)</span></label>
                 <div class="paciente-wrap">
@@ -298,9 +319,11 @@
               <div class="field"><label>Tipo de trámite</label>
                 <select name="tipoTramite"><option value="">Selecciona…</option><option>CIRUGIA</option><option>APOYO PARTO O CESAREA</option><option>CONSULTA MEDICO GENERAL</option><option>CONSULTA ESPECIALISTA</option><option>ESTUDIO LABORATORIO</option></select></div>
               <div class="field full"><label>Comentarios adicionales</label><textarea name="comentarios"></textarea></div>
+              <div class="field full"><label>Adjuntar documento al expediente (opcional, máx. 15 MB)</label><input type="file" id="sol-file" accept=".pdf,image/*"></div>
             </div>
           </fieldset>
           <button class="btn btn-primary" type="submit">Registrar solicitud</button>
+          <button class="btn btn-ghost" type="button" id="sol-docs" style="margin-left:8px;">📎 Documentos del beneficiario</button>
         </form>
 
         <div class="admin-records-head">
@@ -388,7 +411,9 @@
               <div class="field"><label>Fecha de autorización</label><input name="fechaAutorizacion" type="date"></div>
             </div>
           </fieldset>
+          <div class="field full" style="margin:0 0 12px;"><label>Adjuntar documento al expediente (opcional, máx. 15 MB)</label><input type="file" id="auth-file" accept=".pdf,image/*"></div>
           <button class="btn btn-primary" type="submit">Registrar atención</button>
+          <button class="btn btn-ghost" type="button" id="auth-docs" style="margin-left:8px;">📎 Documentos del beneficiario</button>
         </form>
 
         <div class="admin-records">
@@ -420,7 +445,7 @@
         <div id="ben-status"></div>
         <div class="table-wrap">
           <table id="ben-table" class="dtable">
-            <thead><tr><th>Certificado</th><th>Tipo</th><th>Nombre</th><th>RFC</th><th>CURP</th><th>Función</th><th>CCT</th><th>Centro de trabajo</th></tr></thead>
+            <thead><tr><th>Certificado</th><th>Tipo</th><th>Nombre</th><th>RFC</th><th>CURP</th><th>Función</th><th>CCT</th><th>Centro de trabajo</th><th>Expediente</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
@@ -435,6 +460,38 @@
           <span class="meta"><b>Formato de Autorización y/o Confirmación de Servicios Médicos</b><span>PDF · uso interno PASEM</span></span>
           <span class="go">Descargar</span>
         </a>
+      </div>
+
+      <!-- Alta de titular -->
+      <div class="tabpane" id="pane-altatitular">
+        <h3 style="font-family:var(--serif); color:var(--brown-deep); margin:0 0 6px;">Alta de titular</h3>
+        <p style="color:var(--ink); font-size:14px; margin:0 0 14px;">Registra un titular nuevo. Se le asigna automáticamente el siguiente certificado (PASEM-#####) y aparecerá en la Consulta de beneficiarios.</p>
+        <form id="form-tit" class="admin-form card" style="margin-bottom:16px;">
+          <fieldset><legend>Datos del titular</legend>
+            <div class="fgrid">
+              <div class="field full"><label>Nombre completo</label><input name="nombre" type="text"></div>
+              <div class="field"><label>CURP</label><input name="curp" type="text" maxlength="18"></div>
+              <div class="field"><label>RFC</label><input name="rfc" type="text" maxlength="13"></div>
+              <div class="field"><label>Función</label><input name="funcion" type="text"></div>
+              <div class="field"><label>CCT</label><input name="cct" type="text"></div>
+              <div class="field"><label>Centro de trabajo</label><input name="ct" type="text"></div>
+              <div class="field"><label>Nivel</label><input name="nivel" type="text" value="TELESECUNDARIA"></div>
+              <div class="field full"><label>Adjuntar documento al expediente (opcional, máx. 15 MB)</label><input type="file" id="tit-file" accept=".pdf,image/*"></div>
+            </div>
+          </fieldset>
+          <button class="btn btn-primary" type="submit">Dar de alta titular</button>
+        </form>
+        <div class="search-row">
+          <input id="tit-q" type="text" placeholder="Buscar titular nuevo por nombre, CURP o certificado…">
+          <button class="btn btn-ghost" id="tit-refresh" type="button">Actualizar</button>
+        </div>
+        <div id="tit-status"></div>
+        <div class="table-wrap">
+          <table id="tit-table" class="dtable">
+            <thead><tr><th>Certificado</th><th>Nombre</th><th>CURP</th><th>RFC</th><th>Centro de trabajo</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
 
       <!-- Dependientes -->
@@ -453,6 +510,7 @@
               </div>
               <div class="field"><label>Certificado del titular</label><input name="titularCert" id="dep-cert" type="text" readonly></div>
               <div class="field"><label>Nombre del titular</label><input name="titularNombre" id="dep-nom" type="text" readonly></div>
+              <div class="field full"><button type="button" class="btn btn-ghost" id="dep-docs">📎 Documentos del beneficiario</button></div>
             </div>
           </fieldset>
           <fieldset><legend>Datos del dependiente</legend>
@@ -461,9 +519,11 @@
               <div class="field"><label>Parentesco</label><select name="parentesco"><option value="">Selecciona…</option><option>CONYUGE</option><option>CONCUBINA</option><option>HIJO(A)</option><option>PADRES</option></select></div>
               <div class="field"><label>CURP</label><input name="curp" type="text" maxlength="18"></div>
               <div class="field"><label>RFC</label><input name="rfc" type="text" maxlength="13"></div>
+              <div class="field full"><label>Adjuntar documento del dependiente (opcional, máx. 15 MB)</label><input type="file" id="dep-file" accept=".pdf,image/*"></div>
             </div>
           </fieldset>
           <button class="btn btn-primary" type="submit">Dar de alta dependiente</button>
+          <button class="btn btn-ghost" type="button" id="dep-alta-sol" style="margin-left:8px;">Dar de alta y crear solicitud →</button>
         </form>
         <div class="search-row">
           <input id="dep-q" type="text" placeholder="Buscar dependiente por nombre, CURP o certificado…">
@@ -563,7 +623,7 @@
 <script>
 (function(){
   var AUTH='/.netlify/functions/auth', RECORDS='/.netlify/functions/records', USERS='/.netlify/functions/usuarios', BEN='/.netlify/functions/beneficiarios', EXPED='/.netlify/functions/expediente';
-  var SOLIC='/.netlify/functions/solicitudes', DEPS='/.netlify/functions/dependientes';
+  var SOLIC='/.netlify/functions/solicitudes', DEPS='/.netlify/functions/dependientes', TITU='/.netlify/functions/titulares';
   var STAGE_MAIL='telesecundariaseccion26@pasem.com';
   var ETAPAS={1:'Solicitud de atención',2:'Solicitud de documentación',3:'Autorización generada',4:'Servicio otorgado'};
   var TK='pasem_token', RL='pasem_role', EM='pasem_email';
@@ -601,10 +661,11 @@
     if(name==='solicitud') loadSolic();
     if(name==='autorizacion'){ loadRecords(); loadAuthPicker(); }
     if(name==='dependientes') loadDeps();
+    if(name==='altatitular') loadTit();
   }
   // Mayúsculas sin acento en los campos de texto del formulario
   function up(s){ return String(s||'').toUpperCase().replace(/[ÁÀÄÂ]/g,'A').replace(/[ÉÈËÊ]/g,'E').replace(/[ÍÌÏÎ]/g,'I').replace(/[ÓÒÖÔ]/g,'O').replace(/[ÚÙÜÛ]/g,'U'); }
-  document.querySelectorAll('#form-atencion input[type=text], #form-atencion textarea, #form-solicitud input[type=text], #form-solicitud textarea, #form-dep input[type=text]').forEach(function(el){
+  document.querySelectorAll('#form-atencion input[type=text], #form-atencion textarea, #form-solicitud input[type=text], #form-solicitud textarea, #form-dep input[type=text], #form-tit input[type=text]').forEach(function(el){
     el.addEventListener('input', function(){ var p=el.selectionStart; el.value=up(el.value); try{ el.setSelectionRange(p,p); }catch(e){} });
   });
   // "Datos del procedimiento" solo habilitado para CIRUGÍA
@@ -813,6 +874,8 @@
       var r=await api(RECORDS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}); if(!r.ok) throw new Error('HTTP '+r.status);
       var created=await r.json();
       if(data.solicitudId){ try{ await api(SOLIC,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'authorize', id:data.solicitudId, atencionId:created.id})}); }catch(e){} }
+      var afEl=document.getElementById('auth-file'); var af=afEl&&afEl.files[0]; var cref=(data.certificado||data.numAfiliado||'');
+      if(af && cref){ try{ await uploadDoc(af, cref, 'Adjunto al registrar autorización'); }catch(e){ alert('La autorización se guardó, pero el documento no se pudo adjuntar: '+e.message); } }
       form.reset(); document.getElementById('f-solicitudId').value=''; document.getElementById('f-certificado').value=''; var al=document.getElementById('auth-loaded'); if(al) al.textContent=''; syncProc(); loadRecords();
       alert('Autorización registrada. La atención quedó en el registro'+(data.solicitudId?' y la solicitud pasó a «Autorización generada».':'.'));
     }
@@ -834,7 +897,8 @@
     try{
       var r=await api(BEN+'?q='+encodeURIComponent(q)); if(!r.ok) throw new Error('HTTP '+r.status);
       var d=await r.json(); benTbody.innerHTML='';
-      d.results.forEach(function(x){ var tr=document.createElement('tr'); tr.innerHTML='<td><strong>'+esc(x.cert)+'</strong></td><td>'+esc(x.tipo||'')+'</td><td>'+esc(x.nombre)+'</td><td>'+esc(x.rfc)+'</td><td>'+esc(x.curp)+'</td><td>'+esc(x.funcion)+'</td><td>'+esc(x.cct)+'</td><td>'+esc(x.ct)+'</td>'; benTbody.appendChild(tr); });
+      d.results.forEach(function(x){ var tr=document.createElement('tr'); tr.innerHTML='<td><strong>'+esc(x.cert)+'</strong></td><td>'+esc(x.tipo||'')+'</td><td>'+esc(x.nombre)+'</td><td>'+esc(x.rfc)+'</td><td>'+esc(x.curp)+'</td><td>'+esc(x.funcion)+'</td><td>'+esc(x.cct)+'</td><td>'+esc(x.ct)+'</td><td><button class="btn-mini" data-cert="'+esc(x.cert)+'" data-nom="'+esc(x.nombre)+'">📎 Ver</button></td>'; benTbody.appendChild(tr); });
+      benTbody.querySelectorAll('[data-cert]').forEach(function(b){ b.addEventListener('click', function(){ openExpediente(b.getAttribute('data-cert'), b.getAttribute('data-nom')); }); });
       if(d.count===0) benStatus.textContent='Sin coincidencias. Esa persona no aparece en el listado de beneficiarios.';
       else benStatus.textContent=d.count+' coincidencia(s)'+(d.count>=100?' (mostrando las primeras 100)':'')+'. Las personas listadas cuentan con el beneficio.';
     }catch(e){ benStatus.textContent='Error: '+e.message; }
@@ -874,17 +938,26 @@
   if(document.getElementById('exp-refresh')) document.getElementById('exp-refresh').addEventListener('click', loadExp);
   if(document.getElementById('exp-q')) document.getElementById('exp-q').addEventListener('keydown', function(e){ if(e.key==='Enter') loadExp(); });
   function fileToB64(file){ return new Promise(function(res,rej){ var fr=new FileReader(); fr.onload=function(){ res(String(fr.result).split(',')[1]); }; fr.onerror=rej; fr.readAsDataURL(file); }); }
+  var MAXDOC=15*1024*1024;
+  async function uploadDoc(file, ref, desc){
+    if(file.size>MAXDOC) throw new Error('El archivo supera 15 MB.');
+    var b64=await fileToB64(file);
+    var CH=3000000; // múltiplo de 4 (partes < 6 MB del límite de Netlify)
+    var total=Math.max(1, Math.ceil(b64.length/CH));
+    var uploadId='DOC-'+Date.now().toString(36).toUpperCase()+'-'+Math.random().toString(36).slice(2,7).toUpperCase();
+    for(var i=0;i<total;i++){ var part=b64.slice(i*CH,(i+1)*CH); var r=await api(EXPED,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'chunk',uploadId:uploadId,index:i,data:part})}); if(!r.ok) throw new Error('Error al subir la parte '+(i+1)); }
+    var rf=await api(EXPED,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'finalize',uploadId:uploadId,filename:file.name,mime:file.type||'application/octet-stream',ref:ref||'',desc:desc||'',total:total})});
+    if(!rf.ok){ var d={}; try{ d=await rf.json(); }catch(_){ } throw new Error(d.error||'No se pudo finalizar la subida'); }
+    return uploadId;
+  }
   if(formExp) formExp.addEventListener('submit', async function(e){
     e.preventDefault();
     var fd=new FormData(formExp); var file=fd.get('file');
     if(!file||!file.name){ alert('Selecciona un archivo.'); return; }
-    if(file.size>4*1024*1024){ alert('El archivo supera 4 MB.'); return; }
+    if(file.size>MAXDOC){ alert('El archivo supera 15 MB.'); return; }
     var btn=formExp.querySelector('button[type=submit]'); var old=btn.textContent; btn.disabled=true; btn.textContent='Subiendo…';
     try{
-      var b64=await fileToB64(file);
-      var payload={ action:'upload', filename:file.name, mime:file.type||'application/octet-stream', ref:fd.get('ref'), desc:fd.get('desc'), data:b64 };
-      var r=await api(EXPED,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-      if(!r.ok){ var d={}; try{d=await r.json();}catch(_){} throw new Error(d.error||('HTTP '+r.status)); }
+      await uploadDoc(file, fd.get('ref'), fd.get('desc'));
       formExp.reset(); loadExp(); alert('Documento subido.');
     }catch(err){ alert('Error al subir: '+err.message); } finally{ btn.disabled=false; btn.textContent=old; }
   });
@@ -906,8 +979,13 @@
     expTbody.querySelectorAll('[data-act=xdel]').forEach(function(b){ b.addEventListener('click', function(){ delExp(b.getAttribute('data-id')); }); });
   }
   async function dlExp(id){
-    try{ var r=await api(EXPED+'?id='+encodeURIComponent(id)); if(!r.ok) throw new Error('HTTP '+r.status); var d=await r.json(); var a=document.createElement('a'); a.href='data:'+(d.mime||'application/octet-stream')+';base64,'+d.data; a.download=d.filename||'documento'; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
-    catch(e){ alert('Error al descargar: '+e.message); }
+    try{
+      var r=await api(EXPED+'?id='+encodeURIComponent(id)); if(!r.ok) throw new Error('HTTP '+r.status);
+      var meta=await r.json(); var parts=[];
+      for(var i=0;i<(meta.chunks||1);i++){ var rc=await api(EXPED+'?id='+encodeURIComponent(id)+'&chunk='+i); if(!rc.ok) throw new Error('parte '+i); var dc=await rc.json(); var bin=atob(dc.data||''); var arr=new Uint8Array(bin.length); for(var k=0;k<bin.length;k++) arr[k]=bin.charCodeAt(k); parts.push(arr); }
+      var blob=new Blob(parts,{type:meta.mime||'application/octet-stream'});
+      var url=URL.createObjectURL(blob); var a=document.createElement('a'); a.href=url; a.download=meta.filename||'documento'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    }catch(e){ alert('Error al descargar: '+e.message); }
   }
   async function delExp(id){ if(!confirm('¿Eliminar este documento?')) return; try{ var r=await api(EXPED,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id:id})}); if(!r.ok) throw new Error('HTTP '+r.status); loadExp(); }catch(e){ alert('Error: '+e.message); } }
 
@@ -918,13 +996,18 @@
   if(formSol) formSol.addEventListener('submit', async function(e){
     e.preventDefault(); var fd=new FormData(formSol);
     if(!fd.get('nombre')){ alert('Escribe el nombre.'); return; }
-    var payload={ action:'create', folio:fd.get('folio'), folioEleonor:fd.get('folioEleonor'), nombre:fd.get('nombre'), curp:fd.get('curp'), rfc:fd.get('rfc'), certificado:fd.get('certificado'), tipoTramite:fd.get('tipoTramite'), comentarios:fd.get('comentarios') };
+    if(!fd.get('certificado')){ alert('Relaciona el certificado: busca al beneficiario en la base con la lupa 🔍 (el folio se genera a partir del certificado).'); return; }
+    if(!fd.get('tipoTramite')){ alert('Selecciona el tipo de trámite.'); return; }
+    var payload={ action:'create', folioEleonor:fd.get('folioEleonor'), nombre:fd.get('nombre'), curp:fd.get('curp'), rfc:fd.get('rfc'), certificado:fd.get('certificado'), tipoTramite:fd.get('tipoTramite'), comentarios:fd.get('comentarios') };
     var btn=formSol.querySelector('button[type=submit]'), old=btn.textContent; btn.disabled=true; btn.textContent='Guardando…';
     try{
       var r=await api(SOLIC,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
       if(!r.ok){ var d={}; try{ d=await r.json(); }catch(_){ } throw new Error(d.error||('HTTP '+r.status)); }
-      var s=await r.json(); formSol.reset(); loadSolic();
-      if(confirm('Solicitud registrada (Etapa 1: Solicitud de atención).\n¿Enviar la notificación de Etapa 1 por correo?')) notifyStage(s,1);
+      var s=await r.json();
+      var sfEl=document.getElementById('sol-file'); var sf=sfEl&&sfEl.files[0];
+      if(sf){ try{ await uploadDoc(sf, s.certificado, 'Adjunto al registrar solicitud'); }catch(e){ alert('La solicitud se guardó, pero el documento no se pudo adjuntar: '+e.message); } }
+      formSol.reset(); loadSolic();
+      if(confirm('Solicitud registrada.\nFolio generado: '+s.folio+'\n(Etapa 1: Solicitud de atención)\n\n¿Enviar la notificación de Etapa 1 por correo?')) notifyStage(s,1);
     }catch(err){ alert('Error: '+err.message); } finally{ btn.disabled=false; btn.textContent=old; }
   });
   async function loadSolic(){ if(!solStatus) return; solStatus.textContent='Cargando…'; try{ var r=await api(SOLIC); if(!r.ok) throw new Error('HTTP '+r.status); solicitudes=await r.json(); renderSolic(); solStatus.textContent=solicitudes.length+' solicitud(es).'; }catch(e){ solStatus.textContent='Error: '+e.message; } }
@@ -1016,26 +1099,103 @@
         pick.appendChild(it); });
     }catch(e){ pick.innerHTML='<div class="it">Error: '+esc(e.message)+'</div>'; }
   }
-  if(formDep) formDep.addEventListener('submit', async function(e){
-    e.preventDefault(); var fd=new FormData(formDep);
+  if(formDep) formDep.addEventListener('submit', function(e){ e.preventDefault(); altaDep(false); });
+  if(document.getElementById('dep-alta-sol')) document.getElementById('dep-alta-sol').addEventListener('click', function(){ altaDep(true); });
+  async function altaDep(goSol){
+    var fd=new FormData(formDep);
     if(!fd.get('titularCert')){ alert('Busca y selecciona el titular.'); return; }
     if(!fd.get('nombre')){ alert('Escribe el nombre del dependiente.'); return; }
     var payload={ action:'create', titularCert:fd.get('titularCert'), titularNombre:fd.get('titularNombre'), nombre:fd.get('nombre'), parentesco:fd.get('parentesco'), curp:fd.get('curp'), rfc:fd.get('rfc') };
-    var btn=formDep.querySelector('button[type=submit]'), old=btn.textContent; btn.disabled=true; btn.textContent='Guardando…';
     try{
       var r=await api(DEPS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
       if(!r.ok){ var d={}; try{ d=await r.json(); }catch(_){ } throw new Error(d.error||('HTTP '+r.status)); }
-      var dep=await r.json(); formDep.reset(); document.getElementById('dep-cert').value=''; document.getElementById('dep-nom').value=''; loadDeps();
-      alert('Dependiente dado de alta con certificado '+dep.cert+'.');
-    }catch(err){ alert('Error: '+err.message); } finally{ btn.disabled=false; btn.textContent=old; }
+      var dep=await r.json();
+      var dfEl=document.getElementById('dep-file'); var df=dfEl&&dfEl.files[0];
+      if(df){ try{ await uploadDoc(df, dep.cert, 'Adjunto al dar de alta dependiente'); }catch(e){ alert('El dependiente se dio de alta, pero el documento no se pudo adjuntar: '+e.message); } }
+      formDep.reset(); document.getElementById('dep-cert').value=''; document.getElementById('dep-nom').value=''; loadDeps();
+      if(goSol){
+        activate('solicitud');
+        var fs=document.getElementById('form-solicitud');
+        fs.querySelector('[name=nombre]').value=up(dep.nombre||'');
+        fs.querySelector('[name=certificado]').value=dep.cert||'';
+        fs.querySelector('[name=curp]').value=up(dep.curp||'');
+        fs.querySelector('[name=rfc]').value=up(dep.rfc||'');
+        alert('Dependiente dado de alta ('+dep.cert+').\nCompleta el tipo de trámite y registra la solicitud.');
+      } else {
+        alert('Dependiente dado de alta con certificado '+dep.cert+'.');
+        if(confirm('¿Adjuntar documentos del dependiente ahora?')) openExpediente(dep.cert, dep.nombre);
+      }
+    }catch(err){ alert('Error: '+err.message); }
+  }
+
+  // ===== Expediente por beneficiario (ventana modal, reutilizable) =====
+  var EXP_CERT='';
+  function openExpediente(cert, nombre){
+    if(!cert){ alert('Primero relaciona el certificado del beneficiario (búscalo en la base con la lupa 🔍).'); return; }
+    EXP_CERT=cert;
+    document.getElementById('exp-title').textContent='Expediente · '+cert+(nombre?(' · '+nombre):'');
+    document.getElementById('exp-modal').classList.add('open');
+    loadExpFor();
+  }
+  if(document.getElementById('exp-close')) document.getElementById('exp-close').addEventListener('click', function(){ document.getElementById('exp-modal').classList.remove('open'); });
+  if(document.getElementById('exp-modal')) document.getElementById('exp-modal').addEventListener('click', function(e){ if(e.target.id==='exp-modal') e.currentTarget.classList.remove('open'); });
+  async function loadExpFor(){
+    var st=document.getElementById('exp-modal-status'), tb=document.querySelector('#exp-modal-table tbody'); st.textContent='Cargando…'; tb.innerHTML='';
+    try{
+      var r=await api(EXPED+'?q='+encodeURIComponent(EXP_CERT)); if(!r.ok) throw new Error('HTTP '+r.status);
+      var items=(await r.json()).filter(function(d){ return String(d.ref||'')===EXP_CERT; });
+      items.forEach(function(d){ var tr=document.createElement('tr'); var del=isAdmin()?' <button class="btn-del" data-xid="'+esc(d.id)+'">Eliminar</button>':''; tr.innerHTML='<td>'+esc(d.filename)+'</td><td>'+esc(d.desc)+'</td><td>'+esc(fmtDate(d.createdAt))+'</td><td style="white-space:nowrap"><button class="btn-mini" data-xdl="'+esc(d.id)+'">Ver / Descargar</button>'+del+'</td>'; tb.appendChild(tr); });
+      st.textContent=items.length+' documento(s) en el expediente.';
+      tb.querySelectorAll('[data-xdl]').forEach(function(b){ b.addEventListener('click', function(){ dlExp(b.getAttribute('data-xdl')); }); });
+      tb.querySelectorAll('[data-xid]').forEach(function(b){ b.addEventListener('click', async function(){ if(!confirm('¿Eliminar este documento?')) return; try{ var r=await api(EXPED,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id:b.getAttribute('data-xid')})}); if(r.ok) loadExpFor(); }catch(e){ alert('Error: '+e.message); } }); });
+    }catch(e){ st.textContent='Error: '+e.message; }
+  }
+  if(document.getElementById('exp-modal-form')) document.getElementById('exp-modal-form').addEventListener('submit', async function(e){
+    e.preventDefault(); var file=document.getElementById('exp-modal-file').files[0];
+    if(!file){ alert('Selecciona un archivo.'); return; } if(file.size>MAXDOC){ alert('El archivo supera 15 MB.'); return; }
+    var btn=this.querySelector('button[type=submit]'), old=btn.textContent; btn.disabled=true; btn.textContent='Subiendo…';
+    try{ await uploadDoc(file, EXP_CERT, document.getElementById('exp-modal-desc').value); document.getElementById('exp-modal-file').value=''; document.getElementById('exp-modal-desc').value=''; loadExpFor(); }
+    catch(err){ alert('Error al subir: '+err.message); } finally{ btn.disabled=false; btn.textContent=old; }
   });
+  if(document.getElementById('sol-docs')) document.getElementById('sol-docs').addEventListener('click', function(){ openExpediente((document.querySelector('#form-solicitud [name=certificado]').value||'').trim(), document.getElementById('s-nombre').value); });
+  if(document.getElementById('auth-docs')) document.getElementById('auth-docs').addEventListener('click', function(){ var c=(document.getElementById('f-certificado').value||document.querySelector('#form-atencion [name=numAfiliado]').value||'').trim(); openExpediente(c, document.querySelector('#form-atencion [name=paciente]').value); });
+  if(document.getElementById('dep-docs')) document.getElementById('dep-docs').addEventListener('click', function(){ openExpediente((document.getElementById('dep-cert').value||'').trim(), document.getElementById('dep-nom').value); });
   async function loadDeps(){ if(!depStatus) return; depStatus.textContent='Cargando…'; try{ var q=(document.getElementById('dep-q').value||'').trim(); var r=await api(DEPS+(q?('?q='+encodeURIComponent(q)):'')); if(!r.ok) throw new Error('HTTP '+r.status); var items=await r.json(); renderDeps(items); depStatus.textContent=items.length+' dependiente(s).'; }catch(e){ depStatus.textContent='Error: '+e.message; } }
   function renderDeps(items){
     depTbody.innerHTML='';
-    items.forEach(function(d){ var tr=document.createElement('tr'); var del=isAdmin()?'<button class="btn-del" data-act="depdel" data-id="'+esc(d.id)+'">Eliminar</button>':''; tr.innerHTML='<td><strong>'+esc(d.cert)+'</strong></td><td>'+esc(d.nombre)+'</td><td>'+esc(d.parentesco)+'</td><td>'+esc(d.curp)+'</td><td>'+esc(d.titularNombre||d.titularCert)+'</td><td>'+del+'</td>'; depTbody.appendChild(tr); });
+    items.forEach(function(d){ var tr=document.createElement('tr'); var del=isAdmin()?' <button class="btn-del" data-act="depdel" data-id="'+esc(d.id)+'">Eliminar</button>':''; tr.innerHTML='<td><strong>'+esc(d.cert)+'</strong></td><td>'+esc(d.nombre)+'</td><td>'+esc(d.parentesco)+'</td><td>'+esc(d.curp)+'</td><td>'+esc(d.titularNombre||d.titularCert)+'</td><td style="white-space:nowrap"><button class="btn-mini" data-act="depexp" data-cert="'+esc(d.cert)+'" data-nom="'+esc(d.nombre)+'">📎 Expediente</button>'+del+'</td>'; depTbody.appendChild(tr); });
+    depTbody.querySelectorAll('[data-act=depexp]').forEach(function(b){ b.addEventListener('click', function(){ openExpediente(b.getAttribute('data-cert'), b.getAttribute('data-nom')); }); });
     depTbody.querySelectorAll('[data-act=depdel]').forEach(function(b){ b.addEventListener('click', function(){ delDep(b.getAttribute('data-id')); }); });
   }
   async function delDep(id){ if(!confirm('¿Eliminar este dependiente?')) return; try{ var r=await api(DEPS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id:id})}); if(!r.ok) throw new Error('HTTP '+r.status); loadDeps(); }catch(e){ alert('Error: '+e.message); } }
+
+  // ===== Alta de titulares =====
+  var formTit=document.getElementById('form-tit'), titStatus=document.getElementById('tit-status'), titTbody=document.querySelector('#tit-table tbody');
+  if(document.getElementById('tit-refresh')) document.getElementById('tit-refresh').addEventListener('click', loadTit);
+  if(document.getElementById('tit-q')) document.getElementById('tit-q').addEventListener('keydown', function(e){ if(e.key==='Enter') loadTit(); });
+  if(formTit) formTit.addEventListener('submit', async function(e){
+    e.preventDefault(); var fd=new FormData(formTit);
+    if(!fd.get('nombre')){ alert('Escribe el nombre del titular.'); return; }
+    var payload={ action:'create', nombre:fd.get('nombre'), curp:fd.get('curp'), rfc:fd.get('rfc'), funcion:fd.get('funcion'), cct:fd.get('cct'), ct:fd.get('ct'), nivel:fd.get('nivel') };
+    var btn=formTit.querySelector('button[type=submit]'), old=btn.textContent; btn.disabled=true; btn.textContent='Guardando…';
+    try{
+      var r=await api(TITU,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      if(!r.ok){ var d={}; try{ d=await r.json(); }catch(_){ } throw new Error(d.error||('HTTP '+r.status)); }
+      var t=await r.json();
+      var tfEl=document.getElementById('tit-file'); var tf=tfEl&&tfEl.files[0];
+      if(tf){ try{ await uploadDoc(tf, t.cert, 'Adjunto al dar de alta titular'); }catch(e){ alert('El titular se dio de alta, pero el documento no se pudo adjuntar: '+e.message); } }
+      formTit.reset(); loadTit();
+      alert('Titular dado de alta con certificado '+t.cert+'.');
+    }catch(err){ alert('Error: '+err.message); } finally{ btn.disabled=false; btn.textContent=old; }
+  });
+  async function loadTit(){ if(!titStatus) return; titStatus.textContent='Cargando…'; try{ var q=(document.getElementById('tit-q').value||'').trim(); var r=await api(TITU+(q?('?q='+encodeURIComponent(q)):'')); if(!r.ok) throw new Error('HTTP '+r.status); var items=await r.json(); renderTit(items); titStatus.textContent=items.length+' titular(es) dado(s) de alta.'; }catch(e){ titStatus.textContent='Error: '+e.message; } }
+  function renderTit(items){
+    titTbody.innerHTML='';
+    items.forEach(function(t){ var tr=document.createElement('tr'); var del=isAdmin()?'<button class="btn-del" data-act="titdel" data-id="'+esc(t.id)+'">Eliminar</button>':''; tr.innerHTML='<td><strong>'+esc(t.cert)+'</strong></td><td>'+esc(t.nombre)+'</td><td>'+esc(t.curp)+'</td><td>'+esc(t.rfc)+'</td><td>'+esc(t.ct)+'</td><td style="white-space:nowrap"><button class="btn-mini" data-act="titexp" data-cert="'+esc(t.cert)+'" data-nom="'+esc(t.nombre)+'">📎 Expediente</button> '+del+'</td>'; titTbody.appendChild(tr); });
+    titTbody.querySelectorAll('[data-act=titexp]').forEach(function(b){ b.addEventListener('click', function(){ openExpediente(b.getAttribute('data-cert'), b.getAttribute('data-nom')); }); });
+    titTbody.querySelectorAll('[data-act=titdel]').forEach(function(b){ b.addEventListener('click', function(){ delTit(b.getAttribute('data-id')); }); });
+  }
+  async function delTit(id){ if(!confirm('¿Eliminar este titular (dado de alta manualmente)?')) return; try{ var r=await api(TITU,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id:id})}); if(!r.ok) throw new Error('HTTP '+r.status); loadTit(); }catch(e){ alert('Error: '+e.message); } }
 })();
 </script>
 </body>
