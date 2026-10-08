@@ -162,9 +162,14 @@
   }
 
   /* ===== Administración ===== */
-  .admin-bar{display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:18px; flex-wrap:wrap;}
+  .admin-bar{display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; flex-wrap:wrap;}
   .admin-bar .who{font-size:14px; color:var(--ink);}
   .admin-bar .acts{display:flex; gap:8px; flex-wrap:wrap;}
+  .tabs{display:flex; gap:4px; flex-wrap:wrap; border-bottom:1px solid var(--border); margin:2px 0 22px;}
+  .tab{background:none; border:none; padding:10px 16px; font-family:var(--sans); font-size:15px; font-weight:700; color:var(--ink); cursor:pointer; border-bottom:3px solid transparent; border-radius:8px 8px 0 0;}
+  .tab:hover{background:var(--cream-2);}
+  .tab.active{color:var(--brown-deep); border-bottom-color:var(--brown);}
+  .tabpane{display:none;} .tabpane.active{display:block;}
   .admin-form fieldset{border:1px solid var(--border); border-radius:10px; padding:14px 18px 18px; margin:0 0 16px;}
   .admin-form legend{font-family:var(--serif); color:var(--ochre); font-size:13px; text-transform:uppercase; letter-spacing:.6px; padding:0 6px;}
   .fgrid{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
@@ -188,10 +193,32 @@
   .btn-del:hover{background:#fbecea;}
   .btn-mini{background:none; border:1px solid var(--border); color:var(--brown-deep); border-radius:8px; padding:5px 10px; cursor:pointer; font-size:13px;}
   .btn-mini:hover{background:var(--cream-2);}
-  #records-status,#users-status{font-size:14px; color:var(--ink); margin-bottom:8px;}
+  #records-status,#users-status,#ben-status{font-size:14px; color:var(--ink); margin:6px 0 8px;}
   #login-msg{color:#B23A2E; font-size:13px; margin-top:8px; min-height:1em;}
-  .admin-link{margin:14px 0 0; font-size:13px;}
-  .admin-link a{color:var(--ink);}
+  .search-row{display:flex; gap:10px; flex-wrap:wrap; margin:6px 0 10px;}
+  .search-row input{flex:1 1 320px; font-size:15px; padding:11px 13px; border:1px solid var(--border); border-radius:8px;}
+  .dl-doc{display:flex; align-items:center; gap:16px; background:#fff; border:1px solid var(--border); border-radius:12px; padding:18px 20px; box-shadow:var(--shadow); max-width:660px; text-decoration:none;}
+  .dl-doc .ic{flex:0 0 46px; width:46px; height:46px; border-radius:9px; background:var(--cream-2); display:flex; align-items:center; justify-content:center; color:var(--green);}
+  .dl-doc .ic svg{width:24px;height:24px;}
+  .dl-doc .meta{flex:1;} .dl-doc .meta b{display:block; color:var(--brown-deep); font-family:var(--serif); font-size:16px;} .dl-doc .meta span{font-size:13px; color:var(--ink);}
+  .dl-doc .go{background:var(--brown); color:#fff; padding:9px 16px; border-radius:8px; font-weight:700; font-size:14px;}
+  .paciente-wrap{position:relative; display:flex; gap:8px;}
+  .paciente-wrap input{flex:1;}
+  .ben-ico{flex:0 0 auto; border:1px solid var(--border); background:var(--cream-2); border-radius:8px; padding:0 14px; cursor:pointer; font-size:16px;}
+  .ben-pick{position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid var(--border); border-radius:8px; margin-top:4px; max-height:260px; overflow:auto; z-index:30; display:none; box-shadow:var(--shadow);}
+  .ben-pick.open{display:block;}
+  .ben-pick .it{padding:8px 11px; cursor:pointer; font-size:13.5px; border-bottom:1px solid var(--border);}
+  .ben-pick .it:last-child{border-bottom:0;}
+  .ben-pick .it:hover{background:var(--cream-2);}
+  .ben-pick .it small{color:var(--ink); display:block; font-size:12px;}
+  fieldset[disabled]{opacity:.5;}
+  .exp-modal{position:fixed; inset:0; background:rgba(20,40,45,.45); display:none; align-items:flex-start; justify-content:center; z-index:1000; padding:36px 16px; overflow:auto;}
+  .exp-modal.open{display:flex;}
+  .exp-box{background:#fff; border-radius:14px; width:100%; max-width:740px; padding:20px 22px; box-shadow:0 20px 60px rgba(0,0,0,.3);}
+  .exp-head{display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px;}
+  .exp-head strong{font-family:var(--serif); color:var(--brown-deep); font-size:18px;}
+  .exp-up{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:8px 0;}
+  .exp-up input[type=text]{flex:1; min-width:180px; padding:9px 11px; border:1px solid var(--border); border-radius:8px;}
   @media(max-width:860px){ .fgrid,.checks{grid-template-columns:1fr;} }
 </style>
 </head>
@@ -245,30 +272,124 @@
         </span>
       </div>
 
-      <div id="records-block">
-        <form id="form-atencion" class="admin-form card">
-          <fieldset>
-            <legend>Control</legend>
+      <!-- Ventana de expediente (documentos por beneficiario) -->
+      <div id="exp-modal" class="exp-modal"><div class="exp-box">
+        <div class="exp-head"><strong id="exp-title">Expediente</strong><button type="button" class="btn-ghost btn" id="exp-close">Cerrar</button></div>
+        <p style="font-size:13px;color:var(--ink);margin:0;">Documentos del beneficiario (PDF o imagen, máx. 4 MB). Todos quedan juntos en su expediente.</p>
+        <form id="exp-modal-form" class="exp-up">
+          <input type="file" id="exp-modal-file" accept=".pdf,image/*">
+          <input type="text" id="exp-modal-desc" placeholder="Descripción (opcional)">
+          <button class="btn btn-primary" type="submit">Subir</button>
+        </form>
+        <div id="exp-modal-status" style="font-size:13px;color:var(--ink);margin:6px 0;"></div>
+        <div class="table-wrap"><table class="dtable" id="exp-modal-table"><thead><tr><th>Archivo</th><th>Descripción</th><th>Fecha</th><th></th></tr></thead><tbody></tbody></table></div>
+      </div></div>
+
+      <div class="tabs" id="tabs">
+        <button class="tab active" type="button" data-pane="solicitud">Solicitud de servicio</button>
+        <button class="tab" type="button" data-pane="autorizacion">Autorización</button>
+        <button class="tab" type="button" data-pane="consulta">Consulta de beneficiarios</button>
+        <button class="tab" type="button" data-pane="dependientes">Dependientes</button>
+        <button class="tab" type="button" data-pane="descargas">Descargas</button>
+        <button class="tab" type="button" data-pane="expediente">Expediente</button>
+        <button class="tab" type="button" data-pane="usuarios" id="tab-usuarios-btn" style="display:none;">Usuarios</button>
+      </div>
+
+      <!-- Registrar atención -->
+      <!-- Solicitud de servicio -->
+      <div class="tabpane active" id="pane-solicitud">
+        <h3 style="font-family:var(--serif); color:var(--brown-deep); margin:0 0 6px;">1. Solicitud de servicio</h3>
+        <p style="color:var(--ink); font-size:14px; margin:0 0 14px;">Registra la solicitud inicial del afiliado. Después pasará al historial y luego a Autorización.</p>
+        <form id="form-solicitud" class="admin-form card" style="margin-bottom:18px;">
+          <fieldset><legend>Datos de la solicitud</legend>
             <div class="fgrid">
-              <div class="field"><label>Folio de control</label><input name="folio" type="text"></div>
-              <div class="field"><label>Fecha de emisión</label><input name="fechaEmision" type="date"></div>
-              <div class="field full"><label>Tipo de trámite</label>
-                <select name="tipoTramite"><option value="">Selecciona…</option><option>Autorización de cirugía</option><option>Confirmación de servicio(s) del programa</option></select>
+              <div class="field"><label>Folio de control <span style="font-weight:400;color:var(--ink)">(automático)</span></label><input name="folio" type="text" readonly placeholder="Se genera al registrar"></div>
+              <div class="field"><label>Folio ELEONOR (opcional)</label><input name="folioEleonor" type="text"></div>
+              <div class="field full"><label>Nombre completo <span style="font-weight:400;color:var(--ink)">(busca en la base con la lupa)</span></label>
+                <div class="paciente-wrap">
+                  <input name="nombre" id="s-nombre" type="text" autocomplete="off">
+                  <button type="button" class="ben-ico" id="btn-sol-pick" title="Buscar en base de beneficiarios">🔍</button>
+                  <div class="ben-pick" id="sol-pick"></div>
+                </div>
               </div>
+              <div class="field"><label>CURP</label><input name="curp" type="text" maxlength="18"></div>
+              <div class="field"><label>RFC</label><input name="rfc" type="text" maxlength="13"></div>
+              <div class="field"><label>No. de certificado</label><input name="certificado" type="text"></div>
+              <div class="field"><label>Tipo de trámite</label>
+                <select name="tipoTramite"><option value="">Selecciona…</option><option>CIRUGIA</option><option>APOYO PARTO O CESAREA</option><option>CONSULTA MEDICO GENERAL</option><option>CONSULTA ESPECIALISTA</option><option>ESTUDIO LABORATORIO</option></select></div>
+              <div class="field full"><label>Comentarios adicionales</label><textarea name="comentarios"></textarea></div>
             </div>
           </fieldset>
-          <fieldset>
-            <legend>Datos del paciente / afiliado</legend>
+          <button class="btn btn-primary" type="submit">Registrar solicitud</button>
+          <button class="btn btn-ghost" type="button" id="sol-docs" style="margin-left:8px;">📎 Documentos del beneficiario</button>
+        </form>
+
+        <div class="admin-records-head">
+          <h3 style="margin:0;">Historial de solicitudes</h3>
+          <div class="actions"><button class="btn btn-ghost" id="sol-refresh" type="button">Actualizar</button></div>
+        </div>
+        <div id="sol-status"></div>
+        <div class="table-wrap">
+          <table id="sol-table" class="dtable">
+            <thead><tr><th>Folio</th><th>Fecha</th><th>Nombre</th><th>Certificado</th><th>Tipo</th><th>Etapa</th><th>Notificar etapa</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Autorización -->
+      <div class="tabpane" id="pane-autorizacion">
+        <h3 style="font-family:var(--serif); color:var(--brown-deep); margin:0 0 6px;">2. Registro de autorización</h3>
+        <div class="card" style="margin-bottom:16px;">
+          <div class="fgrid">
+            <div class="field"><label>Cargar solicitud</label>
+              <select id="auth-pick"><option value="">Selecciona una solicitud…</option></select></div>
+            <div class="field" style="align-self:end;"><button class="btn btn-ghost" id="btn-auth-load" type="button">Cargar datos de la solicitud</button></div>
+          </div>
+          <p id="auth-loaded" style="font-size:13px;color:var(--ochre);margin:8px 0 0;"></p>
+        </div>
+        <form id="form-atencion" class="admin-form card">
+          <input type="hidden" name="solicitudId" id="f-solicitudId">
+          <fieldset><legend>Control</legend>
             <div class="fgrid">
-              <div class="field full"><label>Nombre completo del paciente</label><input name="paciente" type="text"></div>
+              <div class="field"><label>Folio de control</label><input name="folio" type="text"></div>
+              <div class="field"><label>Folio ELEONOR (opcional)</label><input name="folioEleonor" type="text"></div>
+              <div class="field"><label>Fecha de emisión</label><input name="fechaEmision" type="date"></div>
+              <div class="field"><label>Tipo de trámite</label>
+                <select name="tipoTramite"><option value="">Selecciona…</option><option>CIRUGIA</option><option>APOYO PARTO O CESAREA</option><option>CONSULTA MEDICO GENERAL</option><option>CONSULTA ESPECIALISTA</option><option>ESTUDIO LABORATORIO</option></select></div>
+              <input type="hidden" name="certificado" id="f-certificado">
+            </div>
+          </fieldset>
+          <fieldset><legend>Datos del paciente / afiliado</legend>
+            <div class="fgrid">
+              <div class="field full"><label>Nombre completo del paciente <span style="font-weight:400;color:var(--ink)">(opcional: busca en la base con la lupa)</span></label>
+                <div class="paciente-wrap">
+                  <input name="paciente" id="f-paciente" type="text" autocomplete="off">
+                  <button type="button" class="ben-ico" id="btn-ben-pick" title="Buscar en base de beneficiarios">🔍</button>
+                  <div class="ben-pick" id="ben-pick"></div>
+                </div>
+              </div>
+              <div class="field"><label>CURP</label><input name="curp" type="text" maxlength="18"></div>
+              <div class="field"><label>RFC</label><input name="rfc" type="text" maxlength="13"></div>
               <div class="field"><label>Número de afiliado</label><input name="numAfiliado" type="text"></div>
-              <div class="field"><label>Parentesco con el titular</label><input name="parentesco" type="text"></div>
+              <div class="field"><label>Parentesco con el titular</label>
+                <select name="parentesco"><option value="">Selecciona…</option><option>CONYUGE</option><option>CONCUBINA</option><option>HIJO(A)</option><option>PADRES</option></select></div>
               <div class="field"><label>Plantel / dependencia (SNTE 26)</label><input name="plantel" type="text"></div>
               <div class="field"><label>Titular / trabajador afiliado</label><input name="titular" type="text"></div>
             </div>
           </fieldset>
-          <fieldset>
-            <legend>Datos del procedimiento o servicio</legend>
+          <fieldset><legend>Servicios PASEM a confirmar</legend>
+            <div class="checks">
+              <label class="check"><input type="checkbox" name="servicios" value="Consulta médica general"> Consulta médica general</label>
+              <label class="check"><input type="checkbox" name="servicios" value="Consulta de especialidad"> Consulta de especialidad</label>
+              <label class="check"><input type="checkbox" name="servicios" value="Estudios de laboratorio"> Estudios de laboratorio</label>
+              <label class="check"><input type="checkbox" name="servicios" value="Cirugía mayor"> Cirugía mayor</label>
+              <label class="check"><input type="checkbox" name="servicios" value="Urgencias"> Urgencias</label>
+            </div>
+            <div class="field full" style="margin-top:12px;"><label>Estudio de laboratorio</label>
+              <select name="estudiosDetalle"><option value="">Selecciona…</option><option>ANTIGENO PROSTATICO ESPECIFICO TOTAL EN SUERO</option><option>CITOLOGIA CERVICAL EN BASE LIQUIDA (PAPANICOLAOU)</option><option>MASTOGRAFIA</option></select></div>
+          </fieldset>
+          <fieldset id="fs-proc" disabled><legend>Datos del procedimiento o servicio <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink);font-size:11px;">(solo para CIRUGÍA)</span></legend>
             <div class="fgrid">
               <div class="field full"><label>Diagnóstico</label><input name="diagnostico" type="text"></div>
               <div class="field full"><label>Tipo de cirugía o servicio solicitado</label><input name="tipoServicio" type="text"></div>
@@ -278,32 +399,18 @@
               <div class="field"><label>Fecha programada del procedimiento</label><input name="fechaProc" type="date"></div>
             </div>
           </fieldset>
-          <fieldset>
-            <legend>Servicios PASEM a confirmar</legend>
-            <div class="checks">
-              <label class="check"><input type="checkbox" name="servicios" value="Consulta médica general"> Consulta médica general</label>
-              <label class="check"><input type="checkbox" name="servicios" value="Consulta de especialidad"> Consulta de especialidad</label>
-              <label class="check"><input type="checkbox" name="servicios" value="Estudios de laboratorio"> Estudios de laboratorio</label>
-              <label class="check"><input type="checkbox" name="servicios" value="Hospitalización"> Hospitalización</label>
-              <label class="check"><input type="checkbox" name="servicios" value="Cirugía ambulatoria"> Cirugía ambulatoria</label>
-              <label class="check"><input type="checkbox" name="servicios" value="Cirugía mayor"> Cirugía mayor</label>
-              <label class="check"><input type="checkbox" name="servicios" value="Urgencias"> Urgencias</label>
-            </div>
-            <div class="field full" style="margin-top:12px;"><label>Estudios de laboratorio — especificar</label><input name="estudiosDetalle" type="text"></div>
-          </fieldset>
-          <fieldset>
-            <legend>Observaciones / condiciones</legend>
+          <fieldset><legend>Observaciones / condiciones</legend>
             <div class="field full"><textarea name="observaciones"></textarea></div>
           </fieldset>
-          <fieldset>
-            <legend>Autorización</legend>
+          <fieldset><legend>Autorización</legend>
             <div class="fgrid">
+              <div class="field full"><label>Nombre de quien autoriza</label><input name="autoriza" type="text" value="DRA. ADRIANA PAMPLONA TRUJILLO"></div>
               <div class="field"><label>Cargo / puesto</label><input name="cargo" type="text"></div>
               <div class="field"><label>Fecha de autorización</label><input name="fechaAutorizacion" type="date"></div>
             </div>
-            <p style="font-size:12.5px; color:var(--ink); margin:10px 0 0;">El nombre de quien autoriza se registra automáticamente con la cuenta que inició sesión.</p>
           </fieldset>
           <button class="btn btn-primary" type="submit">Registrar atención</button>
+          <button class="btn btn-ghost" type="button" id="auth-docs" style="margin-left:8px;">📎 Documentos del beneficiario</button>
         </form>
 
         <div class="admin-records">
@@ -317,16 +424,113 @@
           <div id="records-status"></div>
           <div class="table-wrap">
             <table id="records-table" class="dtable">
-              <thead><tr><th>Folio</th><th>F. emisión</th><th>Paciente</th><th>Núm. afiliado</th><th>Trámite</th><th>Cirugía / servicio</th><th>Servicios</th><th>Hospital</th><th>F. proc.</th><th>Capturó</th><th></th></tr></thead>
+              <thead><tr><th>Folio</th><th>F. emisión</th><th>Paciente</th><th>CURP</th><th>RFC</th><th>Núm. afiliado</th><th>Trámite</th><th>Cirugía / servicio</th><th>Servicios</th><th>Hospital</th><th>F. proc.</th><th>Capturó</th><th>Notificado</th><th></th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
         </div>
       </div>
 
-      <div id="users-block" style="display:none; margin-top:30px;">
+      <!-- Consulta de beneficiarios -->
+      <div class="tabpane" id="pane-consulta">
+        <h3 style="font-family:var(--serif); color:var(--brown-deep); margin:0 0 6px;">Consulta de beneficiarios</h3>
+        <p style="color:var(--ink); font-size:14px; margin:0 0 6px;">Busca por <strong>nombre</strong>, <strong>RFC</strong> o <strong>CURP</strong>. Las personas que aparecen en el listado <strong>cuentan con el beneficio</strong> del programa.</p>
+        <div class="search-row">
+          <input id="ben-q" type="text" placeholder="Nombre, RFC o CURP…">
+          <button class="btn btn-primary" id="ben-btn" type="button">Buscar</button>
+        </div>
+        <div id="ben-status"></div>
+        <div class="table-wrap">
+          <table id="ben-table" class="dtable">
+            <thead><tr><th>Certificado</th><th>Tipo</th><th>Nombre</th><th>RFC</th><th>CURP</th><th>Función</th><th>CCT</th><th>Centro de trabajo</th><th>Expediente</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Descargas -->
+      <div class="tabpane" id="pane-descargas">
+        <h3 style="font-family:var(--serif); color:var(--brown-deep); margin:0 0 6px;">Descargas</h3>
+        <p style="color:var(--ink); font-size:14px; margin:0 0 14px;">Documentos del programa disponibles para el personal autorizado.</p>
+        <a class="dl-doc" href="/documentos/Formato_Autorizacion_Confirmacion_SNTE26.pdf" download>
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15h6M9 18h4"/></svg></span>
+          <span class="meta"><b>Formato de Autorización y/o Confirmación de Servicios Médicos</b><span>PDF · uso interno PASEM</span></span>
+          <span class="go">Descargar</span>
+        </a>
+      </div>
+
+      <!-- Dependientes -->
+      <div class="tabpane" id="pane-dependientes">
+        <h3 style="font-family:var(--serif); color:var(--brown-deep); margin:0 0 6px;">Alta de dependientes</h3>
+        <p style="color:var(--ink); font-size:14px; margin:0 0 14px;">Registra dependientes de un titular. El certificado se asigna automáticamente: certificado del titular + letra (A, B, C…).</p>
+        <form id="form-dep" class="admin-form card" style="margin-bottom:16px;">
+          <fieldset><legend>Titular</legend>
+            <div class="fgrid">
+              <div class="field full"><label>Buscar titular (nombre, CURP o certificado)</label>
+                <div class="paciente-wrap">
+                  <input id="dep-tit" type="text" autocomplete="off">
+                  <button type="button" class="ben-ico" id="btn-dep-pick" title="Buscar titular">🔍</button>
+                  <div class="ben-pick" id="dep-pick"></div>
+                </div>
+              </div>
+              <div class="field"><label>Certificado del titular</label><input name="titularCert" id="dep-cert" type="text" readonly></div>
+              <div class="field"><label>Nombre del titular</label><input name="titularNombre" id="dep-nom" type="text" readonly></div>
+              <div class="field full"><button type="button" class="btn btn-ghost" id="dep-docs">📎 Documentos del beneficiario</button></div>
+            </div>
+          </fieldset>
+          <fieldset><legend>Datos del dependiente</legend>
+            <div class="fgrid">
+              <div class="field full"><label>Nombre completo del dependiente</label><input name="nombre" type="text"></div>
+              <div class="field"><label>Parentesco</label><select name="parentesco"><option value="">Selecciona…</option><option>CONYUGE</option><option>CONCUBINA</option><option>HIJO(A)</option><option>PADRES</option></select></div>
+              <div class="field"><label>CURP</label><input name="curp" type="text" maxlength="18"></div>
+              <div class="field"><label>RFC</label><input name="rfc" type="text" maxlength="13"></div>
+            </div>
+          </fieldset>
+          <button class="btn btn-primary" type="submit">Dar de alta dependiente</button>
+          <button class="btn btn-ghost" type="button" id="dep-alta-sol" style="margin-left:8px;">Dar de alta y crear solicitud →</button>
+        </form>
+        <div class="search-row">
+          <input id="dep-q" type="text" placeholder="Buscar dependiente por nombre, CURP o certificado…">
+          <button class="btn btn-ghost" id="dep-refresh" type="button">Actualizar</button>
+        </div>
+        <div id="dep-status"></div>
+        <div class="table-wrap">
+          <table id="dep-table" class="dtable">
+            <thead><tr><th>Certificado</th><th>Dependiente</th><th>Parentesco</th><th>CURP</th><th>Titular</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Expediente -->
+      <div class="tabpane" id="pane-expediente">
+        <h3 style="font-family:var(--serif); color:var(--brown-deep); margin:0 0 6px;">Expediente — documentación</h3>
+        <p style="color:var(--ink); font-size:14px; margin:0 0 14px;">Adjunta documentos del afiliado (PDF o imagen). Máximo <strong>4 MB</strong> por archivo.</p>
+        <form id="form-exp" class="admin-form card" style="margin-bottom:16px;">
+          <div class="fgrid">
+            <div class="field"><label>Asociar a (CURP, folio o nombre)</label><input name="ref" type="text"></div>
+            <div class="field"><label>Descripción (opcional)</label><input name="desc" type="text"></div>
+          </div>
+          <div class="field full" style="margin-top:4px;"><label>Archivo (PDF o imagen, máx. 4 MB)</label><input name="file" type="file" accept=".pdf,image/*"></div>
+          <button class="btn btn-primary" type="submit" style="margin-top:12px;">Subir documento</button>
+        </form>
+        <div class="search-row">
+          <input id="exp-q" type="text" placeholder="Buscar por CURP, folio, nombre o archivo…">
+          <button class="btn btn-ghost" id="exp-refresh" type="button">Actualizar</button>
+        </div>
+        <div id="exp-status"></div>
+        <div class="table-wrap">
+          <table id="exp-table" class="dtable">
+            <thead><tr><th>Archivo</th><th>Asociado a</th><th>Descripción</th><th>Subió</th><th>Fecha</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Usuarios -->
+      <div class="tabpane" id="pane-usuarios">
         <h3 style="font-family:var(--serif); color:var(--brown-deep); margin:0 0 6px;">Usuarios y roles</h3>
-        <p style="color:var(--ink); font-size:14px; margin:0 0 14px;"><strong>Administración</strong>: gestiona usuarios y registros. <strong>Operación</strong>: captura y consulta registros.</p>
+        <p style="color:var(--ink); font-size:14px; margin:0 0 14px;"><strong>Administración</strong>: gestiona usuarios y registros. <strong>Operación</strong>: captura, consulta y descarga.</p>
         <form id="form-user" class="admin-form card" style="margin-bottom:16px;">
           <div class="fgrid">
             <div class="field"><label>Correo del usuario</label><input name="email" type="email" placeholder="persona@correo.com"></div>
@@ -334,7 +538,6 @@
             <div class="field full"><label>Contraseña temporal</label><input name="password" type="text" placeholder="mínimo 6 caracteres"></div>
           </div>
           <button class="btn btn-primary" type="submit">Crear usuario</button>
-          <p style="font-size:12.5px; color:var(--ink); margin:10px 0 0;">Comparte la contraseña temporal con la persona; podrá cambiarla al entrar con «Cambiar mi contraseña».</p>
         </form>
         <div id="users-status"></div>
         <div class="table-wrap">
@@ -344,6 +547,7 @@
           </table>
         </div>
       </div>
+
     </div>
   </div>
 </section>
@@ -382,21 +586,17 @@
 </script>
 <script>
 (function(){
-  var AUTH='/.netlify/functions/auth';
-  var RECORDS='/.netlify/functions/records';
-  var USERS='/.netlify/functions/usuarios';
+  var AUTH='/.netlify/functions/auth', RECORDS='/.netlify/functions/records', USERS='/.netlify/functions/usuarios', BEN='/.netlify/functions/beneficiarios', EXPED='/.netlify/functions/expediente';
+  var SOLIC='/.netlify/functions/solicitudes', DEPS='/.netlify/functions/dependientes';
+  var STAGE_MAIL='telesecundariaseccion26@pasem.com';
+  var ETAPAS={1:'Solicitud de atención',2:'Solicitud de documentación',3:'Autorización generada',4:'Servicio otorgado'};
   var TK='pasem_token', RL='pasem_role', EM='pasem_email';
-  var gate=document.getElementById('admin-gate');
-  var panel=document.getElementById('admin-panel');
+  var gate=document.getElementById('admin-gate'), panel=document.getElementById('admin-panel');
   var userLbl=document.getElementById('admin-user');
-  var usersBlock=document.getElementById('users-block');
-  var form=document.getElementById('form-atencion');
-  var statusEl=document.getElementById('records-status');
-  var tbody=document.querySelector('#records-table tbody');
-  var usersStatus=document.getElementById('users-status');
-  var usersTbody=document.querySelector('#users-table tbody');
-  var formUser=document.getElementById('form-user');
+  var form=document.getElementById('form-atencion'), statusEl=document.getElementById('records-status'), tbody=document.querySelector('#records-table tbody');
+  var usersStatus=document.getElementById('users-status'), usersTbody=document.querySelector('#users-table tbody'), formUser=document.getElementById('form-user');
   var loginMsg=document.getElementById('login-msg');
+  var benTbody=document.querySelector('#ben-table tbody'), benStatus=document.getElementById('ben-status');
   var records=[];
   function tok(){ try{return localStorage.getItem(TK);}catch(e){return null;} }
   function role(){ try{return localStorage.getItem(RL)||'';}catch(e){return '';} }
@@ -413,6 +613,57 @@
   document.getElementById('btn-changepass').addEventListener('click', changePass);
   document.getElementById('btn-refresh').addEventListener('click', loadRecords);
   document.getElementById('btn-export').addEventListener('click', exportCSV);
+  document.getElementById('ben-btn').addEventListener('click', searchBen);
+  document.getElementById('ben-q').addEventListener('keydown', function(e){ if(e.key==='Enter') searchBen(); });
+  // pestañas
+  document.querySelectorAll('.tab').forEach(function(b){ b.addEventListener('click', function(){ activate(b.getAttribute('data-pane')); }); });
+  function activate(name){
+    document.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('active', t.getAttribute('data-pane')===name); });
+    document.querySelectorAll('.tabpane').forEach(function(p){ p.classList.toggle('active', p.id==='pane-'+name); });
+    if(name==='usuarios' && isAdmin()) loadUsers();
+    if(name==='expediente') loadExp();
+    if(name==='solicitud') loadSolic();
+    if(name==='autorizacion'){ loadRecords(); loadAuthPicker(); }
+    if(name==='dependientes') loadDeps();
+  }
+  // Mayúsculas sin acento en los campos de texto del formulario
+  function up(s){ return String(s||'').toUpperCase().replace(/[ÁÀÄÂ]/g,'A').replace(/[ÉÈËÊ]/g,'E').replace(/[ÍÌÏÎ]/g,'I').replace(/[ÓÒÖÔ]/g,'O').replace(/[ÚÙÜÛ]/g,'U'); }
+  document.querySelectorAll('#form-atencion input[type=text], #form-atencion textarea, #form-solicitud input[type=text], #form-solicitud textarea, #form-dep input[type=text]').forEach(function(el){
+    el.addEventListener('input', function(){ var p=el.selectionStart; el.value=up(el.value); try{ el.setSelectionRange(p,p); }catch(e){} });
+  });
+  // "Datos del procedimiento" solo habilitado para CIRUGÍA
+  var tipoSel=document.querySelector('#form-atencion select[name=tipoTramite]');
+  var fsProc=document.getElementById('fs-proc');
+  function syncProc(){ var v=tipoSel.value; var on=(v==='CIRUGIA'||v==='APOYO PARTO O CESAREA'); fsProc.disabled=!on; }
+  tipoSel.addEventListener('change', syncProc); syncProc();
+  // Buscar paciente en la base de beneficiarios
+  var fPac=document.getElementById('f-paciente'), benPick=document.getElementById('ben-pick');
+  document.getElementById('btn-ben-pick').addEventListener('click', pacSearch);
+  async function pacSearch(){
+    var q=(fPac.value||'').trim(); if(q.length<2){ alert('Escribe al menos 2 caracteres (nombre, CURP o RFC).'); return; }
+    benPick.innerHTML='<div class="it">Buscando…</div>'; benPick.classList.add('open');
+    try{
+      var r=await api(BEN+'?q='+encodeURIComponent(q)); var d=await r.json();
+      if(!d.results||!d.results.length){ benPick.innerHTML='<div class="it">Sin coincidencias</div>'; return; }
+      benPick.innerHTML='';
+      d.results.slice(0,15).forEach(function(x){
+        var it=document.createElement('div'); it.className='it';
+        it.innerHTML='<strong>'+esc(x.nombre)+'</strong><small>CURP: '+esc(x.curp||'—')+' · RFC: '+esc(x.rfc||'—')+' · '+esc(x.ct||'')+'</small>';
+        it.addEventListener('click', function(){ pickBen(x); });
+        benPick.appendChild(it);
+      });
+    }catch(e){ benPick.innerHTML='<div class="it">Error: '+esc(e.message)+'</div>'; }
+  }
+  function pickBen(x){
+    var f=document.getElementById('form-atencion');
+    f.querySelector('[name=paciente]').value=up(x.nombre||'');
+    f.querySelector('[name=curp]').value=up(x.curp||'');
+    f.querySelector('[name=rfc]').value=up(x.rfc||'');
+    var na=f.querySelector('[name=numAfiliado]'); if(na) na.value=(x.cert||'');
+    var pl=f.querySelector('[name=plantel]'); if(pl) pl.value=up(x.ct||'');
+    benPick.classList.remove('open'); benPick.innerHTML='';
+  }
+  document.addEventListener('click', function(e){ if(e.target.classList && e.target.classList.contains('ben-ico')) return; document.querySelectorAll('.ben-pick').forEach(function(pk){ if(!pk.contains(e.target)) pk.classList.remove('open'); }); });
 
   if(tok()){ showPanel(); } else { showGate(); }
 
@@ -420,8 +671,8 @@
   function showPanel(){
     gate.style.display='none'; panel.style.display='';
     userLbl.textContent='Sesión: '+email()+' · '+roleLabel(role());
-    if(isAdmin()){ usersBlock.style.display=''; loadUsers(); } else { usersBlock.style.display='none'; }
-    loadRecords();
+    document.getElementById('tab-usuarios-btn').style.display = isAdmin()?'':'none';
+    activate('solicitud');
   }
   async function doLogin(){
     loginMsg.textContent='';
@@ -447,76 +698,184 @@
     catch(e){ alert('Error: '+e.message); }
   }
 
-  // ---- Registros ----
+  // Registros
   async function loadRecords(){
     statusEl.textContent='Cargando…';
-    try{
-      var r=await api(RECORDS);
-      if(!r.ok) throw new Error('HTTP '+r.status);
-      records=await r.json(); renderRecords();
-      statusEl.textContent=records.length+' atención(es) registrada(s).';
-    }catch(e){ statusEl.textContent='Error al cargar: '+e.message; }
+    try{ var r=await api(RECORDS); if(!r.ok) throw new Error('HTTP '+r.status); records=await r.json(); renderRecords(); statusEl.textContent=records.length+' atención(es) registrada(s).'; }
+    catch(e){ statusEl.textContent='Error al cargar: '+e.message; }
   }
+  function fmtDate(iso){ if(!iso) return '—'; try{ var d=new Date(iso); return d.toLocaleString('es-MX',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); }catch(e){ return iso; } }
+  function recById(id){ return records.filter(function(r){ return r.id===id; })[0]; }
   function renderRecords(){
     tbody.innerHTML='';
     records.forEach(function(rec){
-      var tr=document.createElement('tr');
-      var serv=(rec.servicios||[]).join(', ');
-      var del=isAdmin()?'<button class="btn-del" data-id="'+esc(rec.id)+'">Eliminar</button>':'';
-      tr.innerHTML='<td>'+esc(rec.folio)+'</td><td>'+esc(rec.fechaEmision)+'</td><td>'+esc(rec.paciente)+'</td>'+
-        '<td>'+esc(rec.numAfiliado)+'</td><td>'+esc(rec.tipoTramite)+'</td><td>'+esc(rec.tipoServicio)+'</td>'+
-        '<td>'+esc(serv)+'</td><td>'+esc(rec.hospital)+'</td><td>'+esc(rec.fechaProc)+'</td>'+
-        '<td>'+esc(rec.capturadoPor)+'</td><td>'+del+'</td>';
+      var tr=document.createElement('tr'); var serv=(rec.servicios||[]).join(', ');
+      var acts='<button class="btn-mini" data-act="print" data-id="'+esc(rec.id)+'">Imprimir</button> '+
+               '<button class="btn-mini" data-act="notify" data-id="'+esc(rec.id)+'">Notificar SNTE</button>'+
+               (isAdmin()?' <button class="btn-del" data-act="del" data-id="'+esc(rec.id)+'">Eliminar</button>':'');
+      tr.innerHTML='<td>'+esc(rec.folio)+'</td><td>'+esc(rec.fechaEmision)+'</td><td>'+esc(rec.paciente)+'</td><td>'+esc(rec.curp)+'</td><td>'+esc(rec.rfc)+'</td><td>'+esc(rec.numAfiliado)+'</td><td>'+esc(rec.tipoTramite)+'</td><td>'+esc(rec.tipoServicio)+'</td><td>'+esc(serv)+'</td><td>'+esc(rec.hospital)+'</td><td>'+esc(rec.fechaProc)+'</td><td>'+esc(rec.capturadoPor)+'</td><td>'+(rec.notifiedAt?esc(fmtDate(rec.notifiedAt)):'—')+'</td><td style="white-space:nowrap;">'+acts+'</td>';
       tbody.appendChild(tr);
     });
-    if(isAdmin()){ tbody.querySelectorAll('.btn-del').forEach(function(b){ b.addEventListener('click', function(){ delRecord(b.getAttribute('data-id')); }); }); }
+    tbody.querySelectorAll('[data-act=print]').forEach(function(b){ b.addEventListener('click', function(){ printRecord(recById(b.getAttribute('data-id'))); }); });
+    tbody.querySelectorAll('[data-act=notify]').forEach(function(b){ b.addEventListener('click', function(){ notifyRecord(recById(b.getAttribute('data-id'))); }); });
+    tbody.querySelectorAll('[data-act=del]').forEach(function(b){ b.addEventListener('click', function(){ delRecord(b.getAttribute('data-id')); }); });
   }
-  async function delRecord(id){
-    if(!confirm('¿Eliminar este registro?')) return;
-    try{ var r=await api(RECORDS+'?id='+encodeURIComponent(id),{method:'DELETE'}); if(!r.ok) throw new Error('HTTP '+r.status); loadRecords(); }
-    catch(e){ alert('Error al eliminar: '+e.message); }
+  function val(v){ return (v==null||v==='')?'&nbsp;':esc(v); }
+  function printRecord(rec){
+    if(!rec) return;
+    var snte=(document.querySelector('.logo-snte')||{}).src||'';
+    var bida=(document.querySelector('.logo-bida')||{}).src||'';
+    var S=rec.servicios||[]; function has(x){ return S.indexOf(x)>=0; }
+    function box(on){ return '<span class="bx">'+(on?'&#10003;':'')+'</span>'; }
+    var aut = rec.tipoTramite==='Autorización de cirugía';
+    var conf = (rec.tipoTramite||'').indexOf('Confirmación')===0;
+    var html=''+
+    '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Formato PASEM '+val(rec.folio)+'</title>'+
+    '<style>'+
+    '@page{size:letter;margin:14mm;} *{box-sizing:border-box;} body{font-family:Arial,Helvetica,sans-serif; color:#222; font-size:11px; margin:0;}'+
+    '.hd{display:flex; align-items:center; justify-content:space-between; gap:10px;}'+
+    '.hd img{height:58px;} .hd .ctr{text-align:center; flex:1;}'+
+    '.hd .ctr .p1{font-size:11px; color:#333;} .hd .ctr .p2{font-family:Arial; font-weight:900; font-size:26px; color:#E06A1E; letter-spacing:1px; line-height:1;} .hd .ctr .p3{font-size:9px; color:#333;}'+
+    '.rule{border:0; border-top:2px solid #E06A1E; margin:6px 0 10px;}'+
+    '.title{text-align:center; color:#1F3A5F; font-size:13px; font-weight:bold; margin:0 0 10px;}'+
+    '.bar{background:#1F3A5F; color:#fff; font-weight:bold; font-size:10.5px; padding:5px 8px; margin:10px 0 0;}'+
+    'table.f{width:100%; border-collapse:collapse;} table.f td{border:1px solid #9aa6b5; padding:4px 7px; vertical-align:top;}'+
+    '.lbl{font-size:8.5px; color:#1F3A5F; font-weight:bold; text-transform:uppercase; letter-spacing:.3px;}'+
+    '.v{font-size:12px; min-height:15px;}'+
+    '.chk{display:flex; align-items:center; gap:8px; padding:4px 8px; border:1px solid #9aa6b5; border-top:0;}'+
+    '.bx{display:inline-block; width:13px; height:13px; border:1.5px solid #1F3A5F; text-align:center; line-height:12px; font-size:11px; color:#1F3A5F;}'+
+    '.note{font-size:8.5px; color:#555; font-style:italic; margin-top:14px; border-top:1px solid #ccc; padding-top:6px;}'+
+    '.sign{margin-top:26px; display:flex; gap:30px;} .sign div{flex:1; border-top:1px solid #333; padding-top:4px; font-size:9px; text-align:center; color:#333;}'+
+    '</style></head><body>'+
+    '<div class="hd">'+(snte?'<img src="'+snte+'">':'<span></span>')+
+      '<div class="ctr"><div class="p1">Programa de Apoyo de Servicios Médicos</div><div class="p2">PASEM</div><div class="p3">Sección 26 del SNTE · San Luis Potosí</div></div>'+
+      (bida?'<img src="'+bida+'">':'<span></span>')+'</div>'+
+    '<hr class="rule">'+
+    '<div class="title">FORMATO DE AUTORIZACIÓN Y/O CONFIRMACIÓN DE SERVICIOS MÉDICOS</div>'+
+    '<table class="f"><tr><td style="width:34%"><div class="lbl">Folio de control</div><div class="v">'+val(rec.folio)+'</div></td>'+
+      '<td style="width:33%"><div class="lbl">Folio ELEONOR</div><div class="v">'+val(rec.folioEleonor)+'</div></td>'+
+      '<td><div class="lbl">Fecha de emisión (dd/mm/aaaa)</div><div class="v">'+val(rec.fechaEmision)+'</div></td></tr></table>'+
+    '<div class="bar">1. TIPO DE TRÁMITE</div>'+
+    '<div class="chk">'+box(rec.tipoTramite==='CIRUGIA')+' CIRUGÍA</div>'+
+    '<div class="chk">'+box(rec.tipoTramite==='LABORATORIO')+' LABORATORIO</div>'+
+    '<div class="chk">'+box(rec.tipoTramite==='CONSULTA MEDICO GENERAL')+' CONSULTA MÉDICO GENERAL</div>'+
+    '<div class="chk">'+box(rec.tipoTramite==='CONSULTA MEDICO ESPECIALISTA')+' CONSULTA MÉDICO ESPECIALISTA</div>'+
+    '<div class="bar">2. DATOS DEL PACIENTE / AFILIADO</div>'+
+    '<table class="f"><tr><td colspan="2"><div class="lbl">Nombre completo del paciente</div><div class="v">'+val(rec.paciente)+'</div></td></tr>'+
+      '<tr><td style="width:50%"><div class="lbl">CURP</div><div class="v">'+val(rec.curp)+'</div></td><td><div class="lbl">RFC</div><div class="v">'+val(rec.rfc)+'</div></td></tr>'+
+      '<tr><td style="width:50%"><div class="lbl">Número de afiliado</div><div class="v">'+val(rec.numAfiliado)+'</div></td><td><div class="lbl">Parentesco con el titular</div><div class="v">'+val(rec.parentesco)+'</div></td></tr>'+
+      '<tr><td><div class="lbl">Plantel / dependencia (SNTE 26)</div><div class="v">'+val(rec.plantel)+'</div></td><td><div class="lbl">Titular / trabajador afiliado</div><div class="v">'+val(rec.titular)+'</div></td></tr></table>'+
+    '<div class="bar">3. DATOS DEL PROCEDIMIENTO O SERVICIO</div>'+
+    '<table class="f"><tr><td colspan="2"><div class="lbl">Diagnóstico</div><div class="v">'+val(rec.diagnostico)+'</div></td></tr>'+
+      '<tr><td colspan="2"><div class="lbl">Tipo de cirugía o servicio solicitado</div><div class="v">'+val(rec.tipoServicio)+'</div></td></tr>'+
+      '<tr><td style="width:50%"><div class="lbl">Médico tratante</div><div class="v">'+val(rec.medico)+'</div></td><td><div class="lbl">Cédula profesional</div><div class="v">'+val(rec.cedula)+'</div></td></tr>'+
+      '<tr><td><div class="lbl">Hospital / unidad médica o proveedor</div><div class="v">'+val(rec.hospital)+'</div></td><td><div class="lbl">Fecha programada del procedimiento</div><div class="v">'+val(rec.fechaProc)+'</div></td></tr></table>'+
+    '<div class="bar">4. SERVICIOS PASEM A CONFIRMAR</div>'+
+    '<div class="chk">'+box(has('Consulta médica general'))+' Consulta médica general</div>'+
+    '<div class="chk">'+box(has('Consulta de especialidad'))+' Consulta de especialidad</div>'+
+    '<div class="chk">'+box(has('Estudios de laboratorio'))+' Estudios de laboratorio: '+val(rec.estudiosDetalle)+'</div>'+
+    '<div class="chk">'+box(has('Cirugía mayor'))+' Cirugía mayor</div>'+
+    '<div class="chk">'+box(has('Urgencias'))+' Urgencias</div>'+
+    '<div class="bar">5. OBSERVACIONES / CONDICIONES DE LA AUTORIZACIÓN</div>'+
+    '<table class="f"><tr><td style="height:50px"><div class="v">'+val(rec.observaciones)+'</div></td></tr></table>'+
+    '<div class="bar">6. AUTORIZACIÓN</div>'+
+    '<div class="sign"><div>'+val(rec.autoriza||rec.capturadoPor)+'<br>Nombre y firma del administrador del programa</div>'+
+      '<div>'+val(rec.cargo)+'<br>Cargo / puesto</div><div>'+val(rec.fechaAutorizacion)+'<br>Fecha</div></div>'+
+    '<div class="note">Este documento es de uso interno del Programa PASEM, SNTE Sección 26, y no sustituye, por sí mismo, las condiciones generales del convenio vigente. Conservar una copia en el expediente del afiliado. &nbsp;·&nbsp; Folio interno: '+val(rec.id)+'</div>'+
+    '</body></html>';
+    var w=window.open('','_blank');
+    if(!w){ alert('Permite las ventanas emergentes para imprimir.'); return; }
+    w.document.open(); w.document.write(html); w.document.close(); w.focus();
+    setTimeout(function(){ try{ w.print(); }catch(e){} }, 500);
   }
+  async function notifyRecord(rec){
+    if(!rec) return;
+    var L=[
+      'PROGRAMA DE APOYO DE SERVICIOS MÉDICOS (PASEM) — SNTE Sección 26',
+      'Notificación de atención registrada','',
+      'Folio de control: '+(rec.folio||'—'),
+      'Folio ELEONOR: '+(rec.folioEleonor||'—'),
+      'Fecha de emisión: '+(rec.fechaEmision||'—'),
+      'Tipo de trámite: '+(rec.tipoTramite||'—'),'',
+      'PACIENTE / AFILIADO',
+      'Nombre del paciente: '+(rec.paciente||'—'),
+      'CURP: '+(rec.curp||'—'),
+      'RFC: '+(rec.rfc||'—'),
+      'Número de afiliado: '+(rec.numAfiliado||'—'),
+      'Parentesco con el titular: '+(rec.parentesco||'—'),
+      'Plantel / dependencia: '+(rec.plantel||'—'),
+      'Titular / trabajador afiliado: '+(rec.titular||'—'),'',
+      'PROCEDIMIENTO / SERVICIO',
+      'Diagnóstico: '+(rec.diagnostico||'—'),
+      'Tipo de cirugía o servicio: '+(rec.tipoServicio||'—'),
+      'Médico tratante: '+(rec.medico||'—'),
+      'Cédula profesional: '+(rec.cedula||'—'),
+      'Hospital / proveedor: '+(rec.hospital||'—'),
+      'Fecha programada: '+(rec.fechaProc||'—'),'',
+      'Servicios a confirmar: '+((rec.servicios||[]).join(', ')||'—'),
+      'Estudios de laboratorio: '+(rec.estudiosDetalle||'—'),'',
+      'Observaciones: '+(rec.observaciones||'—'),'',
+      'Autoriza: '+(rec.autoriza||rec.capturadoPor||'—'),
+      'Cargo / puesto: '+(rec.cargo||'—'),
+      'Fecha de autorización: '+(rec.fechaAutorizacion||'—'),
+      'Capturó: '+(rec.capturadoPor||'—'),
+      'Folio interno: '+(rec.id||'—')
+    ];
+    var subject=encodeURIComponent('PASEM — Atención: '+(rec.paciente||'(sin nombre)')+' — '+(rec.folio||rec.id||''));
+    var body=encodeURIComponent(L.join('\r\n'));
+    var a=document.createElement('a');
+    a.href='mailto:rodrigoperez@bidaseguros.org?subject='+subject+'&body='+body;
+    a.style.display='none'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    try{ var r=await api(RECORDS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'notify',id:rec.id})}); if(r.ok){ loadRecords(); } }catch(e){}
+  }
+  async function delRecord(id){ if(!confirm('¿Eliminar este registro?')) return; try{ var r=await api(RECORDS+'?id='+encodeURIComponent(id),{method:'DELETE'}); if(!r.ok) throw new Error('HTTP '+r.status); loadRecords(); }catch(e){ alert('Error al eliminar: '+e.message); } }
   form.addEventListener('submit', async function(e){
-    e.preventDefault();
-    var fd=new FormData(form);
-    var data={ folio:fd.get('folio'), fechaEmision:fd.get('fechaEmision'), tipoTramite:fd.get('tipoTramite'),
-      paciente:fd.get('paciente'), numAfiliado:fd.get('numAfiliado'), parentesco:fd.get('parentesco'),
-      plantel:fd.get('plantel'), titular:fd.get('titular'), diagnostico:fd.get('diagnostico'),
-      tipoServicio:fd.get('tipoServicio'), medico:fd.get('medico'), cedula:fd.get('cedula'),
-      hospital:fd.get('hospital'), fechaProc:fd.get('fechaProc'), servicios:fd.getAll('servicios'),
-      estudiosDetalle:fd.get('estudiosDetalle'), observaciones:fd.get('observaciones'),
-      cargo:fd.get('cargo'), fechaAutorizacion:fd.get('fechaAutorizacion') };
+    e.preventDefault(); var fd=new FormData(form);
+    var data={ solicitudId:fd.get('solicitudId'), certificado:fd.get('certificado'), folio:fd.get('folio'), folioEleonor:fd.get('folioEleonor'), fechaEmision:fd.get('fechaEmision'), tipoTramite:fd.get('tipoTramite'), paciente:fd.get('paciente'), curp:fd.get('curp'), rfc:fd.get('rfc'), numAfiliado:fd.get('numAfiliado'), parentesco:fd.get('parentesco'), plantel:fd.get('plantel'), titular:fd.get('titular'), diagnostico:fd.get('diagnostico'), tipoServicio:fd.get('tipoServicio'), medico:fd.get('medico'), cedula:fd.get('cedula'), hospital:fd.get('hospital'), fechaProc:fd.get('fechaProc'), servicios:fd.getAll('servicios'), estudiosDetalle:fd.get('estudiosDetalle'), observaciones:fd.get('observaciones'), autoriza:fd.get('autoriza'), cargo:fd.get('cargo'), fechaAutorizacion:fd.get('fechaAutorizacion') };
     var btn=form.querySelector('button[type=submit]'); var old=btn.textContent; btn.disabled=true; btn.textContent='Guardando…';
-    try{ var r=await api(RECORDS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}); if(!r.ok) throw new Error('HTTP '+r.status); form.reset(); loadRecords(); alert('Atención registrada.'); }
-    catch(err){ alert('Error al registrar: '+err.message); }
-    finally{ btn.disabled=false; btn.textContent=old; }
+    try{
+      var r=await api(RECORDS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}); if(!r.ok) throw new Error('HTTP '+r.status);
+      var created=await r.json();
+      if(data.solicitudId){ try{ await api(SOLIC,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'authorize', id:data.solicitudId, atencionId:created.id})}); }catch(e){} }
+      form.reset(); document.getElementById('f-solicitudId').value=''; document.getElementById('f-certificado').value=''; var al=document.getElementById('auth-loaded'); if(al) al.textContent=''; syncProc(); loadRecords();
+      alert('Autorización registrada. La atención quedó en el registro'+(data.solicitudId?' y la solicitud pasó a «Autorización generada».':'.'));
+    }
+    catch(err){ alert('Error al registrar: '+err.message); } finally{ btn.disabled=false; btn.textContent=old; }
   });
   function exportCSV(){
     if(!records.length){ alert('No hay registros para exportar.'); return; }
-    var cols=['id','createdAt','capturadoPor','folio','fechaEmision','tipoTramite','paciente','numAfiliado','parentesco','plantel','titular','diagnostico','tipoServicio','medico','cedula','hospital','fechaProc','servicios','estudiosDetalle','observaciones','cargo','fechaAutorizacion'];
+    var cols=['id','createdAt','capturadoPor','folio','folioEleonor','fechaEmision','tipoTramite','paciente','curp','rfc','numAfiliado','parentesco','plantel','titular','diagnostico','tipoServicio','medico','cedula','hospital','fechaProc','servicios','estudiosDetalle','observaciones','autoriza','cargo','fechaAutorizacion'];
     var rows=records.map(function(rec){ return cols.map(function(c){ var v=rec[c]; if(Array.isArray(v)) v=v.join('; '); v=(v==null?'':String(v)); if(/[",\n]/.test(v)) v='"'+v.replace(/"/g,'""')+'"'; return v; }).join(','); });
-    var csv=cols.join(',')+'\n'+rows.join('\n');
-    var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
+    var csv=cols.join(',')+'\n'+rows.join('\n'); var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
     var url=URL.createObjectURL(blob); var a=document.createElement('a'); a.href=url; a.download='atenciones_pasem.csv'; a.click(); URL.revokeObjectURL(url);
   }
 
-  // ---- Usuarios (solo administración) ----
-  async function loadUsers(){
+  // Beneficiarios
+  async function searchBen(){
+    var q=document.getElementById('ben-q').value.trim();
+    if(q.length<2){ benStatus.textContent='Escribe al menos 2 caracteres.'; benTbody.innerHTML=''; return; }
+    benStatus.textContent='Buscando…';
     try{
-      var r=await api(USERS); if(!r.ok) throw new Error('HTTP '+r.status);
-      var users=await r.json(); renderUsers(users); usersStatus.textContent=users.length+' usuario(s).';
-    }catch(e){ usersStatus.textContent='Error: '+e.message; }
+      var r=await api(BEN+'?q='+encodeURIComponent(q)); if(!r.ok) throw new Error('HTTP '+r.status);
+      var d=await r.json(); benTbody.innerHTML='';
+      d.results.forEach(function(x){ var tr=document.createElement('tr'); tr.innerHTML='<td><strong>'+esc(x.cert)+'</strong></td><td>'+esc(x.tipo||'')+'</td><td>'+esc(x.nombre)+'</td><td>'+esc(x.rfc)+'</td><td>'+esc(x.curp)+'</td><td>'+esc(x.funcion)+'</td><td>'+esc(x.cct)+'</td><td>'+esc(x.ct)+'</td><td><button class="btn-mini" data-cert="'+esc(x.cert)+'" data-nom="'+esc(x.nombre)+'">📎 Ver</button></td>'; benTbody.appendChild(tr); });
+      benTbody.querySelectorAll('[data-cert]').forEach(function(b){ b.addEventListener('click', function(){ openExpediente(b.getAttribute('data-cert'), b.getAttribute('data-nom')); }); });
+      if(d.count===0) benStatus.textContent='Sin coincidencias. Esa persona no aparece en el listado de beneficiarios.';
+      else benStatus.textContent=d.count+' coincidencia(s)'+(d.count>=100?' (mostrando las primeras 100)':'')+'. Las personas listadas cuentan con el beneficio.';
+    }catch(e){ benStatus.textContent='Error: '+e.message; }
+  }
+
+  // Usuarios
+  async function loadUsers(){
+    try{ var r=await api(USERS); if(!r.ok) throw new Error('HTTP '+r.status); var users=await r.json(); renderUsers(users); usersStatus.textContent=users.length+' usuario(s).'; }
+    catch(e){ usersStatus.textContent='Error: '+e.message; }
   }
   function renderUsers(users){
     usersTbody.innerHTML='';
     users.forEach(function(u){
       var tr=document.createElement('tr');
-      var sel='<select data-email="'+esc(u.email)+'" class="role-sel">'+
-        '<option value="operacion"'+(u.role==='operacion'?' selected':'')+'>Operación</option>'+
-        '<option value="administracion"'+(u.role==='administracion'?' selected':'')+'>Administración</option></select>';
-      tr.innerHTML='<td>'+esc(u.email)+'</td><td>'+sel+'</td>'+
-        '<td><button class="btn-mini" data-act="pass" data-email="'+esc(u.email)+'">Cambiar contraseña</button> '+
-        '<button class="btn-del" data-act="del" data-email="'+esc(u.email)+'">Eliminar</button></td>';
+      var sel='<select data-email="'+esc(u.email)+'" class="role-sel"><option value="operacion"'+(u.role==='operacion'?' selected':'')+'>Operación</option><option value="administracion"'+(u.role==='administracion'?' selected':'')+'>Administración</option></select>';
+      tr.innerHTML='<td>'+esc(u.email)+'</td><td>'+sel+'</td><td><button class="btn-mini" data-act="pass" data-email="'+esc(u.email)+'">Cambiar contraseña</button> <button class="btn-del" data-act="del" data-email="'+esc(u.email)+'">Eliminar</button></td>';
       usersTbody.appendChild(tr);
     });
     usersTbody.querySelectorAll('.role-sel').forEach(function(sl){ sl.addEventListener('change', function(){ setRole(sl.getAttribute('data-email'), sl.value); }); });
@@ -524,18 +883,232 @@
     usersTbody.querySelectorAll('[data-act=del]').forEach(function(b){ b.addEventListener('click', function(){ delUser(b.getAttribute('data-email')); }); });
   }
   formUser.addEventListener('submit', async function(e){
-    e.preventDefault();
-    var fd=new FormData(formUser); var em=fd.get('email'); var rol=fd.get('role'); var pw=fd.get('password');
+    e.preventDefault(); var fd=new FormData(formUser); var em=fd.get('email'); var rol=fd.get('role'); var pw=fd.get('password');
     if(!em||!pw){ alert('Escribe correo y contraseña temporal.'); return; }
     var btn=formUser.querySelector('button[type=submit]'); var old=btn.textContent; btn.disabled=true; btn.textContent='Creando…';
     try{ await postUsers({action:'create', email:em, role:rol, password:pw}); formUser.reset(); loadUsers(); alert('Usuario creado. Comparte la contraseña temporal con la persona.'); }
-    catch(err){ alert('Error al crear: '+err.message); }
-    finally{ btn.disabled=false; btn.textContent=old; }
+    catch(err){ alert('Error al crear: '+err.message); } finally{ btn.disabled=false; btn.textContent=old; }
   });
   async function postUsers(payload){ var r=await api(USERS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); if(!r.ok){ var d={}; try{d=await r.json();}catch(_){} throw new Error(d.error||('HTTP '+r.status)); } return r.json(); }
   async function setRole(em,rol){ try{ await postUsers({action:'setrole', email:em, role:rol}); loadUsers(); }catch(e){ alert('Error al cambiar rol: '+e.message); loadUsers(); } }
   async function resetPass(em){ var np=prompt('Nueva contraseña para '+em+' (mínimo 6 caracteres):'); if(!np) return; try{ await postUsers({action:'setpassword', email:em, password:np}); alert('Contraseña actualizada.'); }catch(e){ alert('Error: '+e.message); } }
   async function delUser(em){ if(!confirm('¿Eliminar al usuario '+em+'?')) return; try{ await postUsers({action:'delete', email:em}); loadUsers(); }catch(e){ alert('Error al eliminar: '+e.message); } }
+
+  // ---- Expediente (documentación) ----
+  var formExp=document.getElementById('form-exp'), expStatus=document.getElementById('exp-status'), expTbody=document.querySelector('#exp-table tbody');
+  if(document.getElementById('exp-refresh')) document.getElementById('exp-refresh').addEventListener('click', loadExp);
+  if(document.getElementById('exp-q')) document.getElementById('exp-q').addEventListener('keydown', function(e){ if(e.key==='Enter') loadExp(); });
+  function fileToB64(file){ return new Promise(function(res,rej){ var fr=new FileReader(); fr.onload=function(){ res(String(fr.result).split(',')[1]); }; fr.onerror=rej; fr.readAsDataURL(file); }); }
+  if(formExp) formExp.addEventListener('submit', async function(e){
+    e.preventDefault();
+    var fd=new FormData(formExp); var file=fd.get('file');
+    if(!file||!file.name){ alert('Selecciona un archivo.'); return; }
+    if(file.size>4*1024*1024){ alert('El archivo supera 4 MB.'); return; }
+    var btn=formExp.querySelector('button[type=submit]'); var old=btn.textContent; btn.disabled=true; btn.textContent='Subiendo…';
+    try{
+      var b64=await fileToB64(file);
+      var payload={ action:'upload', filename:file.name, mime:file.type||'application/octet-stream', ref:fd.get('ref'), desc:fd.get('desc'), data:b64 };
+      var r=await api(EXPED,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      if(!r.ok){ var d={}; try{d=await r.json();}catch(_){} throw new Error(d.error||('HTTP '+r.status)); }
+      formExp.reset(); loadExp(); alert('Documento subido.');
+    }catch(err){ alert('Error al subir: '+err.message); } finally{ btn.disabled=false; btn.textContent=old; }
+  });
+  async function loadExp(){
+    if(!expStatus) return;
+    expStatus.textContent='Cargando…';
+    try{ var q=(document.getElementById('exp-q').value||'').trim(); var r=await api(EXPED+(q?('?q='+encodeURIComponent(q)):'')); if(!r.ok) throw new Error('HTTP '+r.status); var items=await r.json(); renderExp(items); expStatus.textContent=items.length+' documento(s).'; }
+    catch(e){ expStatus.textContent='Error: '+e.message; }
+  }
+  function renderExp(items){
+    expTbody.innerHTML='';
+    items.forEach(function(d){
+      var tr=document.createElement('tr');
+      var del=isAdmin()?' <button class="btn-del" data-act="xdel" data-id="'+esc(d.id)+'">Eliminar</button>':'';
+      tr.innerHTML='<td>'+esc(d.filename)+'</td><td>'+esc(d.ref)+'</td><td>'+esc(d.desc)+'</td><td>'+esc(d.uploadedBy)+'</td><td>'+esc(fmtDate(d.createdAt))+'</td><td style="white-space:nowrap"><button class="btn-mini" data-act="xdl" data-id="'+esc(d.id)+'">Descargar</button>'+del+'</td>';
+      expTbody.appendChild(tr);
+    });
+    expTbody.querySelectorAll('[data-act=xdl]').forEach(function(b){ b.addEventListener('click', function(){ dlExp(b.getAttribute('data-id')); }); });
+    expTbody.querySelectorAll('[data-act=xdel]').forEach(function(b){ b.addEventListener('click', function(){ delExp(b.getAttribute('data-id')); }); });
+  }
+  async function dlExp(id){
+    try{ var r=await api(EXPED+'?id='+encodeURIComponent(id)); if(!r.ok) throw new Error('HTTP '+r.status); var d=await r.json(); var a=document.createElement('a'); a.href='data:'+(d.mime||'application/octet-stream')+';base64,'+d.data; a.download=d.filename||'documento'; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
+    catch(e){ alert('Error al descargar: '+e.message); }
+  }
+  async function delExp(id){ if(!confirm('¿Eliminar este documento?')) return; try{ var r=await api(EXPED,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id:id})}); if(!r.ok) throw new Error('HTTP '+r.status); loadExp(); }catch(e){ alert('Error: '+e.message); } }
+
+  // ===== Solicitud de servicio =====
+  var formSol=document.getElementById('form-solicitud'), solStatus=document.getElementById('sol-status'), solTbody=document.querySelector('#sol-table tbody');
+  var solicitudes=[];
+  if(document.getElementById('sol-refresh')) document.getElementById('sol-refresh').addEventListener('click', loadSolic);
+  if(formSol) formSol.addEventListener('submit', async function(e){
+    e.preventDefault(); var fd=new FormData(formSol);
+    if(!fd.get('nombre')){ alert('Escribe el nombre.'); return; }
+    if(!fd.get('certificado')){ alert('Relaciona el certificado: busca al beneficiario en la base con la lupa 🔍 (el folio se genera a partir del certificado).'); return; }
+    if(!fd.get('tipoTramite')){ alert('Selecciona el tipo de trámite.'); return; }
+    var payload={ action:'create', folioEleonor:fd.get('folioEleonor'), nombre:fd.get('nombre'), curp:fd.get('curp'), rfc:fd.get('rfc'), certificado:fd.get('certificado'), tipoTramite:fd.get('tipoTramite'), comentarios:fd.get('comentarios') };
+    var btn=formSol.querySelector('button[type=submit]'), old=btn.textContent; btn.disabled=true; btn.textContent='Guardando…';
+    try{
+      var r=await api(SOLIC,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      if(!r.ok){ var d={}; try{ d=await r.json(); }catch(_){ } throw new Error(d.error||('HTTP '+r.status)); }
+      var s=await r.json(); formSol.reset(); loadSolic();
+      if(confirm('Solicitud registrada.\nFolio generado: '+s.folio+'\n(Etapa 1: Solicitud de atención)\n\n¿Enviar la notificación de Etapa 1 por correo?')) notifyStage(s,1);
+    }catch(err){ alert('Error: '+err.message); } finally{ btn.disabled=false; btn.textContent=old; }
+  });
+  async function loadSolic(){ if(!solStatus) return; solStatus.textContent='Cargando…'; try{ var r=await api(SOLIC); if(!r.ok) throw new Error('HTTP '+r.status); solicitudes=await r.json(); renderSolic(); solStatus.textContent=solicitudes.length+' solicitud(es).'; }catch(e){ solStatus.textContent='Error: '+e.message; } }
+  function solById(id){ return solicitudes.filter(function(s){ return s.id===id; })[0]; }
+  function etapaActual(s){ var m=0; if(s&&s.etapas){ ['1','2','3','4'].forEach(function(k){ if(s.etapas[k]) m=Math.max(m,parseInt(k,10)); }); } return m; }
+  function renderSolic(){
+    solTbody.innerHTML='';
+    solicitudes.forEach(function(s){
+      var tr=document.createElement('tr');
+      var e=etapaActual(s); var etLbl=e?(e+'. '+ETAPAS[e]):'—';
+      var sel='<select class="st-sel" data-id="'+esc(s.id)+'"><option value="1">1. Solicitud de atención</option><option value="2">2. Solicitud de documentación</option><option value="3">3. Autorización generada</option><option value="4">4. Servicio otorgado</option></select> <button class="btn-mini" data-act="stage" data-id="'+esc(s.id)+'">Notificar</button>';
+      var act='<button class="btn-mini" data-act="toauth" data-id="'+esc(s.id)+'">Autorizar →</button>'+(isAdmin()?' <button class="btn-del" data-act="soldel" data-id="'+esc(s.id)+'">Eliminar</button>':'');
+      tr.innerHTML='<td>'+esc(s.folio)+'</td><td>'+esc(fmtDate(s.createdAt))+'</td><td>'+esc(s.nombre)+'</td><td>'+esc(s.certificado)+'</td><td>'+esc(s.tipoTramite)+'</td><td>'+esc(etLbl)+(s.autorizada?' ✓':'')+'</td><td style="white-space:nowrap">'+sel+'</td><td style="white-space:nowrap">'+act+'</td>';
+      solTbody.appendChild(tr);
+    });
+    solTbody.querySelectorAll('[data-act=stage]').forEach(function(b){ b.addEventListener('click', function(){ var id=b.getAttribute('data-id'); var selEl=solTbody.querySelector('.st-sel[data-id="'+id+'"]'); notifyStage(solById(id), parseInt(selEl.value,10)); }); });
+    solTbody.querySelectorAll('[data-act=toauth]').forEach(function(b){ b.addEventListener('click', function(){ loadToAuth(b.getAttribute('data-id')); }); });
+    solTbody.querySelectorAll('[data-act=soldel]').forEach(function(b){ b.addEventListener('click', function(){ delSol(b.getAttribute('data-id')); }); });
+  }
+  async function delSol(id){ if(!confirm('¿Eliminar esta solicitud?')) return; try{ var r=await api(SOLIC,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id:id})}); if(!r.ok) throw new Error('HTTP '+r.status); loadSolic(); }catch(e){ alert('Error: '+e.message); } }
+  async function notifyStage(s, etapa){
+    if(!s) return;
+    var nombreEtapa=ETAPAS[etapa]||('Etapa '+etapa);
+    var L=['PROGRAMA DE APOYO DE SERVICIOS MÉDICOS (PASEM) — SNTE Sección 26','Notificación de etapa '+etapa+': '+nombreEtapa,'',
+      'Folio de control: '+(s.folio||'—'),'Folio ELEONOR: '+(s.folioEleonor||'—'),'Nombre: '+(s.nombre||'—'),'Certificado: '+(s.certificado||'—'),
+      'CURP: '+(s.curp||'—'),'RFC: '+(s.rfc||'—'),'Tipo de trámite: '+(s.tipoTramite||'—'),'Comentarios: '+(s.comentarios||'—'),'','Folio interno: '+(s.id||'—')];
+    var subject=encodeURIComponent('PASEM — Etapa '+etapa+' ('+nombreEtapa+'): '+(s.nombre||''));
+    var a=document.createElement('a'); a.href='mailto:'+STAGE_MAIL+'?subject='+subject+'&body='+encodeURIComponent(L.join('\r\n')); a.style.display='none'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    try{ var r=await api(SOLIC,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'stage', id:s.id, etapa:String(etapa)})}); if(r.ok) loadSolic(); }catch(e){}
+  }
+  function loadToAuth(id){
+    var s=solById(id); if(!s) return;
+    activate('autorizacion');
+    var f=document.getElementById('form-atencion');
+    f.querySelector('[name=solicitudId]').value=s.id;
+    f.querySelector('[name=certificado]').value=s.certificado||'';
+    f.querySelector('[name=folio]').value=s.folio||'';
+    f.querySelector('[name=folioEleonor]').value=s.folioEleonor||'';
+    f.querySelector('[name=paciente]').value=s.nombre||'';
+    f.querySelector('[name=curp]').value=s.curp||'';
+    f.querySelector('[name=rfc]').value=s.rfc||'';
+    var na=f.querySelector('[name=numAfiliado]'); if(na) na.value=s.certificado||'';
+    var ts=f.querySelector('[name=tipoTramite]'); if(ts) ts.value=s.tipoTramite||'';
+    var ob=f.querySelector('[name=observaciones]'); if(ob && s.comentarios) ob.value=s.comentarios;
+    syncProc();
+    var al=document.getElementById('auth-loaded'); if(al) al.textContent='Solicitud cargada: '+(s.nombre||'')+' · '+(s.tipoTramite||'');
+    try{ document.getElementById('administracion').scrollIntoView(); }catch(e){}
+  }
+  async function loadAuthPicker(){
+    var sel=document.getElementById('auth-pick'); if(!sel) return;
+    try{ var r=await api(SOLIC); if(!r.ok) return; solicitudes=await r.json();
+      sel.innerHTML='<option value="">Selecciona una solicitud…</option>';
+      solicitudes.forEach(function(s){ var o=document.createElement('option'); o.value=s.id; o.textContent=(s.folio?('['+s.folio+'] '):'')+(s.nombre||'(sin nombre)')+' — '+(s.tipoTramite||'')+(s.autorizada?' (autorizada)':''); sel.appendChild(o); });
+    }catch(e){}
+  }
+  if(document.getElementById('btn-auth-load')) document.getElementById('btn-auth-load').addEventListener('click', function(){ var id=document.getElementById('auth-pick').value; if(id) loadToAuth(id); else alert('Elige una solicitud de la lista.'); });
+
+  // ===== Buscadores reutilizables en base de beneficiarios =====
+  async function benSearchInto(inputId, pickId, formEl, map){
+    var inp=document.getElementById(inputId), pick=document.getElementById(pickId);
+    var q=(inp.value||'').trim(); if(q.length<2){ alert('Escribe al menos 2 caracteres.'); return; }
+    pick.innerHTML='<div class="it">Buscando…</div>'; pick.classList.add('open');
+    try{ var r=await api(BEN+'?q='+encodeURIComponent(q)); var d=await r.json();
+      if(!d.results||!d.results.length){ pick.innerHTML='<div class="it">Sin coincidencias</div>'; return; }
+      pick.innerHTML='';
+      d.results.slice(0,15).forEach(function(x){ var it=document.createElement('div'); it.className='it';
+        it.innerHTML='<strong>'+esc(x.cert)+' — '+esc(x.nombre)+'</strong><small>CURP: '+esc(x.curp||'—')+' · RFC: '+esc(x.rfc||'—')+'</small>';
+        it.addEventListener('click', function(){ if(map.nombre) formEl.querySelector('[name='+map.nombre+']').value=up(x.nombre||''); if(map.curp) formEl.querySelector('[name='+map.curp+']').value=up(x.curp||''); if(map.rfc) formEl.querySelector('[name='+map.rfc+']').value=up(x.rfc||''); if(map.cert) formEl.querySelector('[name='+map.cert+']').value=(x.cert||''); pick.classList.remove('open'); pick.innerHTML=''; });
+        pick.appendChild(it); });
+    }catch(e){ pick.innerHTML='<div class="it">Error: '+esc(e.message)+'</div>'; }
+  }
+  if(document.getElementById('btn-sol-pick')) document.getElementById('btn-sol-pick').addEventListener('click', function(){ benSearchInto('s-nombre','sol-pick', formSol, {nombre:'nombre',curp:'curp',rfc:'rfc',cert:'certificado'}); });
+
+  // ===== Dependientes =====
+  var formDep=document.getElementById('form-dep'), depStatus=document.getElementById('dep-status'), depTbody=document.querySelector('#dep-table tbody');
+  if(document.getElementById('dep-refresh')) document.getElementById('dep-refresh').addEventListener('click', loadDeps);
+  if(document.getElementById('dep-q')) document.getElementById('dep-q').addEventListener('keydown', function(e){ if(e.key==='Enter') loadDeps(); });
+  if(document.getElementById('btn-dep-pick')) document.getElementById('btn-dep-pick').addEventListener('click', depTitularSearch);
+  async function depTitularSearch(){
+    var inp=document.getElementById('dep-tit'), pick=document.getElementById('dep-pick');
+    var q=(inp.value||'').trim(); if(q.length<2){ alert('Escribe al menos 2 caracteres.'); return; }
+    pick.innerHTML='<div class="it">Buscando…</div>'; pick.classList.add('open');
+    try{ var r=await api(BEN+'?q='+encodeURIComponent(q)); var d=await r.json();
+      if(!d.results||!d.results.length){ pick.innerHTML='<div class="it">Sin coincidencias</div>'; return; }
+      pick.innerHTML='';
+      d.results.slice(0,15).forEach(function(x){ var it=document.createElement('div'); it.className='it';
+        it.innerHTML='<strong>'+esc(x.cert)+' — '+esc(x.nombre)+'</strong><small>'+esc(x.tipo||'')+'</small>';
+        it.addEventListener('click', function(){ document.getElementById('dep-cert').value=x.cert||''; document.getElementById('dep-nom').value=x.nombre||''; pick.classList.remove('open'); pick.innerHTML=''; });
+        pick.appendChild(it); });
+    }catch(e){ pick.innerHTML='<div class="it">Error: '+esc(e.message)+'</div>'; }
+  }
+  if(formDep) formDep.addEventListener('submit', function(e){ e.preventDefault(); altaDep(false); });
+  if(document.getElementById('dep-alta-sol')) document.getElementById('dep-alta-sol').addEventListener('click', function(){ altaDep(true); });
+  async function altaDep(goSol){
+    var fd=new FormData(formDep);
+    if(!fd.get('titularCert')){ alert('Busca y selecciona el titular.'); return; }
+    if(!fd.get('nombre')){ alert('Escribe el nombre del dependiente.'); return; }
+    var payload={ action:'create', titularCert:fd.get('titularCert'), titularNombre:fd.get('titularNombre'), nombre:fd.get('nombre'), parentesco:fd.get('parentesco'), curp:fd.get('curp'), rfc:fd.get('rfc') };
+    try{
+      var r=await api(DEPS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      if(!r.ok){ var d={}; try{ d=await r.json(); }catch(_){ } throw new Error(d.error||('HTTP '+r.status)); }
+      var dep=await r.json(); formDep.reset(); document.getElementById('dep-cert').value=''; document.getElementById('dep-nom').value=''; loadDeps();
+      if(goSol){
+        activate('solicitud');
+        var fs=document.getElementById('form-solicitud');
+        fs.querySelector('[name=nombre]').value=up(dep.nombre||'');
+        fs.querySelector('[name=certificado]').value=dep.cert||'';
+        fs.querySelector('[name=curp]').value=up(dep.curp||'');
+        fs.querySelector('[name=rfc]').value=up(dep.rfc||'');
+        alert('Dependiente dado de alta ('+dep.cert+').\nCompleta el tipo de trámite y registra la solicitud.');
+      } else {
+        alert('Dependiente dado de alta con certificado '+dep.cert+'.');
+        if(confirm('¿Adjuntar documentos del dependiente ahora?')) openExpediente(dep.cert, dep.nombre);
+      }
+    }catch(err){ alert('Error: '+err.message); }
+  }
+
+  // ===== Expediente por beneficiario (ventana modal, reutilizable) =====
+  var EXP_CERT='';
+  function openExpediente(cert, nombre){
+    if(!cert){ alert('Primero relaciona el certificado del beneficiario (búscalo en la base con la lupa 🔍).'); return; }
+    EXP_CERT=cert;
+    document.getElementById('exp-title').textContent='Expediente · '+cert+(nombre?(' · '+nombre):'');
+    document.getElementById('exp-modal').classList.add('open');
+    loadExpFor();
+  }
+  if(document.getElementById('exp-close')) document.getElementById('exp-close').addEventListener('click', function(){ document.getElementById('exp-modal').classList.remove('open'); });
+  if(document.getElementById('exp-modal')) document.getElementById('exp-modal').addEventListener('click', function(e){ if(e.target.id==='exp-modal') e.currentTarget.classList.remove('open'); });
+  async function loadExpFor(){
+    var st=document.getElementById('exp-modal-status'), tb=document.querySelector('#exp-modal-table tbody'); st.textContent='Cargando…'; tb.innerHTML='';
+    try{
+      var r=await api(EXPED+'?q='+encodeURIComponent(EXP_CERT)); if(!r.ok) throw new Error('HTTP '+r.status);
+      var items=(await r.json()).filter(function(d){ return String(d.ref||'')===EXP_CERT; });
+      items.forEach(function(d){ var tr=document.createElement('tr'); var del=isAdmin()?' <button class="btn-del" data-xid="'+esc(d.id)+'">Eliminar</button>':''; tr.innerHTML='<td>'+esc(d.filename)+'</td><td>'+esc(d.desc)+'</td><td>'+esc(fmtDate(d.createdAt))+'</td><td style="white-space:nowrap"><button class="btn-mini" data-xdl="'+esc(d.id)+'">Ver / Descargar</button>'+del+'</td>'; tb.appendChild(tr); });
+      st.textContent=items.length+' documento(s) en el expediente.';
+      tb.querySelectorAll('[data-xdl]').forEach(function(b){ b.addEventListener('click', function(){ dlExp(b.getAttribute('data-xdl')); }); });
+      tb.querySelectorAll('[data-xid]').forEach(function(b){ b.addEventListener('click', async function(){ if(!confirm('¿Eliminar este documento?')) return; try{ var r=await api(EXPED,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id:b.getAttribute('data-xid')})}); if(r.ok) loadExpFor(); }catch(e){ alert('Error: '+e.message); } }); });
+    }catch(e){ st.textContent='Error: '+e.message; }
+  }
+  if(document.getElementById('exp-modal-form')) document.getElementById('exp-modal-form').addEventListener('submit', async function(e){
+    e.preventDefault(); var file=document.getElementById('exp-modal-file').files[0];
+    if(!file){ alert('Selecciona un archivo.'); return; } if(file.size>4*1024*1024){ alert('El archivo supera 4 MB.'); return; }
+    var btn=this.querySelector('button[type=submit]'), old=btn.textContent; btn.disabled=true; btn.textContent='Subiendo…';
+    try{ var b64=await fileToB64(file); var payload={action:'upload', filename:file.name, mime:file.type||'application/octet-stream', ref:EXP_CERT, desc:document.getElementById('exp-modal-desc').value, data:b64}; var r=await api(EXPED,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); if(!r.ok){ var d={}; try{ d=await r.json(); }catch(_){ } throw new Error(d.error||('HTTP '+r.status)); } document.getElementById('exp-modal-file').value=''; document.getElementById('exp-modal-desc').value=''; loadExpFor(); }
+    catch(err){ alert('Error al subir: '+err.message); } finally{ btn.disabled=false; btn.textContent=old; }
+  });
+  if(document.getElementById('sol-docs')) document.getElementById('sol-docs').addEventListener('click', function(){ openExpediente((document.querySelector('#form-solicitud [name=certificado]').value||'').trim(), document.getElementById('s-nombre').value); });
+  if(document.getElementById('auth-docs')) document.getElementById('auth-docs').addEventListener('click', function(){ var c=(document.getElementById('f-certificado').value||document.querySelector('#form-atencion [name=numAfiliado]').value||'').trim(); openExpediente(c, document.querySelector('#form-atencion [name=paciente]').value); });
+  if(document.getElementById('dep-docs')) document.getElementById('dep-docs').addEventListener('click', function(){ openExpediente((document.getElementById('dep-cert').value||'').trim(), document.getElementById('dep-nom').value); });
+  async function loadDeps(){ if(!depStatus) return; depStatus.textContent='Cargando…'; try{ var q=(document.getElementById('dep-q').value||'').trim(); var r=await api(DEPS+(q?('?q='+encodeURIComponent(q)):'')); if(!r.ok) throw new Error('HTTP '+r.status); var items=await r.json(); renderDeps(items); depStatus.textContent=items.length+' dependiente(s).'; }catch(e){ depStatus.textContent='Error: '+e.message; } }
+  function renderDeps(items){
+    depTbody.innerHTML='';
+    items.forEach(function(d){ var tr=document.createElement('tr'); var del=isAdmin()?' <button class="btn-del" data-act="depdel" data-id="'+esc(d.id)+'">Eliminar</button>':''; tr.innerHTML='<td><strong>'+esc(d.cert)+'</strong></td><td>'+esc(d.nombre)+'</td><td>'+esc(d.parentesco)+'</td><td>'+esc(d.curp)+'</td><td>'+esc(d.titularNombre||d.titularCert)+'</td><td style="white-space:nowrap"><button class="btn-mini" data-act="depexp" data-cert="'+esc(d.cert)+'" data-nom="'+esc(d.nombre)+'">📎 Expediente</button>'+del+'</td>'; depTbody.appendChild(tr); });
+    depTbody.querySelectorAll('[data-act=depexp]').forEach(function(b){ b.addEventListener('click', function(){ openExpediente(b.getAttribute('data-cert'), b.getAttribute('data-nom')); }); });
+    depTbody.querySelectorAll('[data-act=depdel]').forEach(function(b){ b.addEventListener('click', function(){ delDep(b.getAttribute('data-id')); }); });
+  }
+  async function delDep(id){ if(!confirm('¿Eliminar este dependiente?')) return; try{ var r=await api(DEPS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id:id})}); if(!r.ok) throw new Error('HTTP '+r.status); loadDeps(); }catch(e){ alert('Error: '+e.message); } }
 })();
 </script>
 </body>

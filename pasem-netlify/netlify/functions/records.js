@@ -40,6 +40,14 @@ export const handler = async (event) => {
     }
     if(event.httpMethod==='POST'){
       const data=JSON.parse(event.body||'{}');
+      // sellar fecha de notificación a un registro existente
+      if(data.action==='notify'){
+        const nid=data.id; if(!nid) return {statusCode:400,headers,body:JSON.stringify({error:'Falta id'})};
+        const rec=await store.get(nid,{type:'json'}); if(!rec) return {statusCode:404,headers,body:JSON.stringify({error:'Registro no encontrado'})};
+        rec.notifiedAt=new Date().toISOString(); rec.notifiedBy=p.email||'usuario';
+        await store.setJSON(nid,rec);
+        return {statusCode:200,headers,body:JSON.stringify(rec)};
+      }
       const id='PASEM-'+Date.now().toString(36).toUpperCase()+'-'+Math.random().toString(36).slice(2,7).toUpperCase();
       const record={...data, id, createdAt:new Date().toISOString(), capturadoPor:p.email||'usuario'};
       await store.setJSON(id,record);
