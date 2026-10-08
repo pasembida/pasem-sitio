@@ -5,6 +5,7 @@ function makeStore(name){ const siteID=process.env.NETLIFY_SITE_ID||process.env.
 function b64url(buf){ return Buffer.from(buf).toString('base64').replace(/=+$/,'').replace(/\+/g,'-').replace(/\//g,'_'); }
 function verify(token){ if(!token) return null; const parts=token.split('.'); if(parts.length!==3) return null; const data=parts[0]+'.'+parts[1]; const sig=b64url(crypto.createHmac('sha256',SECRET).update(data).digest()); if(sig!==parts[2]) return null; let p; try{ p=JSON.parse(Buffer.from(parts[1].replace(/-/g,'+').replace(/_/g,'/'),'base64').toString()); }catch(e){ return null; } if(p.exp&&Math.floor(Date.now()/1000)>p.exp) return null; return p; }
 function norm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+const TIPO_CODE={ 'CIRUGIA':'CIR', 'APOYO PARTO O CESAREA':'PAR', 'CONSULTA MEDICO GENERAL':'CGE', 'CONSULTA ESPECIALISTA':'CES', 'ESTUDIO LABORATORIO':'LAB' };
 
 export const handler = async (event) => {
   const headers={'Content-Type':'application/json'};
@@ -28,9 +29,23 @@ export const handler = async (event) => {
     if(event.httpMethod==='POST'){
       const body=JSON.parse(event.body||'{}');
       if(body.action==='create'){
+        const cert=String(body.certificado||'').trim().toUpperCase();
+        const tipo=String(body.tipoTramite||'').trim().toUpperCase();
+        if(!cert) return {statusCode:400,headers,body:JSON.stringify({error:'Relaciona el certificado del beneficiario (búscalo en la base con la lupa) antes de generar el folio.'})};
+        if(!tipo) return {statusCode:400,headers,body:JSON.stringify({error:'Selecciona el tipo de trámite.'})};
+        const code=TIPO_CODE[tipo]||'GEN';
+        // consecutivo por certificado + tipo, con blindaje contra colisiones
+        const {blobs}=await store.list();
+        const all=(await Promise.all(blobs.map(b=>store.get(b.key,{type:'json'})))).filter(Boolean);
+        const prefix=cert+'-'+code+'-';
+        let maxN=0;
+        all.forEach(x=>{ if(typeof x.folio==='string' && x.folio.indexOf(prefix)===0){ const n=parseInt(x.folio.slice(prefix.length),10); if(!isNaN(n)) maxN=Math.max(maxN,n); } });
+        const existing=new Set(all.map(x=>x.folio));
+        let n=maxN+1, folio=prefix+String(n).padStart(3,'0');
+        while(existing.has(folio)){ n++; folio=prefix+String(n).padStart(3,'0'); }
         const id='SOL-'+Date.now().toString(36).toUpperCase()+'-'+Math.random().toString(36).slice(2,6).toUpperCase();
         const now=new Date().toISOString();
-        const s={ id, folio:body.folio||'', folioEleonor:body.folioEleonor||'', nombre:body.nombre||'', rfc:body.rfc||'', curp:body.curp||'', certificado:body.certificado||'', tipoTramite:body.tipoTramite||'', comentarios:body.comentarios||'', estado:1, etapas:{'1':now}, autorizada:false, createdAt:now, capturadoPor:p.email||'usuario' };
+        const s={ id, folio, folioEleonor:body.folioEleonor||'', nombre:body.nombre||'', rfc:body.rfc||'', curp:body.curp||'', certificado:cert, tipoTramite:body.tipoTramite||'', comentarios:body.comentarios||'', estado:1, etapas:{'1':now}, autorizada:false, createdAt:now, capturadoPor:p.email||'usuario' };
         await store.setJSON(id,s);
         return {statusCode:200,headers,body:JSON.stringify(s)};
       }
