@@ -36,6 +36,17 @@ export const handler = async (event) => {
   for(let i=0;i<INDEX.length && results.length<100;i++){
     if(matchAll(INDEX[i])){ const x=DATA[i]; results.push({cert:x.ce,tipo:'Titular',nombre:x.n,rfc:x.r,curp:x.c,funcion:x.f,cct:x.cct,ct:x.t,nivel:x.nv}); }
   }
+  // titulares dados de alta
+  try{
+    const tstore=makeStore('pasem-titulares');
+    const { blobs }=await tstore.list();
+    const tits=(await Promise.all(blobs.map(b=>tstore.get(b.key,{type:'json'})))).filter(Boolean);
+    for(const t of tits){
+      if(results.length>=200) break;
+      const hay=norm([t.cert,t.nombre,t.curp,t.rfc,t.cct,t.ct].join(' '));
+      if(matchAll(hay)){ results.push({cert:t.cert,tipo:'Titular',nombre:t.nombre,rfc:t.rfc,curp:t.curp,funcion:t.funcion||'',cct:t.cct||'',ct:t.ct||'',nivel:t.nivel||''}); }
+    }
+  }catch(e){}
   // dependientes dados de alta
   try{
     const dstore=makeStore('pasem-dependientes');
