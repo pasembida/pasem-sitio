@@ -49,6 +49,13 @@ export const handler = async (event) => {
         await store.setJSON(id,s);
         return {statusCode:200,headers,body:JSON.stringify(s)};
       }
+      if(body.action==='update'){
+        const s=await store.get(body.id,{type:'json'}); if(!s) return {statusCode:404,headers,body:JSON.stringify({error:'No encontrada'})};
+        ['folioEleonor','nombre','curp','rfc','certificado','tipoTramite','comentarios'].forEach(function(k){ if(body[k]!=null) s[k]=body[k]; });
+        s.updatedAt=new Date().toISOString(); s.updatedBy=p.email||'usuario';
+        await store.setJSON(s.id,s);
+        return {statusCode:200,headers,body:JSON.stringify(s)};
+      }
       if(body.action==='stage'){
         const s=await store.get(body.id,{type:'json'}); if(!s) return {statusCode:404,headers,body:JSON.stringify({error:'No encontrada'})};
         const et=String(body.etapa); if(['1','2','3','4'].indexOf(et)<0) return {statusCode:400,headers,body:JSON.stringify({error:'Etapa inválida'})};
