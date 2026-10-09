@@ -431,6 +431,113 @@
               <div class="field"><label>Fecha programada del procedimiento</label><input name="fechaProc" type="date"></div>
             </div>
           </fieldset>
+          <fieldset id="fs-cirugia" disabled style="display:none"><legend>Programación de cirugía <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink);font-size:11px;">(CIRUGÍA / Apoyo Parto o Cesárea)</span></legend>
+            <div style="font-family:var(--serif);color:var(--ochre);font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin:4px 0 6px;">Afiliación / paciente</div>
+            <div class="fgrid">
+              <div class="field"><label>Zona / región</label><select name="zona"><option value="">Selecciona…</option><option>SAN LUIS POTOSI</option><option>MATEHUALA</option><option>RIOVERDE</option><option>CD. VALLES</option><option>TAMAZUNCHALE</option></select></div>
+              <div class="field"><label>Clave del C.T.</label><input name="claveCT" type="text"></div>
+              <div class="field"><label>Sexo del paciente</label><select name="sexoPaciente"><option value="">—</option><option>F</option><option>M</option></select></div>
+              <div class="field"><label>Edad del paciente</label><input name="edadPaciente" type="text"></div>
+              <div class="field"><label>Fecha de nacimiento del paciente</label><input name="fechaNacPaciente" type="date"></div>
+            </div>
+            <div style="font-family:var(--serif);color:var(--ochre);font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px;">Padecimiento o accidente</div>
+            <div class="fgrid">
+              <div class="field"><label>Causa de atención</label><select name="causaAtencion"><option value="">—</option><option>ACCIDENTE</option><option>ENFERMEDAD</option><option>EMBARAZO</option></select></div>
+              <div class="field"><label>Tipo de padecimiento</label><select name="tipoPadecimiento"><option value="">—</option><option>CONGENITO</option><option>ADQUIRIDO</option><option>AGUDO</option><option>CRONICO</option></select></div>
+              <div class="field"><label>Fecha de inicio de síntomas</label><input name="fechaSintomas" type="date"></div>
+              <div class="field"><label>Fecha de diagnóstico</label><input name="fechaDiagnostico" type="date"></div>
+              <div class="field"><label>¿Se relaciona con otro padecimiento?</label><select name="relacionOtro"><option value="">—</option><option>SI</option><option>NO</option></select></div>
+              <div class="field"><label>¿Cuál?</label><input name="relacionCual" type="text"></div>
+              <div class="field full"><label>Detalle: ¿cómo inició el padecimiento / cómo ocurrió el accidente?</label><textarea name="detallePadecimiento"></textarea></div>
+              <div class="field"><label>En caso de accidente, ¿intervinieron autoridades legales?</label><select name="autoridadesLegales"><option value="">—</option><option>SI</option><option>NO</option></select></div>
+            </div>
+            <div style="font-family:var(--serif);color:var(--ochre);font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px;">Historia clínica</div>
+            <div class="fgrid">
+              <div class="field full"><label>Antecedentes personales patológicos</label><textarea name="antPatologicos"></textarea></div>
+              <div class="field full"><label>Antecedentes personales no patológicos</label><textarea name="antNoPatologicos"></textarea></div>
+              <div class="field full"><label>Antecedentes gineco-obstétricos</label><textarea name="antGineco"></textarea></div>
+              <div class="field full"><label>Antecedentes perinatales</label><textarea name="antPerinatales"></textarea></div>
+              <div class="field"><label>Pulso (x min)</label><input name="vitPulso" type="text"></div>
+              <div class="field"><label>Resp. (x min)</label><input name="vitResp" type="text"></div>
+              <div class="field"><label>Temp. (°C)</label><input name="vitTemp" type="text"></div>
+              <div class="field"><label>P. arterial (mmHg)</label><input name="vitTA" type="text"></div>
+              <div class="field"><label>Peso (kg)</label><input name="vitPeso" type="text"></div>
+              <div class="field"><label>Altura (m)</label><input name="vitAltura" type="text"></div>
+              <div class="field full"><label>Resultados de la exploración física</label><textarea name="exploracionFisica"></textarea></div>
+              <div class="field full"><label>Estudios realizados (anexar interpretaciones)</label><textarea name="estudiosRealizados"></textarea></div>
+            </div>
+            <div style="font-family:var(--serif);color:var(--ochre);font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px;">Cirugía propuesta y tratamiento</div>
+            <div class="fgrid">
+              <div class="field full"><label>Procedimiento quirúrgico propuesto / técnica</label><textarea name="procedimientoTecnica"></textarea></div>
+              <div class="field"><label>Equipo específico a utilizar</label><input name="equipoEspecifico" type="text"></div>
+              <div class="field"><label>¿Complicaciones previstas?</label><select name="complicaciones"><option value="">—</option><option>SI</option><option>NO</option></select></div>
+              <div class="field full"><label>Descripción de complicaciones</label><input name="complicacionesDesc" type="text"></div>
+              <div class="field"><label>¿Tratamiento post-quirúrgico?</label><select name="postQuirurgico"><option value="">—</option><option>SI</option><option>NO</option></select></div>
+              <div class="field"><label>¿Cuál? (radio/quimio/fisio/medicamentos)</label><input name="postQuirurgicoCual" type="text"></div>
+              <div class="field full"><label>Información adicional</label><textarea name="infoAdicionalCir"></textarea></div>
+            </div>
+            <div style="font-family:var(--serif);color:var(--ochre);font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px;">Insumos y recursos</div>
+            <div class="fgrid">
+              <div class="field"><label>¿Aparatos ortopédicos / prótesis?</label><select name="aparatosProtesis"><option value="">—</option><option>SI</option><option>NO</option></select></div>
+              <div class="field"><label>Especifique cuáles</label><input name="aparatosEspecifique" type="text"></div>
+              <div class="field"><label>¿Renta de equipo quirúrgico?</label><select name="rentaEquipo"><option value="">—</option><option>SI</option><option>NO</option></select></div>
+              <div class="field"><label>Especifique (laparoscópico, ligasure, etc.)</label><input name="rentaEspecifique" type="text"></div>
+              <div class="field"><label>¿Transfusión de sangre y/o plasma?</label><select name="transfusion"><option value="">—</option><option>SI</option><option>NO</option></select></div>
+              <div class="field"><label>¿Estancia en terapia intensiva/intermedia/coronarios?</label><select name="terapiaIntensiva"><option value="">—</option><option>SI</option><option>NO</option></select></div>
+              <div class="field"><label>Días estimados de hospitalización</label><input name="diasHospitalizacion" type="text"></div>
+              <div class="field"><label>¿Estudios adicionales de lab/gabinete?</label><select name="estudiosAdicionales"><option value="">—</option><option>SI</option><option>NO</option></select></div>
+              <div class="field full"><label>¿Cuáles?</label><input name="estudiosAdicionalesCuales" type="text"></div>
+            </div>
+            <div style="font-family:var(--serif);color:var(--ochre);font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px;">Hospital de la red</div>
+            <div class="fgrid">
+              <div class="field"><label>Ciudad</label><input name="hospitalCiudad" type="text"></div>
+              <div class="field"><label>Estado</label><input name="hospitalEstado" type="text"></div>
+              <div class="field"><label>Tipo de estancia</label><select name="tipoEstancia"><option value="">—</option><option>URGENCIA</option><option>HOSPITALARIA</option><option>CORTA ESTANCIA O AMBULATORIA</option></select></div>
+              <div class="field"><label>Fecha de ingreso</label><input name="fechaIngreso" type="date"></div>
+              <div class="field"><label>Hora de ingreso</label><input name="horaIngreso" type="time"></div>
+            </div>
+            <div style="font-family:var(--serif);color:var(--ochre);font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px;">Médico tratante</div>
+            <div class="fgrid">
+              <div class="field"><label>Especialidad</label><input name="medicoEspecialidad" type="text"></div>
+              <div class="field"><label>Cédula de especialidad</label><input name="medicoCedulaEsp" type="text"></div>
+              <div class="field"><label>Tipo de participación</label><select name="medicoTipoParticipacion"><option value="">—</option><option>TRATANTE</option><option>CIRUJANO</option><option>OTRA</option></select></div>
+              <div class="field"><label>¿Pertenece a la red PASEM?</label><select name="medicoRed"><option value="">—</option><option>SI</option><option>NO</option></select></div>
+              <div class="field"><label>Teléfono del consultorio</label><input name="medicoTelefono" type="text"></div>
+              <div class="field"><label>Celular</label><input name="medicoCelular" type="text"></div>
+              <div class="field"><label>Correo electrónico</label><input name="medicoCorreo" type="email"></div>
+              <div class="field"><label>¿Hubo interconsulta?</label><select name="huboInterconsulta"><option value="">—</option><option>SI</option><option>NO</option></select></div>
+            </div>
+            <div style="font-family:var(--serif);color:var(--ochre);font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px;">Médicos interconsultantes / participantes</div>
+            <div class="fgrid">
+              <div class="field full"><label>Interconsultante 1 — nombre</label><input name="inter1Nombre" type="text"></div>
+              <div class="field"><label>Especialidad</label><input name="inter1Especialidad" type="text"></div>
+              <div class="field"><label>Cédula profesional</label><input name="inter1Cedula" type="text"></div>
+              <div class="field"><label>Participación</label><input name="inter1Participacion" type="text" placeholder="Cirujano / Anestesiólogo / Ayudantía / Otra"></div>
+              <div class="field full"><label>Interconsultante 2 — nombre</label><input name="inter2Nombre" type="text"></div>
+              <div class="field"><label>Especialidad</label><input name="inter2Especialidad" type="text"></div>
+              <div class="field"><label>Cédula profesional</label><input name="inter2Cedula" type="text"></div>
+              <div class="field"><label>Participación</label><input name="inter2Participacion" type="text" placeholder="Cirujano / Anestesiólogo / Ayudantía / Otra"></div>
+            </div>
+            <div style="font-family:var(--serif);color:var(--ochre);font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px;">Presupuesto de honorarios (M.N., IVA incluido)</div>
+            <div class="fgrid">
+              <div class="field"><label>Cirujano / médico tratante</label><input name="honCirujano" type="text" placeholder="$"></div>
+              <div class="field"><label>Primer ayudante</label><input name="honAyudante1" type="text" placeholder="$"></div>
+              <div class="field"><label>Segundo ayudante</label><input name="honAyudante2" type="text" placeholder="$"></div>
+              <div class="field"><label>Anestesiólogo</label><input name="honAnestesiologo" type="text" placeholder="$"></div>
+              <div class="field"><label>Otro participante (especificar)</label><input name="honOtroDesc" type="text"></div>
+              <div class="field"><label>Otro — importe</label><input name="honOtro" type="text" placeholder="$"></div>
+              <div class="field"><label>Total de honorarios</label><input name="honTotal" type="text" placeholder="$"></div>
+            </div>
+            <div style="font-family:var(--serif);color:var(--ochre);font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px;">Uso exclusivo de administradores PASEM</div>
+            <div class="fgrid">
+              <div class="field"><label>Afiliación vigente</label><select name="afiliacionVigente"><option value="">—</option><option>SI</option><option>NO</option></select></div>
+              <div class="field"><label>Talón de cheque verificado</label><select name="talonVerificado"><option value="">—</option><option>SI</option><option>NO</option></select></div>
+              <div class="field"><label>Resolución</label><select name="resolucion"><option value="">—</option><option>AUTORIZADO</option><option>RECHAZADO</option></select></div>
+              <div class="field"><label>Fecha de recepción</label><input name="fechaRecepcion" type="date"></div>
+              <div class="field full"><label>N.° de oficio / orden de internamiento</label><input name="numOficio" type="text"></div>
+              <div class="field full"><label>Observaciones (administración)</label><textarea name="obsAdmin"></textarea></div>
+            </div>
+          </fieldset>
           <fieldset><legend>Observaciones / condiciones</legend>
             <div class="field full"><textarea name="observaciones"></textarea></div>
           </fieldset>
@@ -806,7 +913,7 @@
   // "Datos del procedimiento" solo habilitado para CIRUGÍA
   var tipoSel=document.querySelector('#form-atencion select[name=tipoTramite]');
   var fsProc=document.getElementById('fs-proc');
-  function syncProc(){ var v=tipoSel.value; var on=(v==='CIRUGIA'||v==='APOYO PARTO O CESAREA'); fsProc.disabled=!on; }
+  function syncProc(){ var v=tipoSel.value; var on=(v==='CIRUGIA'||v==='APOYO PARTO O CESAREA'); fsProc.disabled=!on; var fc=document.getElementById('fs-cirugia'); if(fc){ fc.disabled=!on; fc.style.display=on?'':'none'; } }
   tipoSel.addEventListener('change', syncProc); syncProc();
   // Buscar paciente en la base de beneficiarios
   var fPac=document.getElementById('f-paciente'), benPick=document.getElementById('ben-pick');
@@ -899,6 +1006,25 @@
     var bida=(document.querySelector('.logo-bida')||{}).src||'';
     var S=rec.servicios||[]; function has(x){ return S.indexOf(x)>=0; }
     function box(on){ return '<span class="bx">'+(on?'&#10003;':'')+'</span>'; }
+    var isCir=(rec.tipoTramite==='CIRUGIA'||rec.tipoTramite==='APOYO PARTO O CESAREA');
+    function row2(l,v){ return (v!=null&&v!=='')?('<tr><td class="lbl" style="width:38%">'+l+'</td><td class="v">'+val(v)+'</td></tr>'):''; }
+    var cirRows='';
+    if(isCir){
+      var P=[['Zona/región',rec.zona],['Clave C.T.',rec.claveCT],['Sexo paciente',rec.sexoPaciente],['Edad',rec.edadPaciente],['F. nac. paciente',rec.fechaNacPaciente],
+        ['Causa de atención',rec.causaAtencion],['Tipo de padecimiento',rec.tipoPadecimiento],['Inicio de síntomas',rec.fechaSintomas],['F. diagnóstico',rec.fechaDiagnostico],['¿Relación con otro?',rec.relacionOtro],['¿Cuál?',rec.relacionCual],['Detalle',rec.detallePadecimiento],['¿Autoridades legales?',rec.autoridadesLegales],
+        ['Ant. patológicos',rec.antPatologicos],['Ant. no patológicos',rec.antNoPatologicos],['Ant. gineco-obstétricos',rec.antGineco],['Ant. perinatales',rec.antPerinatales],
+        ['Pulso',rec.vitPulso],['Resp.',rec.vitResp],['Temp.',rec.vitTemp],['T/A',rec.vitTA],['Peso',rec.vitPeso],['Altura',rec.vitAltura],['Exploración física',rec.exploracionFisica],['Estudios realizados',rec.estudiosRealizados],
+        ['Procedimiento/técnica',rec.procedimientoTecnica],['Equipo específico',rec.equipoEspecifico],['¿Complicaciones?',rec.complicaciones],['Desc. complicaciones',rec.complicacionesDesc],['¿Post-quirúrgico?',rec.postQuirurgico],['¿Cuál?',rec.postQuirurgicoCual],['Info adicional',rec.infoAdicionalCir],
+        ['¿Aparatos/prótesis?',rec.aparatosProtesis],['Especifique',rec.aparatosEspecifique],['¿Renta de equipo?',rec.rentaEquipo],['Especifique',rec.rentaEspecifique],['¿Transfusión?',rec.transfusion],['¿Terapia intensiva?',rec.terapiaIntensiva],['Días hospitalización',rec.diasHospitalizacion],['¿Estudios adicionales?',rec.estudiosAdicionales],['¿Cuáles?',rec.estudiosAdicionalesCuales],
+        ['Ciudad',rec.hospitalCiudad],['Estado',rec.hospitalEstado],['Tipo de estancia',rec.tipoEstancia],['F. ingreso',rec.fechaIngreso],['Hora ingreso',rec.horaIngreso],
+        ['Médico especialidad',rec.medicoEspecialidad],['Céd. especialidad',rec.medicoCedulaEsp],['Participación',rec.medicoTipoParticipacion],['¿Red PASEM?',rec.medicoRed],['Tel. consultorio',rec.medicoTelefono],['Celular médico',rec.medicoCelular],['Correo médico',rec.medicoCorreo],['¿Interconsulta?',rec.huboInterconsulta],
+        ['Interconsultante 1',rec.inter1Nombre],['Esp. 1',rec.inter1Especialidad],['Céd. 1',rec.inter1Cedula],['Partic. 1',rec.inter1Participacion],
+        ['Interconsultante 2',rec.inter2Nombre],['Esp. 2',rec.inter2Especialidad],['Céd. 2',rec.inter2Cedula],['Partic. 2',rec.inter2Participacion],
+        ['Hon. cirujano',rec.honCirujano],['Hon. 1er ayudante',rec.honAyudante1],['Hon. 2º ayudante',rec.honAyudante2],['Hon. anestesiólogo',rec.honAnestesiologo],['Otro',rec.honOtroDesc],['Otro importe',rec.honOtro],['TOTAL honorarios',rec.honTotal],
+        ['Afiliación vigente',rec.afiliacionVigente],['Talón verificado',rec.talonVerificado],['Resolución',rec.resolucion],['F. recepción',rec.fechaRecepcion],['N.° oficio/orden',rec.numOficio],['Obs. administración',rec.obsAdmin]];
+      for(var ci=0;ci<P.length;ci++){ cirRows+=row2(P[ci][0],P[ci][1]); }
+    }
+    var cirBlock=(isCir&&cirRows)?('<div class="bar">PROGRAMACIÓN DE CIRUGÍA</div><table class="f">'+cirRows+'</table>'):'';
     var aut = rec.tipoTramite==='Autorización de cirugía';
     var conf = (rec.tipoTramite||'').indexOf('Confirmación')===0;
     var html=''+
@@ -950,6 +1076,7 @@
     '<div class="chk">'+box(has('Urgencias'))+' Urgencias</div>'+
     '<div class="bar">5. OBSERVACIONES / CONDICIONES DE LA AUTORIZACIÓN</div>'+
     '<table class="f"><tr><td style="height:50px"><div class="v">'+val(rec.observaciones)+'</div></td></tr></table>'+
+    cirBlock+
     '<div class="bar">6. AUTORIZACIÓN</div>'+
     '<div class="sign"><div>'+val(rec.autoriza||rec.capturadoPor)+'<br>Nombre y firma del administrador del programa</div>'+
       '<div>'+val(rec.cargo)+'<br>Cargo / puesto</div><div>'+val(rec.fechaAutorizacion)+'<br>Fecha</div></div>'+
@@ -1000,7 +1127,7 @@
   async function delRecord(id){ if(!confirm('¿Eliminar este registro?')) return; try{ var r=await api(RECORDS+'?id='+encodeURIComponent(id),{method:'DELETE'}); if(!r.ok) throw new Error('HTTP '+r.status); loadRecords(); }catch(e){ alert('Error al eliminar: '+e.message); } }
   form.addEventListener('submit', async function(e){
     e.preventDefault(); var fd=new FormData(form);
-    var data={ solicitudId:fd.get('solicitudId'), certificado:fd.get('certificado'), folio:fd.get('folio'), folioEleonor:fd.get('folioEleonor'), fechaEmision:fd.get('fechaEmision'), tipoTramite:fd.get('tipoTramite'), paciente:fd.get('paciente'), curp:fd.get('curp'), rfc:fd.get('rfc'), numAfiliado:fd.get('numAfiliado'), parentesco:fd.get('parentesco'), plantel:fd.get('plantel'), titular:fd.get('titular'), diagnostico:fd.get('diagnostico'), tipoServicio:fd.get('tipoServicio'), medico:fd.get('medico'), cedula:fd.get('cedula'), hospital:fd.get('hospital'), fechaProc:fd.get('fechaProc'), servicios:fd.getAll('servicios'), estudiosDetalle:fd.get('estudiosDetalle'), observaciones:fd.get('observaciones'), autoriza:fd.get('autoriza'), cargo:fd.get('cargo'), fechaAutorizacion:fd.get('fechaAutorizacion') };
+    var data=formObj(form); data.servicios=fd.getAll('servicios');
     var btn=form.querySelector('button[type=submit]'); var old=btn.textContent; btn.disabled=true; btn.textContent='Guardando…';
     try{
       var r=await api(RECORDS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}); if(!r.ok) throw new Error('HTTP '+r.status);
