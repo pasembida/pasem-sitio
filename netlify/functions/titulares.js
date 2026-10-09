@@ -35,7 +35,7 @@ export const handler = async (event) => {
         all.forEach(t=>{ const m=/PASEM-(\d+)/.exec(String(t.cert||'')); if(m){ const n=parseInt(m[1],10); if(!isNaN(n)) maxN=Math.max(maxN,n); } });
         const n=maxN+1; const cert='PASEM-'+String(n).padStart(5,'0');
         const id='TIT-'+Date.now().toString(36).toUpperCase()+'-'+Math.random().toString(36).slice(2,6).toUpperCase();
-        const t={ id, cert, nombre:body.nombre||'', curp:body.curp||'', rfc:body.rfc||'', funcion:body.funcion||'', cct:body.cct||'', ct:body.ct||'', nivel:body.nivel||'', createdAt:new Date().toISOString(), capturadoPor:p.email||'usuario' };
+        const t=Object.assign({}, body, { id, cert, createdAt:new Date().toISOString(), capturadoPor:p.email||'usuario' }); delete t.action;
         await store.setJSON(id,t);
         return {statusCode:200,headers,body:JSON.stringify(t)};
       }

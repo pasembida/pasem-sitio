@@ -37,7 +37,7 @@ export const handler = async (event) => {
         let letter=''; for(const L of LETTERS){ if(used.indexOf(L)<0){ letter=L; break; } }
         if(!letter) return {statusCode:400,headers,body:JSON.stringify({error:'Se alcanzó el máximo de dependientes para este titular'})};
         const id='DEP-'+Date.now().toString(36).toUpperCase()+'-'+Math.random().toString(36).slice(2,6).toUpperCase();
-        const dep={ id, cert:titularCert+letter, titularCert, titularNombre:body.titularNombre||'', nombre:body.nombre||'', parentesco:body.parentesco||'', curp:body.curp||'', rfc:body.rfc||'', createdAt:new Date().toISOString(), capturadoPor:p.email||'usuario' };
+        const dep=Object.assign({}, body, { id, cert:titularCert+letter, titularCert, createdAt:new Date().toISOString(), capturadoPor:p.email||'usuario' }); delete dep.action;
         await store.setJSON(id,dep);
         return {statusCode:200,headers,body:JSON.stringify(dep)};
       }

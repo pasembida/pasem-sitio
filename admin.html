@@ -275,7 +275,7 @@
       <!-- Ventana de expediente (documentos por beneficiario) -->
       <div id="exp-modal" class="exp-modal"><div class="exp-box">
         <div class="exp-head"><strong id="exp-title">Expediente</strong><button type="button" class="btn-ghost btn" id="exp-close">Cerrar</button></div>
-        <p style="font-size:13px;color:var(--ink);margin:0;">Documentos del beneficiario (PDF o imagen, máx. 4 MB). Todos quedan juntos en su expediente.</p>
+        <p style="font-size:13px;color:var(--ink);margin:0;">Documentos del beneficiario (PDF o imagen, máx. 15 MB). Todos quedan juntos en su expediente.</p>
         <form id="exp-modal-form" class="exp-up">
           <input type="file" id="exp-modal-file" accept=".pdf,image/*">
           <input type="text" id="exp-modal-desc" placeholder="Descripción (opcional)">
@@ -497,17 +497,60 @@
         <h3 style="font-family:var(--serif); color:var(--brown-deep); margin:0 0 6px;">Alta de titular</h3>
         <p style="color:var(--ink); font-size:14px; margin:0 0 14px;">Registra un titular nuevo. Se le asigna automáticamente el siguiente certificado (PASEM-#####) y aparecerá en la Consulta de beneficiarios.</p>
         <form id="form-tit" class="admin-form card" style="margin-bottom:16px;">
-          <fieldset><legend>Datos del titular</legend>
+          <fieldset><legend>Datos de afiliación</legend>
+            <div class="fgrid">
+              <div class="field"><label>Fecha de alta</label><input name="fechaAlta" type="date"></div>
+              <div class="field"><label>Municipio</label><input name="municipio" type="text"></div>
+              <div class="field"><label>Tipo de personal</label><select name="tipoPersonal"><option value="">Selecciona…</option><option>DOCENTE</option><option>PAAE</option></select></div>
+              <div class="field"><label>Nivel</label><input name="nivel" type="text" value="TELESECUNDARIA"></div>
+              <div class="field"><label>Nombre del centro de trabajo</label><input name="ct" type="text"></div>
+              <div class="field"><label>Clave del C.T. (CCT)</label><input name="cct" type="text"></div>
+            </div>
+          </fieldset>
+          <fieldset><legend>Datos del trabajador titular</legend>
             <div class="fgrid">
               <div class="field full"><label>Nombre completo</label><input name="nombre" type="text"></div>
               <div class="field"><label>CURP</label><input name="curp" type="text" maxlength="18"></div>
               <div class="field"><label>RFC</label><input name="rfc" type="text" maxlength="13"></div>
+              <div class="field"><label>Fecha de nacimiento</label><input name="fechaNacimiento" type="date"></div>
+              <div class="field"><label>Sexo</label><select name="sexo"><option value="">Selecciona…</option><option>F</option><option>M</option></select></div>
+              <div class="field"><label>Estado civil</label><select name="estadoCivil"><option value="">Selecciona…</option><option>SOLTERO(A)</option><option>CASADO(A)</option><option>CONCUBINATO</option><option>VIUDO(A)</option><option>DIVORCIADO(A)</option></select></div>
               <div class="field"><label>Función</label><input name="funcion" type="text"></div>
-              <div class="field"><label>CCT</label><input name="cct" type="text"></div>
-              <div class="field"><label>Centro de trabajo</label><input name="ct" type="text"></div>
-              <div class="field"><label>Nivel</label><input name="nivel" type="text" value="TELESECUNDARIA"></div>
-              <div class="field full"><label>Adjuntar documento al expediente (opcional, máx. 15 MB)</label><input type="file" id="tit-file" accept=".pdf,image/*"></div>
+              <div class="field"><label>Clave de cobro</label><input name="claveCobro" type="text"></div>
             </div>
+          </fieldset>
+          <fieldset><legend>Datos de contacto</legend>
+            <div class="fgrid">
+              <div class="field"><label>Teléfono</label><input name="telefono" type="text"></div>
+              <div class="field"><label>Celular</label><input name="celular" type="text"></div>
+              <div class="field"><label>Correo electrónico</label><input name="correo" type="email"></div>
+              <div class="field full"><label>Domicilio particular</label><input name="domicilio" type="text"></div>
+            </div>
+          </fieldset>
+          <fieldset><legend>Cuestionario médico</legend>
+            <div class="fgrid">
+              <div class="field"><label>Diabetes</label><select name="med_diabetes"><option value="">—</option><option>SI</option><option>NO</option></select></div>
+              <div class="field"><label>Hipertensión</label><select name="med_hipertension"><option value="">—</option><option>SI</option><option>NO</option></select></div>
+              <div class="field"><label>Cáncer</label><select name="med_cancer"><option value="">—</option><option>SI</option><option>NO</option></select></div>
+              <div class="field"><label>Afecciones cardiacas</label><select name="med_cardiacas"><option value="">—</option><option>SI</option><option>NO</option></select></div>
+              <div class="field"><label>¿Quién presenta el padecimiento?</label><input name="med_quien" type="text"></div>
+              <div class="field"><label>Especifique el padecimiento</label><input name="med_especifique" type="text"></div>
+            </div>
+            <p style="font-size:12px;color:var(--ink);margin:8px 0 0;">Los padecimientos preexistentes no reciben apoyo del programa.</p>
+          </fieldset>
+          <fieldset><legend>Documentación entregada</legend>
+            <div class="checks">
+              <label class="check"><input type="checkbox" name="docs" value="Acta de nacimiento"> Acta de nacimiento (titular y beneficiarios)</label>
+              <label class="check"><input type="checkbox" name="docs" value="Acta de matrimonio o concubinato"> Acta de matrimonio o constancia de concubinato</label>
+              <label class="check"><input type="checkbox" name="docs" value="Constancia de estudios"> Constancia(s) de estudios (hijos 18-25)</label>
+              <label class="check"><input type="checkbox" name="docs" value="Identificacion INE"> Identificación oficial (INE)</label>
+              <label class="check"><input type="checkbox" name="docs" value="Talon de cheque"> Talón de cheque más reciente</label>
+              <label class="check"><input type="checkbox" name="docs" value="Estudio socioeconomico"> Estudio socioeconómico (si aplica)</label>
+            </div>
+          </fieldset>
+          <fieldset><legend>Declaración</legend>
+            <label class="check"><input type="checkbox" name="aviso" value="1"> Acepta el aviso de privacidad y declara bajo protesta de decir verdad.</label>
+            <div class="field full" style="margin-top:10px;"><label>Adjuntar documento al expediente (opcional, máx. 15 MB)</label><input type="file" id="tit-file" accept=".pdf,image/*"></div>
           </fieldset>
           <button class="btn btn-primary" type="submit">Dar de alta titular</button>
         </form>
@@ -546,11 +589,45 @@
           <fieldset><legend>Datos del dependiente</legend>
             <div class="fgrid">
               <div class="field full"><label>Nombre completo del dependiente</label><input name="nombre" type="text"></div>
-              <div class="field"><label>Parentesco</label><select name="parentesco"><option value="">Selecciona…</option><option>CONYUGE</option><option>CONCUBINA</option><option>HIJO(A)</option><option>PADRES</option></select></div>
+              <div class="field"><label>Parentesco</label><select name="parentesco"><option value="">Selecciona…</option><option>CONYUGE</option><option>CONCUBINA</option><option>HIJO(A)</option><option>PADRE</option><option>MADRE</option></select></div>
               <div class="field"><label>CURP</label><input name="curp" type="text" maxlength="18"></div>
               <div class="field"><label>RFC</label><input name="rfc" type="text" maxlength="13"></div>
-              <div class="field full"><label>Adjuntar documento del dependiente (opcional, máx. 15 MB)</label><input type="file" id="dep-file" accept=".pdf,image/*"></div>
+              <div class="field"><label>Fecha de nacimiento</label><input name="fechaNacimiento" type="date"></div>
+              <div class="field"><label>Sexo</label><select name="sexo"><option value="">Selecciona…</option><option>F</option><option>M</option></select></div>
+              <div class="field"><label>¿Estudia? (hijos 18-25)</label><select name="estudia"><option value="">—</option><option>SI</option><option>NO</option></select></div>
             </div>
+          </fieldset>
+          <fieldset><legend>Datos de contacto del beneficiario</legend>
+            <div class="fgrid">
+              <div class="field"><label>Teléfono</label><input name="telefono" type="text"></div>
+              <div class="field"><label>Celular</label><input name="celular" type="text"></div>
+              <div class="field"><label>Correo electrónico</label><input name="correo" type="email"></div>
+              <div class="field full"><label>Domicilio particular</label><input name="domicilio" type="text"></div>
+            </div>
+          </fieldset>
+          <fieldset><legend>Cuestionario médico</legend>
+            <div class="fgrid">
+              <div class="field"><label>Diabetes</label><select name="med_diabetes"><option value="">—</option><option>SI</option><option>NO</option></select></div>
+              <div class="field"><label>Hipertensión</label><select name="med_hipertension"><option value="">—</option><option>SI</option><option>NO</option></select></div>
+              <div class="field"><label>Cáncer</label><select name="med_cancer"><option value="">—</option><option>SI</option><option>NO</option></select></div>
+              <div class="field"><label>Afecciones cardiacas</label><select name="med_cardiacas"><option value="">—</option><option>SI</option><option>NO</option></select></div>
+              <div class="field full"><label>Especifique el padecimiento (si aplica)</label><input name="med_especifique" type="text"></div>
+            </div>
+            <p style="font-size:12px;color:var(--ink);margin:8px 0 0;">Los padecimientos preexistentes no reciben apoyo del programa.</p>
+          </fieldset>
+          <fieldset><legend>Documentación entregada</legend>
+            <div class="checks">
+              <label class="check"><input type="checkbox" name="docs" value="Acta de nacimiento"> Acta de nacimiento</label>
+              <label class="check"><input type="checkbox" name="docs" value="Identificacion INE"> Identificación oficial (INE)</label>
+              <label class="check"><input type="checkbox" name="docs" value="Constancia de estudios"> Constancia de estudios (18-25)</label>
+              <label class="check"><input type="checkbox" name="docs" value="Acta de matrimonio o concubinato"> Acta de matrimonio / concubinato</label>
+              <label class="check"><input type="checkbox" name="docs" value="CURP"> CURP</label>
+              <label class="check"><input type="checkbox" name="docs" value="Estudio socioeconomico"> Estudio socioeconómico (padres)</label>
+            </div>
+          </fieldset>
+          <fieldset><legend>Declaración</legend>
+            <label class="check"><input type="checkbox" name="aviso" value="1"> Acepta el aviso de privacidad y declara bajo protesta de decir verdad.</label>
+            <div class="field full" style="margin-top:10px;"><label>Adjuntar documento del dependiente (opcional, máx. 15 MB)</label><input type="file" id="dep-file" accept=".pdf,image/*"></div>
           </fieldset>
           <button class="btn btn-primary" type="submit">Dar de alta dependiente</button>
           <button class="btn btn-ghost" type="button" id="dep-alta-sol" style="margin-left:8px;">Dar de alta y crear solicitud →</button>
@@ -571,13 +648,13 @@
       <!-- Expediente -->
       <div class="tabpane" id="pane-expediente">
         <h3 style="font-family:var(--serif); color:var(--brown-deep); margin:0 0 6px;">Expediente — documentación</h3>
-        <p style="color:var(--ink); font-size:14px; margin:0 0 14px;">Adjunta documentos del afiliado (PDF o imagen). Máximo <strong>4 MB</strong> por archivo.</p>
+        <p style="color:var(--ink); font-size:14px; margin:0 0 14px;">Adjunta documentos del afiliado (PDF o imagen). Máximo <strong>15 MB</strong> por archivo.</p>
         <form id="form-exp" class="admin-form card" style="margin-bottom:16px;">
           <div class="fgrid">
-            <div class="field"><label>Asociar a (CURP, folio o nombre)</label><input name="ref" type="text"></div>
+            <div class="field"><label>CURP del beneficiario</label><input name="ref" type="text"></div>
             <div class="field"><label>Descripción (opcional)</label><input name="desc" type="text"></div>
           </div>
-          <div class="field full" style="margin-top:4px;"><label>Archivo (PDF o imagen, máx. 4 MB)</label><input name="file" type="file" accept=".pdf,image/*"></div>
+          <div class="field full" style="margin-top:4px;"><label>Archivo (PDF o imagen, máx. 15 MB)</label><input name="file" type="file" accept=".pdf,image/*"></div>
           <button class="btn btn-primary" type="submit" style="margin-top:12px;">Subir documento</button>
         </form>
         <div class="search-row">
@@ -699,6 +776,7 @@
   function isAdmin(){ return role()==='administracion'; }
   function roleLabel(r){ return r==='administracion'?'Administración':(r==='operacion'?'Operación':r||'—'); }
   function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function formObj(form){ var o={}; new FormData(form).forEach(function(v,k){ if(v instanceof File) return; if(o[k]!==undefined){ if(!Array.isArray(o[k])) o[k]=[o[k]]; o[k].push(v); } else { o[k]=v; } }); return o; }
 
   document.getElementById('btn-login').addEventListener('click', doLogin);
   document.getElementById('login-pass').addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
@@ -928,7 +1006,7 @@
       var r=await api(RECORDS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}); if(!r.ok) throw new Error('HTTP '+r.status);
       var created=await r.json();
       if(data.solicitudId){ try{ await api(SOLIC,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'authorize', id:data.solicitudId, atencionId:created.id})}); }catch(e){} }
-      var afEl=document.getElementById('auth-file'); var af=afEl&&afEl.files[0]; var cref=(data.certificado||data.numAfiliado||'');
+      var afEl=document.getElementById('auth-file'); var af=afEl&&afEl.files[0]; var cref=(data.curp||data.certificado||data.numAfiliado||'');
       if(af && cref){ try{ await uploadDoc(af, cref, 'Adjunto al registrar autorización'); }catch(e){ alert('La autorización se guardó, pero el documento no se pudo adjuntar: '+e.message); } }
       form.reset(); document.getElementById('f-solicitudId').value=''; document.getElementById('f-certificado').value=''; var al=document.getElementById('auth-loaded'); if(al) al.textContent=''; syncProc(); loadRecords();
       alert('Autorización registrada. La atención quedó en el registro'+(data.solicitudId?' y la solicitud pasó a «Autorización generada».':'.'));
@@ -951,8 +1029,8 @@
     try{
       var r=await api(BEN+'?q='+encodeURIComponent(q)); if(!r.ok) throw new Error('HTTP '+r.status);
       var d=await r.json(); benTbody.innerHTML='';
-      d.results.forEach(function(x){ var tr=document.createElement('tr'); tr.innerHTML='<td><strong>'+esc(x.cert)+'</strong></td><td>'+esc(x.tipo||'')+'</td><td>'+esc(x.nombre)+'</td><td>'+esc(x.rfc)+'</td><td>'+esc(x.curp)+'</td><td>'+esc(x.funcion)+'</td><td>'+esc(x.cct)+'</td><td>'+esc(x.ct)+'</td><td><button class="btn-mini" data-cert="'+esc(x.cert)+'" data-nom="'+esc(x.nombre)+'">📎 Ver</button></td>'; benTbody.appendChild(tr); });
-      benTbody.querySelectorAll('[data-cert]').forEach(function(b){ b.addEventListener('click', function(){ openExpediente(b.getAttribute('data-cert'), b.getAttribute('data-nom')); }); });
+      d.results.forEach(function(x){ var tr=document.createElement('tr'); tr.innerHTML='<td><strong>'+esc(x.cert)+'</strong></td><td>'+esc(x.tipo||'')+'</td><td>'+esc(x.nombre)+'</td><td>'+esc(x.rfc)+'</td><td>'+esc(x.curp)+'</td><td>'+esc(x.funcion)+'</td><td>'+esc(x.cct)+'</td><td>'+esc(x.ct)+'</td><td><button class="btn-mini" data-curp="'+esc(x.curp)+'" data-cert="'+esc(x.cert)+'" data-nom="'+esc(x.nombre)+'">📎 Ver</button></td>'; benTbody.appendChild(tr); });
+      benTbody.querySelectorAll('[data-cert]').forEach(function(b){ b.addEventListener('click', function(){ openExpediente(b.getAttribute('data-curp'), b.getAttribute('data-cert'), b.getAttribute('data-nom')); }); });
       if(d.count===0) benStatus.textContent='Sin coincidencias. Esa persona no aparece en el listado de beneficiarios.';
       else benStatus.textContent=d.count+' coincidencia(s)'+(d.count>=100?' (mostrando las primeras 100)':'')+'. Las personas listadas cuentan con el beneficio.';
     }catch(e){ benStatus.textContent='Error: '+e.message; }
@@ -1059,7 +1137,7 @@
       if(!r.ok){ var d={}; try{ d=await r.json(); }catch(_){ } throw new Error(d.error||('HTTP '+r.status)); }
       var s=await r.json();
       var sfEl=document.getElementById('sol-file'); var sf=sfEl&&sfEl.files[0];
-      if(sf){ try{ await uploadDoc(sf, s.certificado, 'Adjunto al registrar solicitud'); }catch(e){ alert('La solicitud se guardó, pero el documento no se pudo adjuntar: '+e.message); } }
+      if(sf){ try{ await uploadDoc(sf, (s.curp||s.certificado), 'Adjunto al registrar solicitud'); }catch(e){ alert('La solicitud se guardó, pero el documento no se pudo adjuntar: '+e.message); } }
       formSol.reset(); loadSolic();
       if(confirm('Solicitud registrada.\nFolio generado: '+s.folio+'\n(Etapa 1: Solicitud de atención)\n\n¿Enviar la notificación de Etapa 1 por correo?')) notifyStage(s,1);
     }catch(err){ alert('Error: '+err.message); } finally{ btn.disabled=false; btn.textContent=old; }
@@ -1193,13 +1271,13 @@
     var fd=new FormData(formDep);
     if(!fd.get('titularCert')){ alert('Busca y selecciona el titular.'); return; }
     if(!fd.get('nombre')){ alert('Escribe el nombre del dependiente.'); return; }
-    var payload={ action:'create', titularCert:fd.get('titularCert'), titularNombre:fd.get('titularNombre'), nombre:fd.get('nombre'), parentesco:fd.get('parentesco'), curp:fd.get('curp'), rfc:fd.get('rfc') };
+    var payload=formObj(formDep); payload.action='create';
     try{
       var r=await api(DEPS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
       if(!r.ok){ var d={}; try{ d=await r.json(); }catch(_){ } throw new Error(d.error||('HTTP '+r.status)); }
       var dep=await r.json();
       var dfEl=document.getElementById('dep-file'); var df=dfEl&&dfEl.files[0];
-      if(df){ try{ await uploadDoc(df, dep.cert, 'Adjunto al dar de alta dependiente'); }catch(e){ alert('El dependiente se dio de alta, pero el documento no se pudo adjuntar: '+e.message); } }
+      if(df){ try{ await uploadDoc(df, (dep.curp||dep.cert), 'Adjunto al dar de alta dependiente'); }catch(e){ alert('El dependiente se dio de alta, pero el documento no se pudo adjuntar: '+e.message); } }
       formDep.reset(); document.getElementById('dep-cert').value=''; document.getElementById('dep-nom').value=''; loadDeps();
       if(goSol){
         activate('solicitud');
@@ -1217,11 +1295,12 @@
   }
 
   // ===== Expediente por beneficiario (ventana modal, reutilizable) =====
-  var EXP_CERT='';
-  function openExpediente(cert, nombre){
-    if(!cert){ alert('Primero relaciona el certificado del beneficiario (búscalo en la base con la lupa 🔍).'); return; }
-    EXP_CERT=cert;
-    document.getElementById('exp-title').textContent='Expediente · '+cert+(nombre?(' · '+nombre):'');
+  var EXP_CURP='', EXP_CERT='';
+  function openExpediente(curp, cert, nombre){
+    EXP_CURP=(curp||'').trim(); EXP_CERT=(cert||'').trim();
+    if(!EXP_CURP && !EXP_CERT){ alert('Este beneficiario no tiene CURP ni certificado para asociar el expediente.'); return; }
+    var etq=EXP_CURP||EXP_CERT;
+    document.getElementById('exp-title').textContent='Expediente · '+etq+(nombre?(' · '+nombre):'');
     document.getElementById('exp-modal').classList.add('open');
     loadExpFor();
   }
@@ -1230,8 +1309,14 @@
   async function loadExpFor(){
     var st=document.getElementById('exp-modal-status'), tb=document.querySelector('#exp-modal-table tbody'); st.textContent='Cargando…'; tb.innerHTML='';
     try{
-      var r=await api(EXPED+'?q='+encodeURIComponent(EXP_CERT)); if(!r.ok) throw new Error('HTTP '+r.status);
-      var items=(await r.json()).filter(function(d){ return String(d.ref||'')===EXP_CERT; });
+      var keys=[]; if(EXP_CURP) keys.push(EXP_CURP); if(EXP_CERT && EXP_CERT!==EXP_CURP) keys.push(EXP_CERT);
+      var map={};
+      for(var ki=0; ki<keys.length; ki++){
+        var r=await api(EXPED+'?q='+encodeURIComponent(keys[ki])); if(!r.ok) throw new Error('HTTP '+r.status);
+        (await r.json()).forEach(function(d){ var rf=String(d.ref||''); if((EXP_CURP&&rf===EXP_CURP)||(EXP_CERT&&rf===EXP_CERT)){ map[d.id]=d; } });
+      }
+      var items=Object.keys(map).map(function(k){ return map[k]; });
+      items.sort(function(a,b){ return String(b.createdAt||'').localeCompare(String(a.createdAt||'')); });
       items.forEach(function(d){ var tr=document.createElement('tr'); var del=isAdmin()?' <button class="btn-del" data-xid="'+esc(d.id)+'">Eliminar</button>':''; tr.innerHTML='<td>'+esc(d.filename)+'</td><td>'+esc(d.desc)+'</td><td>'+esc(fmtDate(d.createdAt))+'</td><td style="white-space:nowrap"><button class="btn-mini" data-xdl="'+esc(d.id)+'">Ver / Descargar</button>'+del+'</td>'; tb.appendChild(tr); });
       st.textContent=items.length+' documento(s) en el expediente.';
       tb.querySelectorAll('[data-xdl]').forEach(function(b){ b.addEventListener('click', function(){ dlExp(b.getAttribute('data-xdl')); }); });
@@ -1242,17 +1327,17 @@
     e.preventDefault(); var file=document.getElementById('exp-modal-file').files[0];
     if(!file){ alert('Selecciona un archivo.'); return; } if(file.size>MAXDOC){ alert('El archivo supera 15 MB.'); return; }
     var btn=this.querySelector('button[type=submit]'), old=btn.textContent; btn.disabled=true; btn.textContent='Subiendo…';
-    try{ await uploadDoc(file, EXP_CERT, document.getElementById('exp-modal-desc').value); document.getElementById('exp-modal-file').value=''; document.getElementById('exp-modal-desc').value=''; loadExpFor(); }
+    try{ await uploadDoc(file, (EXP_CURP||EXP_CERT), document.getElementById('exp-modal-desc').value); document.getElementById('exp-modal-file').value=''; document.getElementById('exp-modal-desc').value=''; loadExpFor(); }
     catch(err){ alert('Error al subir: '+err.message); } finally{ btn.disabled=false; btn.textContent=old; }
   });
-  if(document.getElementById('sol-docs')) document.getElementById('sol-docs').addEventListener('click', function(){ openExpediente((document.querySelector('#form-solicitud [name=certificado]').value||'').trim(), document.getElementById('s-nombre').value); });
-  if(document.getElementById('auth-docs')) document.getElementById('auth-docs').addEventListener('click', function(){ var c=(document.getElementById('f-certificado').value||document.querySelector('#form-atencion [name=numAfiliado]').value||'').trim(); openExpediente(c, document.querySelector('#form-atencion [name=paciente]').value); });
-  if(document.getElementById('dep-docs')) document.getElementById('dep-docs').addEventListener('click', function(){ openExpediente((document.getElementById('dep-cert').value||'').trim(), document.getElementById('dep-nom').value); });
+  if(document.getElementById('sol-docs')) document.getElementById('sol-docs').addEventListener('click', function(){ openExpediente((document.querySelector('#form-solicitud [name=curp]').value||'').trim(), (document.querySelector('#form-solicitud [name=certificado]').value||'').trim(), document.getElementById('s-nombre').value); });
+  if(document.getElementById('auth-docs')) document.getElementById('auth-docs').addEventListener('click', function(){ var cu=(document.querySelector('#form-atencion [name=curp]').value||'').trim(); var c=(document.getElementById('f-certificado').value||document.querySelector('#form-atencion [name=numAfiliado]').value||'').trim(); openExpediente(cu, c, document.querySelector('#form-atencion [name=paciente]').value); });
+  if(document.getElementById('dep-docs')) document.getElementById('dep-docs').addEventListener('click', function(){ openExpediente((document.querySelector('#form-dep [name=curp]').value||'').trim(), (document.getElementById('dep-cert').value||'').trim(), document.getElementById('dep-nom').value); });
   async function loadDeps(){ if(!depStatus) return; depStatus.textContent='Cargando…'; try{ var q=(document.getElementById('dep-q').value||'').trim(); var r=await api(DEPS+(q?('?q='+encodeURIComponent(q)):'')); if(!r.ok) throw new Error('HTTP '+r.status); var items=await r.json(); renderDeps(items); depStatus.textContent=items.length+' dependiente(s).'; }catch(e){ depStatus.textContent='Error: '+e.message; } }
   function renderDeps(items){
     depTbody.innerHTML='';
-    items.forEach(function(d){ var tr=document.createElement('tr'); var del=isAdmin()?' <button class="btn-del" data-act="depdel" data-id="'+esc(d.id)+'">Eliminar</button>':''; tr.innerHTML='<td><strong>'+esc(d.cert)+'</strong></td><td>'+esc(d.nombre)+'</td><td>'+esc(d.parentesco)+'</td><td>'+esc(d.curp)+'</td><td>'+esc(d.titularNombre||d.titularCert)+'</td><td style="white-space:nowrap"><button class="btn-mini" data-act="depexp" data-cert="'+esc(d.cert)+'" data-nom="'+esc(d.nombre)+'">📎 Expediente</button>'+del+'</td>'; depTbody.appendChild(tr); });
-    depTbody.querySelectorAll('[data-act=depexp]').forEach(function(b){ b.addEventListener('click', function(){ openExpediente(b.getAttribute('data-cert'), b.getAttribute('data-nom')); }); });
+    items.forEach(function(d){ var tr=document.createElement('tr'); var del=isAdmin()?' <button class="btn-del" data-act="depdel" data-id="'+esc(d.id)+'">Eliminar</button>':''; tr.innerHTML='<td><strong>'+esc(d.cert)+'</strong></td><td>'+esc(d.nombre)+'</td><td>'+esc(d.parentesco)+'</td><td>'+esc(d.curp)+'</td><td>'+esc(d.titularNombre||d.titularCert)+'</td><td style="white-space:nowrap"><button class="btn-mini" data-act="depexp" data-curp="'+esc(d.curp)+'" data-cert="'+esc(d.cert)+'" data-nom="'+esc(d.nombre)+'">📎 Expediente</button>'+del+'</td>'; depTbody.appendChild(tr); });
+    depTbody.querySelectorAll('[data-act=depexp]').forEach(function(b){ b.addEventListener('click', function(){ openExpediente(b.getAttribute('data-curp'), b.getAttribute('data-cert'), b.getAttribute('data-nom')); }); });
     depTbody.querySelectorAll('[data-act=depdel]').forEach(function(b){ b.addEventListener('click', function(){ delDep(b.getAttribute('data-id')); }); });
   }
   async function delDep(id){ if(!confirm('¿Eliminar este dependiente?')) return; try{ var r=await api(DEPS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id:id})}); if(!r.ok) throw new Error('HTTP '+r.status); loadDeps(); }catch(e){ alert('Error: '+e.message); } }
@@ -1264,14 +1349,14 @@
   if(formTit) formTit.addEventListener('submit', async function(e){
     e.preventDefault(); var fd=new FormData(formTit);
     if(!fd.get('nombre')){ alert('Escribe el nombre del titular.'); return; }
-    var payload={ action:'create', nombre:fd.get('nombre'), curp:fd.get('curp'), rfc:fd.get('rfc'), funcion:fd.get('funcion'), cct:fd.get('cct'), ct:fd.get('ct'), nivel:fd.get('nivel') };
+    var payload=formObj(formTit); payload.action='create';
     var btn=formTit.querySelector('button[type=submit]'), old=btn.textContent; btn.disabled=true; btn.textContent='Guardando…';
     try{
       var r=await api(TITU,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
       if(!r.ok){ var d={}; try{ d=await r.json(); }catch(_){ } throw new Error(d.error||('HTTP '+r.status)); }
       var t=await r.json();
       var tfEl=document.getElementById('tit-file'); var tf=tfEl&&tfEl.files[0];
-      if(tf){ try{ await uploadDoc(tf, t.cert, 'Adjunto al dar de alta titular'); }catch(e){ alert('El titular se dio de alta, pero el documento no se pudo adjuntar: '+e.message); } }
+      if(tf){ try{ await uploadDoc(tf, (t.curp||t.cert), 'Adjunto al dar de alta titular'); }catch(e){ alert('El titular se dio de alta, pero el documento no se pudo adjuntar: '+e.message); } }
       formTit.reset(); loadTit();
       alert('Titular dado de alta con certificado '+t.cert+'.');
     }catch(err){ alert('Error: '+err.message); } finally{ btn.disabled=false; btn.textContent=old; }
@@ -1279,8 +1364,8 @@
   async function loadTit(){ if(!titStatus) return; titStatus.textContent='Cargando…'; try{ var q=(document.getElementById('tit-q').value||'').trim(); var r=await api(TITU+(q?('?q='+encodeURIComponent(q)):'')); if(!r.ok) throw new Error('HTTP '+r.status); var items=await r.json(); renderTit(items); titStatus.textContent=items.length+' titular(es) dado(s) de alta.'; }catch(e){ titStatus.textContent='Error: '+e.message; } }
   function renderTit(items){
     titTbody.innerHTML='';
-    items.forEach(function(t){ var tr=document.createElement('tr'); var del=isAdmin()?'<button class="btn-del" data-act="titdel" data-id="'+esc(t.id)+'">Eliminar</button>':''; tr.innerHTML='<td><strong>'+esc(t.cert)+'</strong></td><td>'+esc(t.nombre)+'</td><td>'+esc(t.curp)+'</td><td>'+esc(t.rfc)+'</td><td>'+esc(t.ct)+'</td><td style="white-space:nowrap"><button class="btn-mini" data-act="titexp" data-cert="'+esc(t.cert)+'" data-nom="'+esc(t.nombre)+'">📎 Expediente</button> '+del+'</td>'; titTbody.appendChild(tr); });
-    titTbody.querySelectorAll('[data-act=titexp]').forEach(function(b){ b.addEventListener('click', function(){ openExpediente(b.getAttribute('data-cert'), b.getAttribute('data-nom')); }); });
+    items.forEach(function(t){ var tr=document.createElement('tr'); var del=isAdmin()?'<button class="btn-del" data-act="titdel" data-id="'+esc(t.id)+'">Eliminar</button>':''; tr.innerHTML='<td><strong>'+esc(t.cert)+'</strong></td><td>'+esc(t.nombre)+'</td><td>'+esc(t.curp)+'</td><td>'+esc(t.rfc)+'</td><td>'+esc(t.ct)+'</td><td style="white-space:nowrap"><button class="btn-mini" data-act="titexp" data-curp="'+esc(t.curp)+'" data-cert="'+esc(t.cert)+'" data-nom="'+esc(t.nombre)+'">📎 Expediente</button> '+del+'</td>'; titTbody.appendChild(tr); });
+    titTbody.querySelectorAll('[data-act=titexp]').forEach(function(b){ b.addEventListener('click', function(){ openExpediente(b.getAttribute('data-curp'), b.getAttribute('data-cert'), b.getAttribute('data-nom')); }); });
     titTbody.querySelectorAll('[data-act=titdel]').forEach(function(b){ b.addEventListener('click', function(){ delTit(b.getAttribute('data-id')); }); });
   }
   async function delTit(id){ if(!confirm('¿Eliminar este titular (dado de alta manualmente)?')) return; try{ var r=await api(TITU,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id:id})}); if(!r.ok) throw new Error('HTTP '+r.status); loadTit(); }catch(e){ alert('Error: '+e.message); } }
