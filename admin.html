@@ -177,6 +177,9 @@
   .field.full{grid-column:1 / -1;}
   .field label{font-size:13px; font-weight:700; color:var(--brown-deep);}
   .field input, .field select, .field textarea{font-family:var(--sans); font-size:15px; padding:9px 11px; border:1px solid var(--border); border-radius:8px; background:#fff; color:var(--brown-deep);}
+  #admin-panel input, #admin-panel select, #admin-panel textarea, #admin-gate input, .exp-box input, .exp-box textarea, .search-row input{ box-sizing:border-box; max-width:100%; }
+  .admin-form, .admin-form .card, .admin-form fieldset, .fgrid, .field, .paciente-wrap, .table-wrap{ max-width:100%; min-width:0; }
+  .field > input, .field > select, .field > textarea{ width:100%; }
   .field input:focus, .field select:focus, .field textarea:focus{outline:none; border-color:var(--ochre);}
   .field textarea{min-height:72px; resize:vertical;}
   .checks{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:4px;}
@@ -236,7 +239,7 @@
     table.dtable thead{ display:none; }
     table.dtable, table.dtable tbody, table.dtable tr, table.dtable td{ display:block; width:100%; }
     table.dtable tr{ border:1px solid var(--border); border-radius:10px; margin:0 0 10px; background:#fff; overflow:hidden; }
-    table.dtable td{ border:none; border-bottom:1px solid var(--border); padding:8px 12px; white-space:normal; text-align:left; }
+    table.dtable td{ border:none; border-bottom:1px solid var(--border); padding:8px 12px; white-space:normal !important; text-align:left; }
     table.dtable td:last-child{ border-bottom:none; }
     table.dtable td::before{ content:attr(data-label); display:block; font-size:11px; text-transform:uppercase; letter-spacing:.3px; color:var(--ink); font-weight:700; margin-bottom:2px; }
     table.dtable td[data-label=""]::before{ display:none; }
