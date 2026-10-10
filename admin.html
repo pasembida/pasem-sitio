@@ -219,7 +219,31 @@
   .exp-head strong{font-family:var(--serif); color:var(--brown-deep); font-size:18px;}
   .exp-up{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:8px 0;}
   .exp-up input[type=text]{flex:1; min-width:180px; padding:9px 11px; border:1px solid var(--border); border-radius:8px;}
-  @media(max-width:860px){ .fgrid,.checks{grid-template-columns:1fr;} }
+  @media(max-width:860px){
+    .fgrid,.checks{grid-template-columns:1fr;}
+    /* Evita el auto-zoom de iOS al enfocar campos (requiere >=16px) */
+    .field input, .field select, .field textarea, .search-row input, #login-email, #login-pass, #mail-subject, #mail-body, #exp-modal-desc, #ben-q, #exp-q, #dep-q, #tit-q { font-size:16px; }
+    .table-wrap{ -webkit-overflow-scrolling:touch; }
+    table.dtable th, table.dtable td{ padding:8px 10px; }
+    .exp-box{ padding:16px; }
+    .admin-bar .acts{ width:100%; }
+    .admin-bar .acts .btn{ flex:1; }
+  }
+  /* En teléfono, las tablas se muestran como tarjetas (sin scroll lateral) */
+  @media(max-width:640px){
+    .table-wrap{ border:none; overflow:visible; }
+    table.dtable{ background:transparent; }
+    table.dtable thead{ display:none; }
+    table.dtable, table.dtable tbody, table.dtable tr, table.dtable td{ display:block; width:100%; }
+    table.dtable tr{ border:1px solid var(--border); border-radius:10px; margin:0 0 10px; background:#fff; overflow:hidden; }
+    table.dtable td{ border:none; border-bottom:1px solid var(--border); padding:8px 12px; white-space:normal; text-align:left; }
+    table.dtable td:last-child{ border-bottom:none; }
+    table.dtable td::before{ content:attr(data-label); display:block; font-size:11px; text-transform:uppercase; letter-spacing:.3px; color:var(--ink); font-weight:700; margin-bottom:2px; }
+    table.dtable td[data-label=""]::before{ display:none; }
+    table.dtable td:empty{ display:none; }
+    table.dtable td select{ width:100%; margin-bottom:6px; }
+    table.dtable td .btn-mini, table.dtable td .btn-del{ margin:2px 4px 2px 0; }
+  }
 </style>
 </head>
 <body>
@@ -1496,6 +1520,15 @@
     titTbody.querySelectorAll('[data-act=titdel]').forEach(function(b){ b.addEventListener('click', function(){ delTit(b.getAttribute('data-id')); }); });
   }
   async function delTit(id){ if(!confirm('¿Eliminar este titular (dado de alta manualmente)?')) return; try{ var r=await api(TITU,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id:id})}); if(!r.ok) throw new Error('HTTP '+r.status); loadTit(); }catch(e){ alert('Error: '+e.message); } }
+
+  // Etiqueta automáticamente cada celda con el título de su columna (para la vista en tarjetas en celular)
+  function labelTables(){
+    document.querySelectorAll('table.dtable').forEach(function(t){
+      var ths=t.querySelectorAll('thead th'); var labels=[]; ths.forEach(function(h){ labels.push((h.textContent||'').trim()); });
+      t.querySelectorAll('tbody tr').forEach(function(tr){ tr.querySelectorAll('td').forEach(function(td,i){ if(!td.hasAttribute('data-label')) td.setAttribute('data-label', labels[i]||''); }); });
+    });
+  }
+  (function(){ var panel=document.getElementById('admin-panel'); if(!panel||!window.MutationObserver) return; var tmo; var obs=new MutationObserver(function(){ clearTimeout(tmo); tmo=setTimeout(labelTables, 60); }); obs.observe(panel,{childList:true,subtree:true}); })();
 })();
 </script>
 </body>
