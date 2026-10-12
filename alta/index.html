@@ -3,37 +3,66 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>PASEM · Alta de beneficiario</title>
-<meta name="description" content="Registro de alta de beneficiario — PASEM, Sección 26 del SNTE, San Luis Potosí.">
+<title>PASEM · Alta de beneficiarios</title>
+<meta name="description" content="Alta de beneficiarios — PASEM, Sección 26 del SNTE, San Luis Potosí.">
 <meta name="theme-color" content="#DD6B20">
 <link rel="icon" href="/img/bida.png">
 <style>
-  :root{--orange:#DD6B20;--orange-d:#C25A16;--teal:#14B4B6;--ink:#1F3442;--gray:#767676;--line:#E6ECEE;--bg:#F3FBFB;}
+  :root{--orange:#DD6B20;--orange-d:#C25A16;--teal:#14B4B6;--ink:#1F3442;--gray:#767676;--line:#E6ECEE;--bg:#F3FBFB;--peach:#FFF3EA;}
   *{box-sizing:border-box}
   html,body{margin:0}
   body{background:var(--bg);color:var(--ink);font-family:Arial,"Helvetica Neue",Helvetica,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
   .top{height:10px;background:var(--orange)}
-  main{max-width:520px;margin:0 auto;padding:18px 16px 40px}
+  main{max-width:720px;margin:0 auto;padding:18px 16px 44px}
   .card{background:#fff;border:1px solid var(--line);border-radius:22px;box-shadow:0 10px 30px rgba(31,52,66,.08);padding:22px 20px 26px}
   .logos{display:flex;justify-content:space-between;align-items:center;gap:12px}
   .logos img{display:block;height:auto}
-  .logos .snte{width:46%;max-width:190px}
-  .logos .bida{width:24%;max-width:96px}
-  h1{margin:14px 0 0;text-align:center;font-weight:900;font-size:clamp(40px,12vw,56px);letter-spacing:2px;line-height:1;color:var(--orange)}
+  .logos .snte{width:40%;max-width:190px}
+  .logos .bida{width:20%;max-width:96px}
+  h1{margin:12px 0 0;text-align:center;font-weight:900;font-size:clamp(38px,11vw,54px);letter-spacing:2px;line-height:1;color:var(--orange)}
   .sub{text-align:center;font-weight:700;font-size:15px;margin-top:8px;color:#333}
   .sub2{text-align:center;font-size:13px;color:var(--gray);margin-top:3px}
-  .rule{width:84px;height:4px;border-radius:2px;background:var(--teal);margin:16px auto 20px}
-  .intro{font-size:14px;color:#445;line-height:1.5;margin:0 2px 16px;text-align:center}
-  label{display:block;font-weight:700;font-size:15px;margin:14px 0 6px;color:#2b3a42}
+  .rule{width:84px;height:4px;border-radius:2px;background:var(--teal);margin:16px auto 6px}
+  .step-ind{text-align:center;font-size:12px;font-weight:800;letter-spacing:.8px;color:var(--teal);text-transform:uppercase;margin:6px 0 10px}
+  .intro{font-size:14px;color:#445;line-height:1.5;margin:0 2px 14px;text-align:center}
+
+  .sec{margin-top:22px;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .sec>.sec-h{background:var(--peach);color:#9a4a12;font-weight:800;font-size:14px;padding:11px 14px;letter-spacing:.3px}
+  .sec>.sec-b{padding:14px}
+  .sec .note{font-size:12.5px;color:var(--gray);margin:-4px 0 10px}
+
+  .grid{display:grid;grid-template-columns:1fr;gap:12px}
+  @media(min-width:620px){ .grid.two{grid-template-columns:1fr 1fr} .grid.three{grid-template-columns:1fr 1fr 1fr} }
+  label{display:block;font-weight:700;font-size:14px;margin:0 0 6px;color:#2b3a42}
   label .req{color:var(--orange)}
-  input{width:100%;font-size:17px;padding:14px 14px;border:1px solid #CFDADD;border-radius:12px;background:#fff;color:var(--ink)}
-  input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(20,180,182,.15)}
+  input[type=text],input[type=tel],input[type=email],input[type=date],select,textarea{width:100%;font-size:16px;padding:12px 12px;border:1px solid #CFDADD;border-radius:11px;background:#fff;color:var(--ink)}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(20,180,182,.15)}
+  textarea{min-height:70px;resize:vertical}
   .hint{font-size:12px;color:var(--gray);margin-top:4px}
   .hp{position:absolute;left:-9999px}
-  button{margin-top:22px;width:100%;padding:16px 18px;border:none;border-radius:14px;background:var(--orange);color:#fff;font-weight:800;font-size:18px;cursor:pointer;box-shadow:0 6px 16px rgba(221,107,32,.30)}
-  button:active{background:var(--orange-d)}
-  .ok{display:none;text-align:center;padding:10px 4px}
-  .ok .chk{width:72px;height:72px;border-radius:50%;background:#E8F8EE;color:#1e9e52;display:flex;align-items:center;justify-content:center;margin:6px auto 12px}
+
+  .opts{display:flex;flex-wrap:wrap;gap:8px}
+  .opt{display:inline-flex;align-items:center;gap:7px;border:1px solid #CFDADD;border-radius:999px;padding:8px 14px;font-size:14px;cursor:pointer;background:#fff}
+  .opt input{accent-color:var(--orange);width:18px;height:18px}
+  .checks{display:grid;grid-template-columns:1fr;gap:9px}
+  @media(min-width:620px){ .checks{grid-template-columns:1fr 1fr} }
+  .chk{display:flex;align-items:flex-start;gap:9px;font-size:14px;line-height:1.35;color:#2b3a42}
+  .chk input{margin-top:2px;accent-color:var(--orange);width:18px;height:18px;flex:none}
+
+  table.rep{width:100%;border-collapse:collapse}
+  .rep .row{display:grid;grid-template-columns:1fr;gap:10px;padding:10px;border:1px dashed #D7E2E4;border-radius:12px;margin-bottom:10px}
+  @media(min-width:620px){ .rep .row{grid-template-columns:2fr 1.6fr 1.2fr auto;align-items:end} }
+  .rep .row .rownum{font-weight:800;color:var(--gray);font-size:12px}
+
+  .actions{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap}
+  .btn{flex:1;min-width:160px;padding:15px 18px;border:none;border-radius:13px;font-weight:800;font-size:17px;cursor:pointer}
+  .btn-primary{background:var(--orange);color:#fff;box-shadow:0 6px 16px rgba(221,107,32,.30)}
+  .btn-primary:active{background:var(--orange-d)}
+  .btn-ghost{background:#fff;color:var(--ink);border:1px solid #CFDADD;flex:0 0 auto}
+  .aviso{margin-top:16px;padding:12px 14px;border-radius:12px;background:#F7FBFB;border:1px solid var(--line);font-size:12px;color:#556;line-height:1.5}
+
+  .ok{display:none;text-align:center;padding:14px 4px}
+  .ok .chkc{width:72px;height:72px;border-radius:50%;background:#E8F8EE;color:#1e9e52;display:flex;align-items:center;justify-content:center;margin:6px auto 12px}
   .ok h2{margin:0 0 6px;font-size:22px;color:var(--ink)}
   .ok p{margin:0;color:#556;font-size:15px;line-height:1.5}
   footer{text-align:center;color:var(--gray);font-size:12px;line-height:1.5;margin-top:18px;padding:0 8px}
@@ -48,39 +77,186 @@
       <img class="bida" src="/img/bida.png" alt="BIDA Seguros">
     </div>
     <h1>PASEM</h1>
-    <div class="sub">Alta de beneficiario</div>
+    <div class="sub">Alta de beneficiarios</div>
     <div class="sub2">Sección 26 del SNTE · San Luis Potosí</div>
     <div class="rule"></div>
 
-    <form id="formAlta" name="alta-beneficiario" method="POST" data-netlify="true" netlify-honeypot="bot-field">
-      <input type="hidden" name="form-name" value="alta-beneficiario">
+    <form id="formAlta" name="alta-beneficiario" method="POST">
       <p class="hp"><label>No llenar: <input name="bot-field"></label></p>
 
-      <div class="intro">Captura tus datos. No necesitas cuenta de correo ni iniciar sesión. Al enviar, tu registro llega directo a la administración del programa.</div>
+      <!-- ===================== PASO 1: CONTACTO ===================== -->
+      <div id="paso1">
+        <div class="step-ind">Paso 1 de 2 · Datos de contacto</div>
+        <div class="intro">Primero, cuéntanos quién realiza este registro. No necesitas cuenta de correo ni iniciar sesión.</div>
+        <div class="grid two">
+          <div>
+            <label>Nombre completo <span class="req">*</span></label>
+            <input type="text" name="Contacto - Nombre" required autocomplete="name">
+          </div>
+          <div>
+            <label>Teléfono de contacto <span class="req">*</span></label>
+            <input type="tel" name="Contacto - Telefono" required inputmode="numeric" placeholder="10 dígitos">
+          </div>
+          <div>
+            <label>CURP <span class="req">*</span></label>
+            <input type="text" name="Contacto - CURP" required maxlength="18" placeholder="18 caracteres">
+          </div>
+          <div>
+            <label>RFC</label>
+            <input type="text" name="Contacto - RFC" maxlength="13" placeholder="Opcional">
+          </div>
+          <div>
+            <label>Correo electrónico</label>
+            <input type="email" name="Contacto - Correo" placeholder="Opcional">
+          </div>
+          <div>
+            <label>Parentesco con el titular</label>
+            <select name="Contacto - Parentesco">
+              <option value="">Selecciona…</option>
+              <option>Soy el titular</option><option>Cónyuge / Concubina(o)</option><option>Hijo(a)</option><option>Padre / Madre</option><option>Otro</option>
+            </select>
+          </div>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn btn-primary" id="goStep2">Acceder al formulario →</button>
+        </div>
+      </div>
 
-      <label>Nombre completo <span class="req">*</span></label>
-      <input name="Nombre completo" required autocomplete="name" autocapitalize="characters">
+      <!-- ===================== PASO 2: FORMATO COMPLETO ===================== -->
+      <div id="paso2" style="display:none">
+        <div class="step-ind">Paso 2 de 2 · Formato de alta de beneficiarios</div>
+        <div class="intro">Completa los datos. Favor de no dejar espacios sin contestar en lo que aplique.</div>
 
-      <label>CURP <span class="req">*</span></label>
-      <input name="CURP" required maxlength="18" autocapitalize="characters" placeholder="18 caracteres">
-      <div class="hint">Ejemplo: PERJ850101HSPXXX09</div>
+        <div class="sec"><div class="sec-h">1. Datos de afiliación</div><div class="sec-b">
+          <div class="grid two">
+            <div><label>Municipio</label><input type="text" name="Afiliación - Municipio"></div>
+            <div><label>Nombre del centro de trabajo</label><input type="text" name="Afiliación - Centro de trabajo"></div>
+            <div><label>Clave del C.T.</label><input type="text" name="Afiliación - Clave CT"></div>
+            <div><label>N.° de afiliación (si ya cuentas con él)</label><input type="text" name="Afiliación - No afiliación" placeholder="Opcional"></div>
+          </div>
+          <div style="margin-top:12px"><label>Tipo de personal</label>
+            <div class="opts">
+              <label class="opt"><input type="radio" name="Afiliación - Tipo de personal" value="Docente">Docente</label>
+              <label class="opt"><input type="radio" name="Afiliación - Tipo de personal" value="PAAE">PAAE</label>
+            </div>
+          </div>
+        </div></div>
 
-      <label>RFC</label>
-      <input name="RFC" maxlength="13" autocapitalize="characters" placeholder="Con homoclave (opcional)">
+        <div class="sec"><div class="sec-h">2. Datos del trabajador titular</div><div class="sec-b">
+          <div class="grid three">
+            <div><label>Primer apellido <span class="req">*</span></label><input type="text" name="Titular - Primer apellido" required></div>
+            <div><label>Segundo apellido</label><input type="text" name="Titular - Segundo apellido"></div>
+            <div><label>Nombre(s) <span class="req">*</span></label><input type="text" name="Titular - Nombres" required></div>
+          </div>
+          <div class="grid three" style="margin-top:12px">
+            <div><label>CURP <span class="req">*</span></label><input type="text" name="Titular - CURP" required maxlength="18"></div>
+            <div><label>Fecha de nacimiento</label><input type="date" name="Titular - Fecha nacimiento"></div>
+            <div><label>Sexo</label>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="Titular - Sexo" value="F">F</label>
+                <label class="opt"><input type="radio" name="Titular - Sexo" value="M">M</label>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:12px"><label>Estado civil</label>
+            <div class="opts">
+              <label class="opt"><input type="radio" name="Titular - Estado civil" value="Soltero(a)">Soltero(a)</label>
+              <label class="opt"><input type="radio" name="Titular - Estado civil" value="Casado(a)">Casado(a)</label>
+              <label class="opt"><input type="radio" name="Titular - Estado civil" value="Concubinato">Concubinato</label>
+              <label class="opt"><input type="radio" name="Titular - Estado civil" value="Viudo(a)">Viudo(a)</label>
+              <label class="opt"><input type="radio" name="Titular - Estado civil" value="Divorciado(a)">Divorciado(a)</label>
+            </div>
+          </div>
+          <div class="grid three" style="margin-top:12px">
+            <div><label>Clave de cobro</label><input type="text" name="Titular - Clave de cobro"></div>
+            <div><label>Teléfono</label><input type="tel" name="Titular - Telefono" inputmode="numeric"></div>
+            <div><label>Celular</label><input type="tel" name="Titular - Celular" inputmode="numeric"></div>
+          </div>
+          <div class="grid two" style="margin-top:12px">
+            <div><label>Correo electrónico</label><input type="email" name="Titular - Correo"></div>
+            <div><label>Domicilio particular</label><input type="text" name="Titular - Domicilio"></div>
+          </div>
+        </div></div>
 
-      <label>Teléfono de contacto <span class="req">*</span></label>
-      <input name="Telefono" required type="tel" inputmode="numeric" autocomplete="tel" placeholder="10 dígitos">
+        <div class="sec"><div class="sec-h">3. Datos del cónyuge o concubina(o)</div><div class="sec-b">
+          <div class="note">Complete solo si su estado civil es Casado(a) o Concubinato.</div>
+          <div class="grid three">
+            <div><label>Primer apellido</label><input type="text" name="Cónyuge - Primer apellido"></div>
+            <div><label>Segundo apellido</label><input type="text" name="Cónyuge - Segundo apellido"></div>
+            <div><label>Nombre(s)</label><input type="text" name="Cónyuge - Nombres"></div>
+          </div>
+          <div class="grid three" style="margin-top:12px">
+            <div><label>CURP</label><input type="text" name="Cónyuge - CURP" maxlength="18"></div>
+            <div><label>Fecha de nacimiento</label><input type="date" name="Cónyuge - Fecha nacimiento"></div>
+            <div><label>Sexo</label>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="Cónyuge - Sexo" value="F">F</label>
+                <label class="opt"><input type="radio" name="Cónyuge - Sexo" value="M">M</label>
+              </div>
+            </div>
+          </div>
+        </div></div>
 
-      <label>Correo electrónico</label>
-      <input name="Correo" type="email" autocomplete="email" placeholder="Opcional">
+        <div class="sec"><div class="sec-h">4. Hijos (beneficiarios)</div><div class="sec-b">
+          <div class="note">Solteros menores de 18 años, o hasta 25 si estudian (anexar constancia de estudios).</div>
+          <div class="rep" id="hijos"></div>
+        </div></div>
 
-      <button type="submit">Enviar registro</button>
+        <div class="sec"><div class="sec-h">5. Ascendientes (padres)</div><div class="sec-b">
+          <div class="note">Solo para titulares solteros(as) sin hijos: padres mayores de 60 años y dependientes económicos.</div>
+          <div class="rep" id="padres"></div>
+        </div></div>
+
+        <div class="sec"><div class="sec-h">6. Cuestionario médico</div><div class="sec-b">
+          <div class="grid two">
+            <div><label>Diabetes</label><div class="opts"><label class="opt"><input type="radio" name="Médico - Diabetes" value="Sí">Sí</label><label class="opt"><input type="radio" name="Médico - Diabetes" value="No">No</label></div></div>
+            <div><label>Hipertensión</label><div class="opts"><label class="opt"><input type="radio" name="Médico - Hipertensión" value="Sí">Sí</label><label class="opt"><input type="radio" name="Médico - Hipertensión" value="No">No</label></div></div>
+            <div><label>Cáncer</label><div class="opts"><label class="opt"><input type="radio" name="Médico - Cáncer" value="Sí">Sí</label><label class="opt"><input type="radio" name="Médico - Cáncer" value="No">No</label></div></div>
+            <div><label>Afecciones cardiacas</label><div class="opts"><label class="opt"><input type="radio" name="Médico - Afecciones cardiacas" value="Sí">Sí</label><label class="opt"><input type="radio" name="Médico - Afecciones cardiacas" value="No">No</label></div></div>
+          </div>
+          <div class="grid two" style="margin-top:12px">
+            <div><label>¿Quién presenta el padecimiento? (titular o beneficiario)</label><input type="text" name="Médico - Quién"></div>
+            <div><label>Especifique el padecimiento</label><input type="text" name="Médico - Especifique"></div>
+          </div>
+          <div class="checks" style="margin-top:12px;grid-template-columns:1fr">
+            <label class="chk"><input type="checkbox" name="Médico - Declaración verídica" value="Sí" required> Declaro que las respuestas de este cuestionario son verídicas y completas. <span class="req">*</span></label>
+            <label class="chk"><input type="checkbox" name="Médico - Entiendo preexistentes" value="Sí" required> Entiendo que los padecimientos preexistentes no reciben apoyo del programa. <span class="req">*</span></label>
+          </div>
+        </div></div>
+
+        <div class="sec"><div class="sec-h">7. Documentación entregada</div><div class="sec-b">
+          <div class="note">Marca los documentos que adjuntas (original y copia).</div>
+          <div class="checks">
+            <label class="chk"><input type="checkbox" name="Docs - Acta nacimiento" value="Sí"> Acta de nacimiento del titular y beneficiarios</label>
+            <label class="chk"><input type="checkbox" name="Docs - Acta matrimonio/concubinato" value="Sí"> Acta de matrimonio o constancia de concubinato</label>
+            <label class="chk"><input type="checkbox" name="Docs - Constancias estudios" value="Sí"> Constancia(s) de estudios de hijos de 18 a 25 años</label>
+            <label class="chk"><input type="checkbox" name="Docs - Talón de cheque" value="Sí"> Talón de cheque más reciente a la fecha de alta</label>
+            <label class="chk"><input type="checkbox" name="Docs - INE" value="Sí"> Identificación oficial (INE) del titular y beneficiarios</label>
+            <label class="chk"><input type="checkbox" name="Docs - Estudio socioeconómico" value="Sí"> Estudio socioeconómico (cuando aplique a padres)</label>
+          </div>
+          <div style="margin-top:16px">
+            <label>Adjuntar documentos (fotos o PDF) — opcional</label>
+            <input type="file" id="docsFiles" multiple accept="image/*,application/pdf" style="width:100%;font-size:15px;padding:11px;border:1px solid #CFDADD;border-radius:11px;background:#fff">
+            <div class="hint">Puedes subir acta de nacimiento, CURP, INE, talón de cheque, etc. (varios archivos). Las fotos se optimizan automáticamente.</div>
+            <div class="hint" id="docsStatus" style="color:var(--teal);font-weight:700"></div>
+          </div>
+        </div></div>
+
+        <div class="sec"><div class="sec-h">8. Declaración y aviso de privacidad</div><div class="sec-b">
+          <label class="chk"><input type="checkbox" name="Declaración bajo protesta" value="Sí" required> Bajo protesta de decir verdad, manifiesto que los datos son verídicos y que los beneficiarios cumplen los requisitos de elegibilidad del programa. <span class="req">*</span></label>
+          <label class="chk" style="margin-top:10px"><input type="checkbox" name="Acepta aviso de privacidad" value="Sí" required> Acepto el tratamiento de mis datos personales conforme al aviso de privacidad. <span class="req">*</span></label>
+          <div class="aviso">MULTICATERIN, S.A. de C.V., responsable del tratamiento de los datos personales, los utiliza únicamente para la operación del PASEM, con reserva de los datos sensibles conforme a la ley. Podrás ejercer tus derechos ARCO mediante solicitud dirigida a MULTICATERIN, S.A. de C.V.</div>
+        </div></div>
+
+        <div class="actions">
+          <button type="button" class="btn btn-ghost" id="backStep1">← Regresar</button>
+          <button type="submit" class="btn btn-primary" id="sendBtn">Enviar registro</button>
+        </div>
+      </div>
     </form>
 
     <div class="ok" id="okMsg">
-      <div class="chk">
-        <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-      </div>
+      <div class="chkc"><svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
       <h2>¡Registro enviado!</h2>
       <p>Gracias. Tus datos se recibieron correctamente. La administración del programa se pondrá en contacto contigo.</p>
     </div>
@@ -93,14 +269,95 @@
 </main>
 
 <script>
-  var f=document.getElementById('formAlta');
-  f.addEventListener('submit', function(e){
+  // Generar filas de Hijos (4) y Padres (2)
+  (function(){
+    var h=document.getElementById('hijos');
+    for(var i=1;i<=4;i++){
+      h.insertAdjacentHTML('beforeend',
+        '<div class="row"><div class="rownum">Hijo '+i+'</div>'+
+        '<div><label>Nombre completo</label><input type="text" name="Hijo '+i+' - Nombre"></div>'+
+        '<div><label>CURP</label><input type="text" name="Hijo '+i+' - CURP" maxlength="18"></div>'+
+        '<div><label>Fecha de nacimiento</label><input type="date" name="Hijo '+i+' - Fecha nacimiento"></div>'+
+        '<div><label>¿Estudia?</label><div class="opts"><label class="opt"><input type="radio" name="Hijo '+i+' - Estudia" value="Sí">Sí</label><label class="opt"><input type="radio" name="Hijo '+i+' - Estudia" value="No">No</label></div></div>'+
+        '</div>');
+    }
+    var p=document.getElementById('padres');
+    for(var j=1;j<=2;j++){
+      p.insertAdjacentHTML('beforeend',
+        '<div class="row"><div class="rownum">Padre/Madre '+j+'</div>'+
+        '<div><label>Parentesco</label><div class="opts"><label class="opt"><input type="radio" name="Padre '+j+' - Parentesco" value="Padre">Padre</label><label class="opt"><input type="radio" name="Padre '+j+' - Parentesco" value="Madre">Madre</label></div></div>'+
+        '<div><label>Nombre completo</label><input type="text" name="Padre '+j+' - Nombre"></div>'+
+        '<div><label>CURP</label><input type="text" name="Padre '+j+' - CURP" maxlength="18"></div>'+
+        '<div><label>Fecha de nacimiento</label><input type="date" name="Padre '+j+' - Fecha nacimiento"></div>'+
+        '</div>');
+    }
+  })();
+
+  var form=document.getElementById('formAlta');
+  var paso1=document.getElementById('paso1'), paso2=document.getElementById('paso2');
+
+  document.getElementById('goStep2').addEventListener('click', function(){
+    // validar campos requeridos del paso 1
+    var reqs=paso1.querySelectorAll('[required]');
+    for(var i=0;i<reqs.length;i++){ if(!reqs[i].reportValidity()) return; }
+    paso1.style.display='none'; paso2.style.display='block';
+    window.scrollTo({top:0,behavior:'smooth'});
+  });
+  document.getElementById('backStep1').addEventListener('click', function(){
+    paso2.style.display='none'; paso1.style.display='block';
+    window.scrollTo({top:0,behavior:'smooth'});
+  });
+
+  var FN='/.netlify/functions/';
+  var CHUNK=2500000;
+
+  function fileToB64(file){ return new Promise(function(res,rej){ var r=new FileReader(); r.onload=function(){ res(String(r.result).split(',')[1]||''); }; r.onerror=rej; r.readAsDataURL(file); }); }
+  function compressImage(file){ return new Promise(function(res){ var img=new Image(); var url=URL.createObjectURL(file);
+    img.onload=function(){ var max=1600, w=img.width, h=img.height, sc=Math.min(1,max/Math.max(w,h));
+      var cw=Math.round(w*sc), ch=Math.round(h*sc); var cv=document.createElement('canvas'); cv.width=cw; cv.height=ch;
+      cv.getContext('2d').drawImage(img,0,0,cw,ch); URL.revokeObjectURL(url);
+      var b64=(cv.toDataURL('image/jpeg',0.72).split(',')[1])||'';
+      var name=(file.name||'foto').replace(/\.[^.]+$/,'')+'.jpg';
+      res({filename:name,type:'image/jpeg',b64:b64});
+    };
+    img.onerror=function(){ URL.revokeObjectURL(url); res(null); }; img.src=url; }); }
+  function processFile(file){ return (file.type&&file.type.indexOf('image/')===0)
+      ? compressImage(file).then(function(c){ return (c&&c.b64)?c:fileToB64(file).then(function(b){return {filename:file.name||'documento',type:file.type||'application/octet-stream',b64:b};}); })
+      : fileToB64(file).then(function(b){ return {filename:file.name||'documento',type:file.type||'application/octet-stream',b64:b}; }); }
+  function uploadDoc(doc){
+    var total=Math.max(1,Math.ceil(doc.b64.length/CHUNK));
+    return fetch(FN+'alta-upload',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'init',filename:doc.filename,type:doc.type,size:doc.b64.length,chunks:total})})
+      .then(function(r){return r.json();}).then(function(init){
+        if(!init.docId) throw new Error('No se pudo iniciar la subida');
+        var chain=Promise.resolve();
+        for(var i=0;i<total;i++){ (function(idx){ chain=chain.then(function(){
+          return fetch(FN+'alta-upload',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'chunk',docId:init.docId,index:idx,data:doc.b64.slice(idx*CHUNK,(idx+1)*CHUNK)})})
+            .then(function(rr){ if(!rr.ok) throw new Error('Error al subir una parte'); }); }); })(i); }
+        return chain.then(function(){ return {docId:init.docId, filename:doc.filename, type:doc.type, size:doc.b64.length}; });
+      });
+  }
+  function collectFields(){ var obj={}; var fd=new FormData(form); fd.forEach(function(v,k){ if(typeof v==='string'){ obj[k]=obj[k]?(obj[k]+', '+v):v; } }); return obj; }
+
+  form.addEventListener('submit', function(e){
     e.preventDefault();
-    var btn=f.querySelector('button'); btn.disabled=true; btn.textContent='Enviando…';
-    var data=new URLSearchParams(new FormData(f)).toString();
-    fetch('/', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:data})
-      .then(function(){ f.style.display='none'; document.getElementById('okMsg').style.display='block'; window.scrollTo({top:0,behavior:'smooth'}); })
-      .catch(function(){ btn.disabled=false; btn.textContent='Enviar registro'; alert('No se pudo enviar. Revisa tu conexión e inténtalo de nuevo.'); });
+    if(!form.reportValidity()) return;
+    var btn=document.getElementById('sendBtn'); btn.disabled=true;
+    var fields=collectFields();
+    var input=document.getElementById('docsFiles');
+    var files=(input&&input.files)?Array.prototype.slice.call(input.files):[];
+    var docs=[];
+    var chain=Promise.resolve();
+    files.forEach(function(file,i){ chain=chain.then(function(){
+      btn.textContent='Subiendo documento '+(i+1)+' de '+files.length+'…';
+      return processFile(file).then(uploadDoc).then(function(meta){ docs.push(meta); });
+    }); });
+    chain.then(function(){
+      btn.textContent='Enviando…';
+      return fetch(FN+'alta',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:fields,docs:docs})}).then(function(r){return r.json();});
+    }).then(function(resp){
+      if(resp && resp.error) throw new Error(resp.error);
+      form.style.display='none'; document.getElementById('okMsg').style.display='block'; window.scrollTo({top:0,behavior:'smooth'});
+    }).catch(function(err){ btn.disabled=false; btn.textContent='Enviar registro'; alert('No se pudo enviar: '+((err&&err.message)?err.message:err)); });
   });
 </script>
 </body>
