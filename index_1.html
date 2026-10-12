@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PASEM · Alta de beneficiario</title>
+<meta name="description" content="Registro de alta de beneficiario — PASEM, Sección 26 del SNTE, San Luis Potosí.">
+<meta name="theme-color" content="#DD6B20">
+<link rel="icon" href="/img/bida.png">
+<style>
+  :root{--orange:#DD6B20;--orange-d:#C25A16;--teal:#14B4B6;--ink:#1F3442;--gray:#767676;--line:#E6ECEE;--bg:#F3FBFB;}
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:Arial,"Helvetica Neue",Helvetica,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
+  .top{height:10px;background:var(--orange)}
+  main{max-width:520px;margin:0 auto;padding:18px 16px 40px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:22px;box-shadow:0 10px 30px rgba(31,52,66,.08);padding:22px 20px 26px}
+  .logos{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .logos img{display:block;height:auto}
+  .logos .snte{width:46%;max-width:190px}
+  .logos .bida{width:24%;max-width:96px}
+  h1{margin:14px 0 0;text-align:center;font-weight:900;font-size:clamp(40px,12vw,56px);letter-spacing:2px;line-height:1;color:var(--orange)}
+  .sub{text-align:center;font-weight:700;font-size:15px;margin-top:8px;color:#333}
+  .sub2{text-align:center;font-size:13px;color:var(--gray);margin-top:3px}
+  .rule{width:84px;height:4px;border-radius:2px;background:var(--teal);margin:16px auto 20px}
+  .intro{font-size:14px;color:#445;line-height:1.5;margin:0 2px 16px;text-align:center}
+  label{display:block;font-weight:700;font-size:15px;margin:14px 0 6px;color:#2b3a42}
+  label .req{color:var(--orange)}
+  input{width:100%;font-size:17px;padding:14px 14px;border:1px solid #CFDADD;border-radius:12px;background:#fff;color:var(--ink)}
+  input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(20,180,182,.15)}
+  .hint{font-size:12px;color:var(--gray);margin-top:4px}
+  .hp{position:absolute;left:-9999px}
+  button{margin-top:22px;width:100%;padding:16px 18px;border:none;border-radius:14px;background:var(--orange);color:#fff;font-weight:800;font-size:18px;cursor:pointer;box-shadow:0 6px 16px rgba(221,107,32,.30)}
+  button:active{background:var(--orange-d)}
+  .ok{display:none;text-align:center;padding:10px 4px}
+  .ok .chk{width:72px;height:72px;border-radius:50%;background:#E8F8EE;color:#1e9e52;display:flex;align-items:center;justify-content:center;margin:6px auto 12px}
+  .ok h2{margin:0 0 6px;font-size:22px;color:var(--ink)}
+  .ok p{margin:0;color:#556;font-size:15px;line-height:1.5}
+  footer{text-align:center;color:var(--gray);font-size:12px;line-height:1.5;margin-top:18px;padding:0 8px}
+</style>
+</head>
+<body>
+<div class="top"></div>
+<main>
+  <section class="card">
+    <div class="logos">
+      <img class="snte" src="/img/snte26.jpg" alt="SNTE Sección 26 San Luis Potosí">
+      <img class="bida" src="/img/bida.png" alt="BIDA Seguros">
+    </div>
+    <h1>PASEM</h1>
+    <div class="sub">Alta de beneficiario</div>
+    <div class="sub2">Sección 26 del SNTE · San Luis Potosí</div>
+    <div class="rule"></div>
+
+    <form id="formAlta" name="alta-beneficiario" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+      <input type="hidden" name="form-name" value="alta-beneficiario">
+      <p class="hp"><label>No llenar: <input name="bot-field"></label></p>
+
+      <div class="intro">Captura tus datos. No necesitas cuenta de correo ni iniciar sesión. Al enviar, tu registro llega directo a la administración del programa.</div>
+
+      <label>Nombre completo <span class="req">*</span></label>
+      <input name="Nombre completo" required autocomplete="name" autocapitalize="characters">
+
+      <label>CURP <span class="req">*</span></label>
+      <input name="CURP" required maxlength="18" autocapitalize="characters" placeholder="18 caracteres">
+      <div class="hint">Ejemplo: PERJ850101HSPXXX09</div>
+
+      <label>RFC</label>
+      <input name="RFC" maxlength="13" autocapitalize="characters" placeholder="Con homoclave (opcional)">
+
+      <label>Teléfono de contacto <span class="req">*</span></label>
+      <input name="Telefono" required type="tel" inputmode="numeric" autocomplete="tel" placeholder="10 dígitos">
+
+      <label>Correo electrónico</label>
+      <input name="Correo" type="email" autocomplete="email" placeholder="Opcional">
+
+      <button type="submit">Enviar registro</button>
+    </form>
+
+    <div class="ok" id="okMsg">
+      <div class="chk">
+        <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      </div>
+      <h2>¡Registro enviado!</h2>
+      <p>Gracias. Tus datos se recibieron correctamente. La administración del programa se pondrá en contacto contigo.</p>
+    </div>
+  </section>
+
+  <footer>
+    PASEM — Programa de Apoyo de Servicios Médicos para el personal de Telesecundaria afiliado a la Sección 26 del SNTE.<br>
+    Administrado por MULTICATERIN, S.A. de C.V. con respaldo de BIDA Seguros.
+  </footer>
+</main>
+
+<script>
+  var f=document.getElementById('formAlta');
+  f.addEventListener('submit', function(e){
+    e.preventDefault();
+    var btn=f.querySelector('button'); btn.disabled=true; btn.textContent='Enviando…';
+    var data=new URLSearchParams(new FormData(f)).toString();
+    fetch('/', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:data})
+      .then(function(){ f.style.display='none'; document.getElementById('okMsg').style.display='block'; window.scrollTo({top:0,behavior:'smooth'}); })
+      .catch(function(){ btn.disabled=false; btn.textContent='Enviar registro'; alert('No se pudo enviar. Revisa tu conexión e inténtalo de nuevo.'); });
+  });
+</script>
+</body>
+</html>
