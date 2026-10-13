@@ -1589,10 +1589,13 @@
         '<td>'+esc(titularName(f)||'—')+'</td>'+
         '<td>'+esc(f['Titular - CURP']||f['Contacto - CURP']||'—')+'</td>'+
         '<td>'+docs.length+'</td>'+
-        '<td style="white-space:nowrap"><button class="btn btn-mini" data-ver="'+idx+'" type="button">Ver</button></td>';
+        '<td style="white-space:nowrap"><button class="btn btn-mini" data-ver="'+idx+'" type="button">Ver</button>'+
+          (isAdmin()?' <button class="btn btn-mini btn-del" data-del="'+idx+'" type="button" style="color:#b23b3b">Eliminar</button>':'')+
+        '</td>';
       tb.appendChild(tr);
     });
     tb.querySelectorAll('[data-ver]').forEach(function(b){ b.addEventListener('click', function(){ openAltaDetail(Number(b.getAttribute('data-ver'))); }); });
+    tb.querySelectorAll('[data-del]').forEach(function(b){ b.addEventListener('click', function(){ delAlta(Number(b.getAttribute('data-del')), b); }); });
   }
   function openAltaDetail(idx){
     var a=ALTAS_CACHE[idx]; if(!a) return; var f=a.fields||{}; var docs=a.docs||[];
@@ -1615,6 +1618,17 @@
       var tr=document.createElement('tr'); tr.innerHTML='<td>'+esc(k)+'</td><td>'+esc(v)+'</td>'; tb.appendChild(tr);
     });
     document.getElementById('alta-modal').classList.add('open');
+  }
+  async function delAlta(idx, btn){
+    var a=ALTAS_CACHE[idx]; if(!a) return;
+    var quien=(a.fields&&a.fields['Contacto - Nombre'])||titularName(a.fields)||'este registro';
+    if(!confirm('¿Eliminar el alta de "'+quien+'"? Se borrará el registro y sus documentos. Esta acción no se puede deshacer.')) return;
+    if(btn){ btn.disabled=true; btn.textContent='Eliminando…'; }
+    try{
+      var r=await api(ALTAS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id:a.id})});
+      var d=await r.json(); if(!r.ok) throw new Error((d&&d.error)||('HTTP '+r.status));
+      loadAltas();
+    }catch(e){ if(btn){ btn.disabled=false; btn.textContent='Eliminar'; } alert('No se pudo eliminar: '+e.message); }
   }
   async function downloadDoc(docId, filename, btn){
     var old=btn?btn.textContent:''; if(btn){ btn.disabled=true; btn.textContent='Descargando…'; }

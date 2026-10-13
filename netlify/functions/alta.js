@@ -80,9 +80,37 @@ export const handler = async (event) => {
     }catch(e){ return {statusCode:500,headers,body:JSON.stringify({error:String(e&&e.message?e.message:e)})}; }
   }
 
+  // ---- Eliminar un alta y sus documentos (solo administración) ----
+  if(event.httpMethod==='DELETE' || (event.httpMethod==='POST' && (()=>{try{return JSON.parse(event.body||'{}').action==='delete';}catch(e){return false;}})())){
+    const p=verify((event.headers.authorization||event.headers.Authorization||'').replace('Bearer ',''));
+    if(!p) return {statusCode:401,headers,body:JSON.stringify({error:'No autorizado'})};
+    if(p.role!=='administracion') return {statusCode:403,headers,body:JSON.stringify({error:'Solo administración puede eliminar'})};
+    let id;
+    try{ id=(JSON.parse(event.body||'{}').id)||(event.queryStringParameters||{}).id; }catch(e){ id=(event.queryStringParameters||{}).id; }
+    if(!id) return {statusCode:400,headers,body:JSON.stringify({error:'Falta el id'})};
+    try{
+      const rs=makeStore('pasem-altas');
+      const rec=await rs.get('alta:'+id,{type:'json'});
+      const ds=makeStore('pasem-altas-docs');
+      if(rec && Array.isArray(rec.docs)){
+        for(const d of rec.docs){
+          try{
+            const meta=await ds.get('meta:'+d.docId,{type:'json'});
+            const n=(meta&&meta.chunks)||1;
+            for(let i=0;i<n;i++){ await ds.delete('chunk:'+d.docId+':'+i); }
+            await ds.delete('meta:'+d.docId);
+          }catch(e){}
+        }
+      }
+      await rs.delete('alta:'+id);
+      return {statusCode:200,headers,body:JSON.stringify({ok:true})};
+    }catch(e){ return {statusCode:500,headers,body:JSON.stringify({error:String(e&&e.message?e.message:e)})}; }
+  }
+
   if(event.httpMethod!=='POST') return {statusCode:405,headers,body:JSON.stringify({error:'Método no permitido'})};
   const key=process.env.RESEND_API_KEY;
   try{
+    // El alta pública NO lleva action; si llegara 'delete' ya se habría manejado arriba.
     const body=JSON.parse(event.body||'{}');
     const fields=body.fields||{};
     if(fields['bot-field']) return {statusCode:200,headers,body:JSON.stringify({ok:true})}; // honeypot
