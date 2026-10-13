@@ -1,6 +1,9 @@
 import { getStore } from '@netlify/blobs';
 import crypto from 'node:crypto';
 function makeStore(name){ const siteID=process.env.NETLIFY_SITE_ID||process.env.SITE_ID; const token=process.env.NETLIFY_API_TOKEN||process.env.NETLIFY_AUTH_TOKEN; if(siteID&&token) return getStore({name,siteID,token}); return getStore(name); }
+const SECRET = process.env.SESSION_SECRET || 'pasem-secret-cambiar';
+function b64url(buf){ return Buffer.from(buf).toString('base64').replace(/=+$/,'').replace(/\+/g,'-').replace(/\//g,'_'); }
+function verify(token){ if(!token) return null; const parts=token.split('.'); if(parts.length!==3) return null; const data=parts[0]+'.'+parts[1]; const sig=b64url(crypto.createHmac('sha256',SECRET).update(data).digest()); if(sig!==parts[2]) return null; let p; try{ p=JSON.parse(Buffer.from(parts[1].replace(/-/g,'+').replace(/_/g,'/'),'base64').toString()); }catch(e){ return null; } if(p.exp&&Math.floor(Date.now()/1000)>p.exp) return null; return p; }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 function rowsFromEntries(entries){
@@ -54,6 +57,29 @@ function buildHtml(fields, docNames){
 
 export const handler = async (event) => {
   const headers={'Content-Type':'application/json'};
+
+  // ---- Consulta del panel (requiere sesión) ----
+  if(event.httpMethod==='GET'){
+    const p=verify((event.headers.authorization||event.headers.Authorization||'').replace('Bearer ',''));
+    if(!p) return {statusCode:401,headers,body:JSON.stringify({error:'No autorizado'})};
+    if(!(p.role==='administracion'||p.role==='operacion')) return {statusCode:403,headers,body:JSON.stringify({error:'Sin rol asignado'})};
+    const qp=event.queryStringParameters||{};
+    try{
+      if(qp.doc){
+        const ds=makeStore('pasem-altas-docs');
+        const meta=await ds.get('meta:'+qp.doc,{type:'json'});
+        if(!meta) return {statusCode:404,headers,body:JSON.stringify({error:'Documento no encontrado'})};
+        let b64=''; for(let i=0;i<(meta.chunks||1);i++){ const c=await ds.get('chunk:'+qp.doc+':'+i,{type:'text'}); if(c) b64+=c; }
+        return {statusCode:200,headers,body:JSON.stringify({filename:meta.filename,type:meta.type,data:b64})};
+      }
+      const rs=makeStore('pasem-altas');
+      const { blobs }=await rs.list({ prefix:'alta:' });
+      let items=await Promise.all(blobs.map(b=>rs.get(b.key,{type:'json'})));
+      items=items.filter(Boolean).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+      return {statusCode:200,headers,body:JSON.stringify(items)};
+    }catch(e){ return {statusCode:500,headers,body:JSON.stringify({error:String(e&&e.message?e.message:e)})}; }
+  }
+
   if(event.httpMethod!=='POST') return {statusCode:405,headers,body:JSON.stringify({error:'Método no permitido'})};
   const key=process.env.RESEND_API_KEY;
   try{
@@ -86,8 +112,8 @@ export const handler = async (event) => {
     if(!key){ return {statusCode:200,headers,body:JSON.stringify({ok:true, id:altaId, warning:'Guardado, pero falta RESEND_API_KEY para enviar correo.'})}; }
 
     const from=process.env.MAIL_FROM||'PASEM <asistenciaseccion26@pasem.com>';
-    const to=process.env.ALTA_TO||'atencionseccion26@pasem.com';
-    const cc=process.env.ALTA_CC||'';
+    const to=process.env.ALTA_TO||'rodrigoperez@bidaseguros.org';
+    const cc=process.env.ALTA_CC||'asistenciaseccion26@pasem.com';
     const nombreContacto=fields['Contacto - Nombre']||'';
     const payload={
       from,

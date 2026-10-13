@@ -354,6 +354,7 @@
         <button class="tab" type="button" data-pane="dependientes">Dependientes</button>
         <button class="tab" type="button" data-pane="descargas">Descargas</button>
         <button class="tab" type="button" data-pane="expediente">Expediente</button>
+        <button class="tab" type="button" data-pane="altas">Altas recibidas</button>
         <button class="tab" type="button" data-pane="usuarios" id="tab-usuarios-btn" style="display:none;">Usuarios</button>
       </div>
 
@@ -808,6 +809,25 @@
         </div>
       </div>
 
+      <!-- Altas recibidas -->
+      <div class="tabpane" id="pane-altas">
+        <h3 style="font-family:var(--serif); color:var(--brown-deep); margin:0 0 6px;">Altas recibidas</h3>
+        <p style="color:var(--ink); font-size:14px; margin:0 0 14px;">Registros enviados desde el formulario público <strong>pasem.com/alta</strong>. Puedes ver el detalle, descargar sus documentos y exportar a Excel.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+          <button class="btn btn-ghost" id="altas-reload" type="button">Actualizar</button>
+          <button class="btn btn-primary" id="altas-export" type="button">Exportar a Excel (CSV)</button>
+        </div>
+        <div id="altas-count" style="color:var(--ink);font-size:14px;margin-bottom:8px;"></div>
+        <div class="table-wrap"><table class="dtable" id="altas-table"><thead><tr><th>Fecha</th><th>Contacto</th><th>Teléfono</th><th>Titular</th><th>CURP titular</th><th>Docs</th><th></th></tr></thead><tbody></tbody></table></div>
+      </div>
+
+      <!-- Ventana de detalle de un alta -->
+      <div id="alta-modal" class="exp-modal"><div class="exp-box">
+        <div class="exp-head"><strong id="alta-title">Detalle del alta</strong><button type="button" class="btn btn-ghost" id="alta-close">Cerrar</button></div>
+        <div id="alta-docs" style="margin:4px 0 12px;"></div>
+        <div class="table-wrap"><table class="dtable" id="alta-detail"><thead><tr><th>Campo</th><th>Valor</th></tr></thead><tbody></tbody></table></div>
+      </div></div>
+
       <!-- Usuarios -->
       <div class="tabpane" id="pane-usuarios">
         <h3 style="font-family:var(--serif); color:var(--brown-deep); margin:0 0 6px;">Usuarios y roles</h3>
@@ -867,7 +887,7 @@
 </script>
 <script>
 (function(){
-  var AUTH='/.netlify/functions/auth', RECORDS='/.netlify/functions/records', USERS='/.netlify/functions/usuarios', BEN='/.netlify/functions/beneficiarios', EXPED='/.netlify/functions/expediente';
+  var AUTH='/.netlify/functions/auth', RECORDS='/.netlify/functions/records', USERS='/.netlify/functions/usuarios', BEN='/.netlify/functions/beneficiarios', EXPED='/.netlify/functions/expediente', ALTAS='/.netlify/functions/alta';
   var SOLIC='/.netlify/functions/solicitudes', DEPS='/.netlify/functions/dependientes', TITU='/.netlify/functions/titulares';
   var STAGE_MAIL='telesecundariaseccion26@pasem.com';
   var MAIL='/.netlify/functions/enviar-correo', MAIL_TO='telesecundariaseccion26@pasem.com', MAIL_CC='bidaseguros@bidaseguros.org';
@@ -930,6 +950,7 @@
     document.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('active', t.getAttribute('data-pane')===name); });
     document.querySelectorAll('.tabpane').forEach(function(p){ p.classList.toggle('active', p.id==='pane-'+name); });
     if(name==='usuarios' && isAdmin()) loadUsers();
+    if(name==='altas') loadAltas();
     if(name==='expediente') loadExp();
     if(name==='solicitud') loadSolic();
     if(name==='autorizacion'){ loadRecords(); loadAuthPicker(); }
@@ -1537,6 +1558,101 @@
     });
   }
   (function(){ var panel=document.getElementById('admin-panel'); if(!panel||!window.MutationObserver) return; var tmo; var obs=new MutationObserver(function(){ clearTimeout(tmo); tmo=setTimeout(labelTables, 60); }); obs.observe(panel,{childList:true,subtree:true}); })();
+
+  // ===================== ALTAS RECIBIDAS =====================
+  var ALTAS_CACHE=[];
+  function fmtDate(s){ if(!s) return '—'; try{ var d=new Date(s); return d.toLocaleString('es-MX',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); }catch(e){ return s; } }
+  function titularName(f){ f=f||{}; return [f['Titular - Primer apellido'],f['Titular - Segundo apellido'],f['Titular - Nombres']].filter(Boolean).join(' ').trim(); }
+
+  async function loadAltas(){
+    var tb=document.querySelector('#altas-table tbody'); if(!tb) return;
+    tb.innerHTML='<tr><td colspan="7">Cargando…</td></tr>';
+    document.getElementById('altas-count').textContent='';
+    try{
+      var r=await api(ALTAS+'?list=1'); var items=await r.json();
+      if(!r.ok) throw new Error((items&&items.error)||('HTTP '+r.status));
+      ALTAS_CACHE=Array.isArray(items)?items:[];
+      renderAltas();
+    }catch(e){ tb.innerHTML='<tr><td colspan="7">Error: '+esc(e.message)+'</td></tr>'; }
+  }
+  function renderAltas(){
+    var tb=document.querySelector('#altas-table tbody');
+    document.getElementById('altas-count').textContent=ALTAS_CACHE.length+' alta(s) recibida(s).';
+    if(!ALTAS_CACHE.length){ tb.innerHTML='<tr><td colspan="7">Aún no hay altas registradas.</td></tr>'; return; }
+    tb.innerHTML='';
+    ALTAS_CACHE.forEach(function(a,idx){
+      var f=a.fields||{}; var docs=a.docs||[];
+      var tr=document.createElement('tr');
+      tr.innerHTML='<td>'+esc(fmtDate(a.createdAt))+'</td>'+
+        '<td>'+esc(f['Contacto - Nombre']||'—')+'</td>'+
+        '<td>'+esc(f['Contacto - Telefono']||'—')+'</td>'+
+        '<td>'+esc(titularName(f)||'—')+'</td>'+
+        '<td>'+esc(f['Titular - CURP']||f['Contacto - CURP']||'—')+'</td>'+
+        '<td>'+docs.length+'</td>'+
+        '<td style="white-space:nowrap"><button class="btn btn-mini" data-ver="'+idx+'" type="button">Ver</button></td>';
+      tb.appendChild(tr);
+    });
+    tb.querySelectorAll('[data-ver]').forEach(function(b){ b.addEventListener('click', function(){ openAltaDetail(Number(b.getAttribute('data-ver'))); }); });
+  }
+  function openAltaDetail(idx){
+    var a=ALTAS_CACHE[idx]; if(!a) return; var f=a.fields||{}; var docs=a.docs||[];
+    document.getElementById('alta-title').textContent='Alta — '+(f['Contacto - Nombre']||titularName(f)||'Detalle')+' · '+fmtDate(a.createdAt);
+    // documentos
+    var dv=document.getElementById('alta-docs');
+    if(docs.length){
+      dv.innerHTML='<div style="font-size:13px;font-weight:700;color:var(--brown-deep);margin-bottom:6px;">Documentos ('+docs.length+')</div>';
+      docs.forEach(function(d){
+        var btn=document.createElement('button'); btn.className='btn btn-mini'; btn.type='button'; btn.style.margin='0 6px 6px 0';
+        btn.textContent='⬇ '+(d.filename||'documento');
+        btn.addEventListener('click', function(){ downloadDoc(d.docId, d.filename, btn); });
+        dv.appendChild(btn);
+      });
+    } else { dv.innerHTML='<div style="font-size:13px;color:var(--ink);">Sin documentos adjuntos.</div>'; }
+    // tabla de campos
+    var tb=document.querySelector('#alta-detail tbody'); tb.innerHTML='';
+    Object.keys(f).forEach(function(k){
+      if(k==='bot-field') return; var v=f[k]; if(v==null||String(v).trim()==='') return;
+      var tr=document.createElement('tr'); tr.innerHTML='<td>'+esc(k)+'</td><td>'+esc(v)+'</td>'; tb.appendChild(tr);
+    });
+    document.getElementById('alta-modal').classList.add('open');
+  }
+  async function downloadDoc(docId, filename, btn){
+    var old=btn?btn.textContent:''; if(btn){ btn.disabled=true; btn.textContent='Descargando…'; }
+    try{
+      var r=await api(ALTAS+'?doc='+encodeURIComponent(docId)); var d=await r.json();
+      if(!r.ok) throw new Error((d&&d.error)||('HTTP '+r.status));
+      var bin=atob(d.data||''); var len=bin.length; var bytes=new Uint8Array(len);
+      for(var i=0;i<len;i++) bytes[i]=bin.charCodeAt(i);
+      var blob=new Blob([bytes],{type:d.type||'application/octet-stream'});
+      var url=URL.createObjectURL(blob); var a=document.createElement('a'); a.href=url; a.download=d.filename||filename||'documento'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(url);},2000);
+    }catch(e){ alert('No se pudo descargar: '+e.message); }
+    finally{ if(btn){ btn.disabled=false; btn.textContent=old; } }
+  }
+  function exportAltasCSV(){
+    if(!ALTAS_CACHE.length){ alert('No hay altas para exportar.'); return; }
+    // columnas = unión de todas las claves de fields
+    var keys=[]; var seen={};
+    ALTAS_CACHE.forEach(function(a){ Object.keys(a.fields||{}).forEach(function(k){ if(k!=='bot-field' && !seen[k]){ seen[k]=1; keys.push(k); } }); });
+    var cols=['Fecha','ID'].concat(keys).concat(['Documentos']);
+    function cell(v){ v=(v==null?'':String(v)); if(/[",\n;]/.test(v)) v='"'+v.replace(/"/g,'""')+'"'; return v; }
+    var rows=[cols.map(cell).join(',')];
+    ALTAS_CACHE.forEach(function(a){
+      var f=a.fields||{}; var line=[fmtDate(a.createdAt), a.id||''];
+      keys.forEach(function(k){ line.push(f[k]!=null?f[k]:''); });
+      line.push((a.docs||[]).map(function(d){return d.filename||'doc';}).join(' | '));
+      rows.push(line.map(cell).join(','));
+    });
+    var csv='\ufeff'+rows.join('\r\n'); // BOM para acentos en Excel
+    var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+    var url=URL.createObjectURL(blob); var a=document.createElement('a'); a.href=url;
+    a.download='altas-pasem-'+new Date().toISOString().slice(0,10)+'.csv'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(url);},2000);
+  }
+  (function(){
+    var rl=document.getElementById('altas-reload'); if(rl) rl.addEventListener('click', loadAltas);
+    var ex=document.getElementById('altas-export'); if(ex) ex.addEventListener('click', exportAltasCSV);
+    var cl=document.getElementById('alta-close'); if(cl) cl.addEventListener('click', function(){ document.getElementById('alta-modal').classList.remove('open'); });
+    var md=document.getElementById('alta-modal'); if(md) md.addEventListener('click', function(e){ if(e.target===md) md.classList.remove('open'); });
+  })();
 })();
 </script>
 </body>
