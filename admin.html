@@ -835,7 +835,7 @@
         <p style="color:var(--ink); font-size:14px; margin:0 0 14px;">Genera un reporte dirigido a la Dirección General con el estado del padrón, las actualizaciones de datos recibidas y los procedimientos abiertos.</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
           <button class="btn btn-primary" id="btn-informe" type="button">Informe a Dirección</button>
-          <button class="btn btn-ghost" id="btn-informe-print" type="button" style="display:none;">Imprimir / Guardar PDF</button>
+          <button class="btn btn-ghost" id="btn-informe-print" type="button" style="display:none;">Descargar PDF</button>
           <button class="btn btn-ghost" id="btn-informe-send" type="button" style="display:none;">Enviar a Dirección</button>
         </div>
         <div id="informe-msg" style="font-size:14px;margin-bottom:10px;"></div>
@@ -1754,37 +1754,74 @@
     finally{ btn.disabled=false; btn.textContent='Actualizar informe'; }
   }
 
-  function printInforme(){
-    if(!INFORME_DATA) return;
+  function informeParts(){
     var snte=(document.querySelector('.logo-snte')||{}).src||'';
     var bida=(document.querySelector('.logo-bida')||{}).src||'';
-    var w=window.open('','_blank'); if(!w) return;
-    var css='body{font-family:Arial,Helvetica,sans-serif;color:#1f3442;margin:0;padding:24px;}'+
-      '.hd{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #DD6B20;padding-bottom:10px;margin-bottom:6px;}'+
-      '.hd img{height:48px;} h1{font-size:20px;color:#DD6B20;margin:10px 0 2px;} .muted{color:#767676;font-size:12px;}'+
-      '.bar{background:#DD6B20;color:#fff;font-weight:700;padding:7px 10px;border-radius:6px;margin:16px 0 8px;font-size:13px;}'+
-      'table{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px;} th,td{border:1px solid #E2E8EA;padding:6px 8px;text-align:left;vertical-align:top;} th{background:#FFF3EA;}'+
-      '.kpis{display:flex;gap:8px;flex-wrap:wrap;} .kpi{flex:1;min-width:140px;border:1px solid #E2E8EA;border-radius:8px;padding:8px 10px;} .kpi .l{font-size:10px;text-transform:uppercase;color:#767676;font-weight:700;} .kpi .v{font-size:20px;font-weight:900;color:#1f3442;}'+
-      '.red{color:#b23b3b;font-weight:800;} .amber{color:#b9770e;font-weight:700;}';
+    var css='@page{size:letter;margin:10mm;}'+
+      '*{box-sizing:border-box;} html,body{margin:0;} body{font-family:Arial,Helvetica,sans-serif;color:#1f3442;padding:0;font-size:10px;line-height:1.25;}'+
+      '.hd{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #DD6B20;padding-bottom:6px;margin-bottom:4px;}'+
+      '.hd img{height:34px;} h1{font-size:15px;color:#DD6B20;margin:6px 0 1px;} .muted{color:#767676;font-size:9px;}'+
+      '.bar{background:#DD6B20;color:#fff;font-weight:700;padding:4px 8px;border-radius:4px;margin:8px 0 4px;font-size:10px;}'+
+      'table{width:100%;border-collapse:collapse;font-size:9px;margin-top:2px;} th,td{border:1px solid #E2E8EA;padding:3px 5px;text-align:left;vertical-align:top;} th{background:#FFF3EA;}'+
+      '.kpis{display:flex;gap:5px;flex-wrap:wrap;} .kpi{flex:1;min-width:95px;border:1px solid #E2E8EA;border-radius:6px;padding:4px 7px;} .kpi .l{font-size:8px;text-transform:uppercase;color:#767676;font-weight:700;} .kpi .v{font-size:15px;font-weight:900;color:#1f3442;}'+
+      '.red{color:#b23b3b;font-weight:800;} .amber{color:#b9770e;font-weight:700;}'+
+      '.bar,table,.kpis{break-inside:avoid;page-break-inside:avoid;} tr{break-inside:avoid;}';
     var d=INFORME_DATA, t=d.totals||{};
     function kpi(l,v){ return '<div class="kpi"><div class="l">'+l+'</div><div class="v">'+v+'</div></div>'; }
-    var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Informe a Dirección — PASEM</title><style>'+css+'</style></head><body>'+
-      '<div class="hd">'+(snte?'<img src="'+snte+'">':'')+'<div style="text-align:center;"><div style="font-size:12px;color:#767676;">Programa de Apoyo de Servicios Médicos</div><div style="font-size:22px;font-weight:900;color:#DD6B20;">PASEM</div><div style="font-size:11px;color:#767676;">Sección 26 del SNTE · San Luis Potosí</div></div>'+(bida?'<img src="'+bida+'">':'')+'</div>'+
+    var body='<div class="hd">'+(snte?'<img src="'+snte+'">':'')+'<div style="text-align:center;"><div style="font-size:12px;color:#767676;">Programa de Apoyo de Servicios Médicos</div><div style="font-size:22px;font-weight:900;color:#DD6B20;">PASEM</div><div style="font-size:11px;color:#767676;">Sección 26 del SNTE · San Luis Potosí</div></div>'+(bida?'<img src="'+bida+'">':'')+'</div>'+
       '<h1>Informe a la Dirección General</h1><div class="muted">Generado: '+esc(fmtDate(d.generatedAt))+'</div>'+
       '<div class="bar">1. Padrón de titulares</div><div style="font-size:14px;">Total de titulares en el padrón actual: <strong>'+Number(d.padronTotal||0).toLocaleString('es-MX')+'</strong></div>'+
       '<div class="bar">2. Actualizaciones de datos recibidas</div><div class="kpis">'+kpi('Altas recibidas',Number(t.altas||0).toLocaleString('es-MX'))+kpi('Titulares únicos',Number(t.titularesUnicos||0).toLocaleString('es-MX'))+kpi('Dependientes',Number(t.dependientes||0).toLocaleString('es-MX'))+kpi('Ya en padrón',Number(t.titularesEnPadron||0).toLocaleString('es-MX'))+kpi('Nuevos',Number(t.titularesNuevos||0).toLocaleString('es-MX'))+'</div>';
     var dia=d.diario||[];
-    html+='<div class="bar">3. Acumulado diario</div>';
-    if(dia.length){ html+='<table><thead><tr><th>Fecha</th><th>Altas</th><th>Titulares</th><th>Dependientes</th></tr></thead><tbody>'; dia.forEach(function(r){ html+='<tr><td>'+esc(r.fecha)+'</td><td>'+r.altas+'</td><td>'+r.titulares+'</td><td>'+r.dependientes+'</td></tr>'; }); html+='</tbody></table>'; } else { html+='<div>Sin datos.</div>'; }
+    body+='<div class="bar">3. Acumulado diario</div>';
+    if(dia.length){ body+='<table><thead><tr><th>Fecha</th><th>Altas</th><th>Titulares</th><th>Dependientes</th></tr></thead><tbody>'; dia.forEach(function(r){ body+='<tr><td>'+esc(r.fecha)+'</td><td>'+r.altas+'</td><td>'+r.titulares+'</td><td>'+r.dependientes+'</td></tr>'; }); body+='</tbody></table>'; } else { body+='<div>Sin datos.</div>'; }
     var nv=d.nuevos||[];
-    html+='<div class="bar">4. Titulares nuevos para inclusión ('+nv.length+')</div>';
-    if(nv.length){ html+='<table><thead><tr><th>CURP</th><th>Nombre</th><th>Contacto</th><th>Teléfono</th><th>Fecha</th><th>Docs</th></tr></thead><tbody>'; nv.forEach(function(r){ html+='<tr><td>'+esc(r.curp)+'</td><td>'+esc(r.nombre||'—')+'</td><td>'+esc(r.contacto||'—')+'</td><td>'+esc(r.telefono||'—')+'</td><td>'+esc(fmtDate(r.fecha))+'</td><td>'+(r.docs||0)+'</td></tr>'; }); html+='</tbody></table>'; } else { html+='<div>Todos los titulares que actualizaron ya están en el padrón.</div>'; }
+    body+='<div class="bar">4. Titulares nuevos para inclusión ('+nv.length+')</div>';
+    if(nv.length){ body+='<table><thead><tr><th>CURP</th><th>Nombre</th><th>Contacto</th><th>Teléfono</th><th>Fecha</th><th>Docs</th></tr></thead><tbody>'; nv.forEach(function(r){ body+='<tr><td>'+esc(r.curp)+'</td><td>'+esc(r.nombre||'—')+'</td><td>'+esc(r.contacto||'—')+'</td><td>'+esc(r.telefono||'—')+'</td><td>'+esc(fmtDate(r.fecha))+'</td><td>'+(r.docs||0)+'</td></tr>'; }); body+='</tbody></table>'; } else { body+='<div>Todos los titulares que actualizaron ya están en el padrón.</div>'; }
     var pr=d.procedimientos||[];
-    html+='<div class="bar">5. Procedimientos abiertos ('+pr.length+')</div>';
-    if(pr.length){ html+='<table><thead><tr><th>Folio</th><th>Nombre</th><th>Trámite solicitado</th><th>Etapa actual</th><th>Tiempo en etapa</th><th>Detalle</th></tr></thead><tbody>'; pr.forEach(function(s){ var cls=(s.diasEnEtapa>=15?'red':(s.diasEnEtapa>=7?'amber':'')); html+='<tr><td>'+esc(s.folio||'—')+'</td><td>'+esc(s.nombre||'—')+'</td><td><strong>'+esc(s.tipoTramite||'—')+'</strong></td><td>'+esc(s.etapa+'. '+s.etapaLabel)+'</td><td class="'+cls+'">'+diasTxt(s.diasEnEtapa)+'</td><td>'+esc(s.comentarios||'—')+'</td></tr>'; }); html+='</tbody></table>'; } else { html+='<div>No hay procedimientos abiertos.</div>'; }
-    html+='<p class="muted" style="margin-top:18px;">PASEM · Sección 26 del SNTE · Administrado por MULTICATERIN, S.A. de C.V. con respaldo de BIDA Seguros.</p>';
-    html+='</body></html>';
-    w.document.open(); w.document.write(html); w.document.close(); w.focus(); setTimeout(function(){ w.print(); }, 400);
+    body+='<div class="bar">5. Procedimientos abiertos ('+pr.length+')</div>';
+    if(pr.length){ body+='<table><thead><tr><th>Folio</th><th>Nombre</th><th>Trámite solicitado</th><th>Etapa actual</th><th>Tiempo en etapa</th><th>Detalle</th></tr></thead><tbody>'; pr.forEach(function(s){ var cls=(s.diasEnEtapa>=15?'red':(s.diasEnEtapa>=7?'amber':'')); body+='<tr><td>'+esc(s.folio||'—')+'</td><td>'+esc(s.nombre||'—')+'</td><td><strong>'+esc(s.tipoTramite||'—')+'</strong></td><td>'+esc(s.etapa+'. '+s.etapaLabel)+'</td><td class="'+cls+'">'+diasTxt(s.diasEnEtapa)+'</td><td>'+esc(s.comentarios||'—')+'</td></tr>'; }); body+='</tbody></table>'; } else { body+='<div>No hay procedimientos abiertos.</div>'; }
+    body+='<p class="muted" style="margin-top:18px;">PASEM · Sección 26 del SNTE · Administrado por MULTICATERIN, S.A. de C.V. con respaldo de BIDA Seguros.</p>';
+    return {css:css, body:body};
+  }
+
+  function informeFilename(){ try{ return 'informe-direccion-pasem-'+new Date(INFORME_DATA.generatedAt).toISOString().slice(0,10)+'.pdf'; }catch(e){ return 'informe-direccion-pasem.pdf'; } }
+
+  function printInforme(){
+    if(!INFORME_DATA) return;
+    var parts=informeParts();
+    var w=window.open('','_blank'); if(!w){ alert('Permite las ventanas emergentes para imprimir, o usa Descargar PDF.'); return; }
+    w.document.open(); w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Informe a Dirección — PASEM</title><style>'+parts.css+'</style></head><body>'+parts.body+'</body></html>'); w.document.close(); w.focus(); setTimeout(function(){ w.print(); }, 400);
+  }
+
+  function loadScript(src){ return new Promise(function(res,rej){ if(window.html2pdf) return res(); var s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=rej; document.head.appendChild(s); }); }
+
+  async function downloadInformePDF(){
+    if(!INFORME_DATA) return;
+    var btn=document.getElementById('btn-informe-print'); var old=btn?btn.textContent:'';
+    if(btn){ btn.disabled=true; btn.textContent='Generando PDF…'; }
+    try{
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
+      if(!window.html2pdf) throw new Error('no-lib');
+      var parts=informeParts();
+      var cont=document.createElement('div');
+      cont.style.cssText='position:fixed;left:-10000px;top:0;width:760px;background:#fff;padding:0;';
+      cont.innerHTML='<style>'+parts.css+'</style><div style="padding:0 2px;">'+parts.body+'</div>';
+      document.body.appendChild(cont);
+      await window.html2pdf().set({
+        margin:[10,10,10,10],
+        filename: informeFilename(),
+        image:{type:'jpeg', quality:0.96},
+        html2canvas:{scale:2, useCORS:true, backgroundColor:'#ffffff'},
+        jsPDF:{unit:'mm', format:'letter', orientation:'portrait'},
+        pagebreak:{mode:['css','legacy']}
+      }).from(cont).save();
+      document.body.removeChild(cont);
+    }catch(e){
+      // Respaldo: si no se pudo cargar la librería, abrir el diálogo de impresión (Guardar como PDF)
+      printInforme();
+    }
+    finally{ if(btn){ btn.disabled=false; btn.textContent=old||'Descargar PDF'; } }
   }
 
   async function sendInforme(){
@@ -1801,7 +1838,7 @@
 
   (function(){
     var b=document.getElementById('btn-informe'); if(b) b.addEventListener('click', loadInforme);
-    var pb=document.getElementById('btn-informe-print'); if(pb) pb.addEventListener('click', printInforme);
+    var pb=document.getElementById('btn-informe-print'); if(pb) pb.addEventListener('click', downloadInformePDF);
     var sb=document.getElementById('btn-informe-send'); if(sb) sb.addEventListener('click', sendInforme);
   })();
 })();
