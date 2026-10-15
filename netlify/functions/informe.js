@@ -33,8 +33,10 @@ function informeEmailHtml(d){
       '<tr><td style="padding:16px 18px 2px;"><div style="font-size:18px;font-weight:800;">Informe a la Dirección General</div><div style="color:#767676;font-size:12px;">Generado: '+esc(fmtFecha(d.generatedAt))+'</div></td></tr>'+
       '<tr><td style="padding:8px 18px;">'+
         '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">'+
-        bar('1. Padrón de titulares')+
-        '<tr><td colspan="6" style="padding:6px 2px 10px;font-size:14px;">Total de titulares en el padrón actual: <strong>'+Number(d.padronTotal||0).toLocaleString('es-MX')+'</strong></td></tr>'+
+        bar('1. Padrón')+
+        '<tr><td colspan="6" style="padding:6px 2px 2px;font-size:14px;">Titulares en el padrón: <strong>'+Number(d.padronTotal||0).toLocaleString('es-MX')+'</strong></td></tr>'+
+        '<tr><td colspan="6" style="padding:2px 2px;font-size:14px;">Dependientes dados de alta: <strong>'+Number(d.dependientesPadron||0).toLocaleString('es-MX')+'</strong></td></tr>'+
+        '<tr><td colspan="6" style="padding:4px 2px 10px;font-size:14px;border-top:1px solid #E9EEF0;">Total de personas (titulares + dependientes): <strong style="color:#DD6B20;">'+Number(d.padronPersonas||((d.padronTotal||0)+(d.dependientesPadron||0))).toLocaleString('es-MX')+'</strong></td></tr>'+
         bar('2. Actualizaciones de datos recibidas')+
         '<tr><td colspan="6" style="padding:6px 0 12px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="6"><tr>'+kpi('Altas',Number(t.altas||0).toLocaleString('es-MX'))+kpi('Titulares únicos',Number(t.titularesUnicos||0).toLocaleString('es-MX'))+kpi('Dependientes',Number(t.dependientes||0).toLocaleString('es-MX'))+kpi('Ya en padrón',Number(t.titularesEnPadron||0).toLocaleString('es-MX'))+kpi('Nuevos',Number(t.titularesNuevos||0).toLocaleString('es-MX'))+'</tr></table></td></tr>'+
         bar('3. Acumulado diario')+
@@ -124,6 +126,23 @@ export const handler = async (event) => {
     const diarioArr=Object.keys(diario).sort().map(k=>({fecha:k, ...diario[k]}));
     const nuevos=Array.from(nuevosMap.values()).sort((a,b)=>String(b.fecha||'').localeCompare(String(a.fecha||'')));
 
+    // Dependientes dados de alta en el padrón: de las altas en línea + del módulo de administración, sin duplicar por CURP.
+    const depCurps=new Set(); let depSinCurp=0;
+    altas.forEach(a=>{ const f=a.fields||{};
+      const add=(c)=>{ const k=norm(c); if(k) depCurps.add(k); else depSinCurp++; };
+      if(norm(f['Cónyuge - CURP'])||norm(f['Cónyuge - Nombres'])||norm(f['Cónyuge - Primer apellido'])) add(f['Cónyuge - CURP']);
+      for(let i=1;i<=4;i++){ if(norm(f['Hijo '+i+' - Nombre'])||norm(f['Hijo '+i+' - CURP'])) add(f['Hijo '+i+' - CURP']); }
+      for(let j=1;j<=2;j++){ if(norm(f['Padre '+j+' - Nombre'])||norm(f['Padre '+j+' - CURP'])) add(f['Padre '+j+' - CURP']); }
+    });
+    // Dependientes registrados desde el módulo de administración (pasem-dependientes)
+    try{
+      const ds2=makeStore('pasem-dependientes');
+      const {blobs}=await ds2.list();
+      const deps=(await Promise.all(blobs.map(b=>ds2.get(b.key,{type:'json'})))).filter(Boolean);
+      deps.forEach(x=>{ const k=norm(x.curp); if(k) depCurps.add(k); else depSinCurp++; });
+    }catch(e){}
+    const dependientesPadron = depCurps.size + depSinCurp;
+
     // Procedimientos abiertos (solicitudes con estado < 4)
     const ss=makeStore('pasem-solicitudes');
     let sols=[]; try{ const {blobs}=await ss.list(); sols=(await Promise.all(blobs.map(b=>ss.get(b.key,{type:'json'})))).filter(Boolean); }catch(e){ sols=[]; }
@@ -143,6 +162,8 @@ export const handler = async (event) => {
     return {
       generatedAt:new Date().toISOString(),
       padronTotal,
+      dependientesPadron,
+      padronPersonas: padronTotal + dependientesPadron,
       totals:{ altas:altas.length, titularesUnicos:tCurpVistos.size, titularesConDatos:totalTitulares, dependientes:totalDependientes, titularesEnPadron:enPadronSet.size, titularesNuevos:nuevos.length },
       diario:diarioArr,
       nuevos,

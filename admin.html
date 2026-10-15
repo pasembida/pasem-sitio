@@ -1693,8 +1693,11 @@
     h+='<div class="sec-head" style="margin:4px 0 10px;"><div class="eyebrow">Reporte</div><h3 style="font-family:var(--serif);margin:2px 0;">Informe a la Dirección General</h3><div style="color:var(--ink);font-size:13px;">Generado: '+esc(fmtDate(data.generatedAt))+'</div></div>';
 
     // 1. Padrón
-    h+='<div class="card" style="padding:16px;margin:0 0 14px;"><div style="font-family:var(--serif);color:var(--ochre);font-size:13px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">1. Padrón de titulares</div>'+
-       '<div style="font-size:15px;">Total de titulares en el padrón actual: <strong style="font-size:20px;color:var(--brown-deep);">'+Number(data.padronTotal||0).toLocaleString('es-MX')+'</strong></div></div>';
+    var depP=Number(data.dependientesPadron||0), titP=Number(data.padronTotal||0), totP=Number(data.padronPersonas||(titP+depP));
+    h+='<div class="card" style="padding:16px;margin:0 0 14px;"><div style="font-family:var(--serif);color:var(--ochre);font-size:13px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">1. Padrón</div>'+
+       '<div style="font-size:15px;margin-bottom:4px;">Titulares en el padrón: <strong style="font-size:20px;color:var(--brown-deep);">'+titP.toLocaleString('es-MX')+'</strong></div>'+
+       '<div style="font-size:15px;margin-bottom:4px;">Dependientes dados de alta: <strong style="font-size:20px;color:var(--brown-deep);">'+depP.toLocaleString('es-MX')+'</strong></div>'+
+       '<div style="font-size:15px;border-top:1px solid var(--border);padding-top:8px;margin-top:6px;">Total de personas (titulares + dependientes): <strong style="font-size:22px;color:var(--brown);">'+totP.toLocaleString('es-MX')+'</strong></div></div>';
 
     // 2. Actualizaciones
     function kpi(lbl,val,sub){ return '<div style="flex:1;min-width:150px;background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px 14px;"><div style="font-size:12px;color:var(--ink);text-transform:uppercase;letter-spacing:.4px;font-weight:700;">'+lbl+'</div><div style="font-size:24px;font-weight:900;color:var(--brown-deep);">'+val+'</div>'+(sub?'<div style="font-size:12px;color:var(--ink);">'+sub+'</div>':'')+'</div>'; }
@@ -1834,11 +1837,14 @@
       function bar(txt){ doc.setFillColor(ORANGE[0],ORANGE[1],ORANGE[2]); doc.rect(M,y,W-2*M,6,'F'); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255); doc.setFontSize(10); doc.text(txt, M+2, y+4.1); y+=8; }
       function table(head, rows){ doc.autoTable({ startY:y, head:[head], body:rows, margin:{left:M,right:M}, styles:{fontSize:8, cellPadding:1.6, textColor:INK, lineColor:[226,232,234], lineWidth:0.1}, headStyles:{fillColor:PEACH, textColor:INK, fontStyle:'bold'}, alternateRowStyles:{fillColor:[247,252,252]}, theme:'grid' }); y=doc.lastAutoTable.finalY+4; }
 
-      bar('1. Padrón de titulares');
-      doc.setFont('helvetica','normal'); doc.setTextColor(INK[0],INK[1],INK[2]); doc.setFontSize(11);
-      doc.text('Total de titulares en el padrón actual: ', M, y+1); 
-      var lbl='Total de titulares en el padrón actual: '; var lw=doc.getTextWidth(lbl);
-      doc.setFont('helvetica','bold'); doc.text(String(Number(d.padronTotal||0).toLocaleString('es-MX')), M+lw, y+1); y+=7;
+      bar('1. Padrón');
+      var titP=Number(d.padronTotal||0), depP=Number(d.dependientesPadron||0), totP=Number(d.padronPersonas||(titP+depP));
+      function kvline(lbl,val,boldVal,valColor){ doc.setFont('helvetica','normal'); doc.setTextColor(INK[0],INK[1],INK[2]); doc.setFontSize(10.5); doc.text(lbl, M, y+1); var lw=doc.getTextWidth(lbl); doc.setFont('helvetica','bold'); if(valColor) doc.setTextColor(valColor[0],valColor[1],valColor[2]); doc.text(val, M+lw, y+1); doc.setTextColor(INK[0],INK[1],INK[2]); y+=5.5; }
+      kvline('Titulares en el padrón: ', titP.toLocaleString('es-MX'));
+      kvline('Dependientes dados de alta: ', depP.toLocaleString('es-MX'));
+      doc.setDrawColor(226,232,234); doc.line(M,y-1.5,W-M,y-1.5);
+      kvline('Total de personas (titulares + dependientes): ', totP.toLocaleString('es-MX'), true, ORANGE);
+      y+=1.5;
 
       bar('2. Actualizaciones de datos recibidas');
       table(['Altas recibidas','Titulares únicos','Dependientes','Ya en padrón','Nuevos'],
