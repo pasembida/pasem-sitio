@@ -5,6 +5,10 @@
 [functions]
   node_bundler = "esbuild"
 
+# Envío automático del Informe a Dirección: todos los días 9:00 am SLP (UTC-6) = 15:00 UTC
+[functions."informe-cron"]
+  schedule = "0 15 * * *"
+
 [[redirects]]
   from = "/admin"
   to = "/admin.html"
