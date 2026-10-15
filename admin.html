@@ -355,6 +355,7 @@
         <button class="tab" type="button" data-pane="descargas">Descargas</button>
         <button class="tab" type="button" data-pane="expediente">Expediente</button>
         <button class="tab" type="button" data-pane="altas">Altas recibidas</button>
+        <button class="tab" type="button" data-pane="informe" id="tab-informe-btn" style="display:none;">Informe a Dirección</button>
         <button class="tab" type="button" data-pane="usuarios" id="tab-usuarios-btn" style="display:none;">Usuarios</button>
       </div>
 
@@ -828,6 +829,19 @@
         <div class="table-wrap"><table class="dtable" id="alta-detail"><thead><tr><th>Campo</th><th>Valor</th></tr></thead><tbody></tbody></table></div>
       </div></div>
 
+      <!-- Informe a Dirección -->
+      <div class="tabpane" id="pane-informe">
+        <h3 style="font-family:var(--serif); color:var(--brown-deep); margin:0 0 6px;">Informe a Dirección</h3>
+        <p style="color:var(--ink); font-size:14px; margin:0 0 14px;">Genera un reporte dirigido a la Dirección General con el estado del padrón, las actualizaciones de datos recibidas y los procedimientos abiertos.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+          <button class="btn btn-primary" id="btn-informe" type="button">Informe a Dirección</button>
+          <button class="btn btn-ghost" id="btn-informe-print" type="button" style="display:none;">Imprimir / Guardar PDF</button>
+          <button class="btn btn-ghost" id="btn-informe-send" type="button" style="display:none;">Enviar a Dirección</button>
+        </div>
+        <div id="informe-msg" style="font-size:14px;margin-bottom:10px;"></div>
+        <div id="informe-out"></div>
+      </div>
+
       <!-- Usuarios -->
       <div class="tabpane" id="pane-usuarios">
         <h3 style="font-family:var(--serif); color:var(--brown-deep); margin:0 0 6px;">Usuarios y roles</h3>
@@ -887,7 +901,7 @@
 </script>
 <script>
 (function(){
-  var AUTH='/.netlify/functions/auth', RECORDS='/.netlify/functions/records', USERS='/.netlify/functions/usuarios', BEN='/.netlify/functions/beneficiarios', EXPED='/.netlify/functions/expediente', ALTAS='/.netlify/functions/alta';
+  var AUTH='/.netlify/functions/auth', RECORDS='/.netlify/functions/records', USERS='/.netlify/functions/usuarios', BEN='/.netlify/functions/beneficiarios', EXPED='/.netlify/functions/expediente', ALTAS='/.netlify/functions/alta', INFORME='/.netlify/functions/informe';
   var SOLIC='/.netlify/functions/solicitudes', DEPS='/.netlify/functions/dependientes', TITU='/.netlify/functions/titulares';
   var STAGE_MAIL='telesecundariaseccion26@pasem.com';
   var MAIL='/.netlify/functions/enviar-correo', MAIL_TO='telesecundariaseccion26@pasem.com', MAIL_CC='bidaseguros@bidaseguros.org';
@@ -1004,6 +1018,7 @@
     userLbl.innerHTML='<span class="who-email">'+esc(email())+'</span><br><span class="who-chip">'+esc(roleLabel(role()))+'</span>';
     var av=document.getElementById('admin-av'); if(av) av.textContent=(email()||'?').charAt(0).toUpperCase();
     document.getElementById('tab-usuarios-btn').style.display = isAdmin()?'':'none';
+    var ti=document.getElementById('tab-informe-btn'); if(ti) ti.style.display = isAdmin()?'':'none';
     activate('solicitud');
   }
   async function doLogin(){
@@ -1666,6 +1681,128 @@
     var ex=document.getElementById('altas-export'); if(ex) ex.addEventListener('click', exportAltasCSV);
     var cl=document.getElementById('alta-close'); if(cl) cl.addEventListener('click', function(){ document.getElementById('alta-modal').classList.remove('open'); });
     var md=document.getElementById('alta-modal'); if(md) md.addEventListener('click', function(e){ if(e.target===md) md.classList.remove('open'); });
+  })();
+
+  // ===================== INFORME A DIRECCIÓN =====================
+  var INFORME_DATA=null;
+  function diasTxt(d){ if(d==null) return '—'; if(d===0) return 'Hoy'; return d+(d===1?' día':' días'); }
+  function diasColor(d){ if(d==null) return ''; if(d>=15) return 'color:#b23b3b;font-weight:800'; if(d>=7) return 'color:#b9770e;font-weight:700'; return ''; }
+
+  function informeHTML(data){
+    var t=data.totals||{}; var h='';
+    h+='<div class="sec-head" style="margin:4px 0 10px;"><div class="eyebrow">Reporte</div><h3 style="font-family:var(--serif);margin:2px 0;">Informe a la Dirección General</h3><div style="color:var(--ink);font-size:13px;">Generado: '+esc(fmtDate(data.generatedAt))+'</div></div>';
+
+    // 1. Padrón
+    h+='<div class="card" style="padding:16px;margin:0 0 14px;"><div style="font-family:var(--serif);color:var(--ochre);font-size:13px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">1. Padrón de titulares</div>'+
+       '<div style="font-size:15px;">Total de titulares en el padrón actual: <strong style="font-size:20px;color:var(--brown-deep);">'+Number(data.padronTotal||0).toLocaleString('es-MX')+'</strong></div></div>';
+
+    // 2. Actualizaciones
+    function kpi(lbl,val,sub){ return '<div style="flex:1;min-width:150px;background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px 14px;"><div style="font-size:12px;color:var(--ink);text-transform:uppercase;letter-spacing:.4px;font-weight:700;">'+lbl+'</div><div style="font-size:24px;font-weight:900;color:var(--brown-deep);">'+val+'</div>'+(sub?'<div style="font-size:12px;color:var(--ink);">'+sub+'</div>':'')+'</div>'; }
+    h+='<div class="card" style="padding:16px;margin:0 0 14px;"><div style="font-family:var(--serif);color:var(--ochre);font-size:13px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">2. Actualizaciones de datos recibidas</div>'+
+       '<div style="display:flex;gap:10px;flex-wrap:wrap;">'+
+         kpi('Altas recibidas', Number(t.altas||0).toLocaleString('es-MX'),'registros enviados')+
+         kpi('Titulares (únicos)', Number(t.titularesUnicos||0).toLocaleString('es-MX'),'actualizaron sus datos')+
+         kpi('Dependientes', Number(t.dependientes||0).toLocaleString('es-MX'),'cónyuge, hijos y padres')+
+       '</div>'+
+       '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">'+
+         kpi('Titulares ya en el padrón', Number(t.titularesEnPadron||0).toLocaleString('es-MX'),'coinciden por CURP')+
+         kpi('Titulares NUEVOS', Number(t.titularesNuevos||0).toLocaleString('es-MX'),'no están en el padrón')+
+       '</div></div>';
+
+    // 3. Acumulado diario
+    var dia=data.diario||[];
+    h+='<div class="card" style="padding:16px;margin:0 0 14px;"><div style="font-family:var(--serif);color:var(--ochre);font-size:13px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">3. Acumulado diario</div>';
+    if(dia.length){
+      h+='<div class="table-wrap"><table class="dtable"><thead><tr><th>Fecha</th><th>Altas</th><th>Titulares</th><th>Dependientes</th></tr></thead><tbody>';
+      dia.forEach(function(r){ h+='<tr><td>'+esc(r.fecha)+'</td><td>'+r.altas+'</td><td>'+r.titulares+'</td><td>'+r.dependientes+'</td></tr>'; });
+      h+='</tbody></table></div>';
+    } else { h+='<div style="font-size:14px;color:var(--ink);">Aún no hay actualizaciones registradas.</div>'; }
+    h+='</div>';
+
+    // 4. Titulares nuevos (para inclusión)
+    var nv=data.nuevos||[];
+    h+='<div class="card" style="padding:16px;margin:0 0 14px;"><div style="font-family:var(--serif);color:var(--ochre);font-size:13px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">4. Titulares nuevos para inclusión ('+nv.length+')</div>';
+    if(nv.length){
+      h+='<div class="table-wrap"><table class="dtable"><thead><tr><th>CURP</th><th>Nombre</th><th>Contacto</th><th>Teléfono</th><th>Fecha</th><th>Docs</th></tr></thead><tbody>';
+      nv.forEach(function(r){ h+='<tr><td>'+esc(r.curp)+'</td><td>'+esc(r.nombre||'—')+'</td><td>'+esc(r.contacto||'—')+'</td><td>'+esc(r.telefono||'—')+'</td><td>'+esc(fmtDate(r.fecha))+'</td><td>'+(r.docs||0)+'</td></tr>'; });
+      h+='</tbody></table></div>';
+    } else { h+='<div style="font-size:14px;color:var(--ink);">Todos los titulares que actualizaron ya están en el padrón.</div>'; }
+    h+='</div>';
+
+    // 5. Procedimientos abiertos
+    var pr=data.procedimientos||[];
+    h+='<div class="card" style="padding:16px;margin:0 0 14px;"><div style="font-family:var(--serif);color:var(--ochre);font-size:13px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">5. Procedimientos abiertos ('+pr.length+')</div>';
+    if(pr.length){
+      h+='<div class="table-wrap"><table class="dtable"><thead><tr><th>Folio</th><th>Nombre</th><th>Trámite solicitado</th><th>Etapa actual</th><th>Tiempo en etapa</th><th>Detalle</th></tr></thead><tbody>';
+      pr.forEach(function(s){ h+='<tr><td>'+esc(s.folio||'—')+'</td><td>'+esc(s.nombre||'—')+'</td><td><strong>'+esc(s.tipoTramite||'—')+'</strong></td><td>'+esc(s.etapa+'. '+s.etapaLabel)+'</td><td style="'+diasColor(s.diasEnEtapa)+'">'+diasTxt(s.diasEnEtapa)+'</td><td>'+esc(s.comentarios||'—')+'</td></tr>'; });
+      h+='</tbody></table></div><div style="font-size:12px;color:var(--ink);margin-top:6px;">Los tiempos en amarillo llevan 7 días o más; en rojo, 15 días o más.</div>';
+    } else { h+='<div style="font-size:14px;color:var(--ink);">No hay procedimientos abiertos.</div>'; }
+    h+='</div>';
+    return h;
+  }
+
+  async function loadInforme(){
+    var out=document.getElementById('informe-out'); var btn=document.getElementById('btn-informe');
+    btn.disabled=true; btn.textContent='Generando…'; out.innerHTML='<div style="padding:10px;color:var(--ink);">Calculando el informe…</div>';
+    try{
+      var r=await api(INFORME); var data=await r.json();
+      if(!r.ok) throw new Error((data&&data.error)||('HTTP '+r.status));
+      INFORME_DATA=data; out.innerHTML=informeHTML(data);
+      document.getElementById('btn-informe-print').style.display='';
+      document.getElementById('btn-informe-send').style.display='';
+    }catch(e){ out.innerHTML='<div style="padding:10px;color:#b23b3b;">Error: '+esc(e.message)+'</div>'; }
+    finally{ btn.disabled=false; btn.textContent='Actualizar informe'; }
+  }
+
+  function printInforme(){
+    if(!INFORME_DATA) return;
+    var snte=(document.querySelector('.logo-snte')||{}).src||'';
+    var bida=(document.querySelector('.logo-bida')||{}).src||'';
+    var w=window.open('','_blank'); if(!w) return;
+    var css='body{font-family:Arial,Helvetica,sans-serif;color:#1f3442;margin:0;padding:24px;}'+
+      '.hd{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #DD6B20;padding-bottom:10px;margin-bottom:6px;}'+
+      '.hd img{height:48px;} h1{font-size:20px;color:#DD6B20;margin:10px 0 2px;} .muted{color:#767676;font-size:12px;}'+
+      '.bar{background:#DD6B20;color:#fff;font-weight:700;padding:7px 10px;border-radius:6px;margin:16px 0 8px;font-size:13px;}'+
+      'table{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px;} th,td{border:1px solid #E2E8EA;padding:6px 8px;text-align:left;vertical-align:top;} th{background:#FFF3EA;}'+
+      '.kpis{display:flex;gap:8px;flex-wrap:wrap;} .kpi{flex:1;min-width:140px;border:1px solid #E2E8EA;border-radius:8px;padding:8px 10px;} .kpi .l{font-size:10px;text-transform:uppercase;color:#767676;font-weight:700;} .kpi .v{font-size:20px;font-weight:900;color:#1f3442;}'+
+      '.red{color:#b23b3b;font-weight:800;} .amber{color:#b9770e;font-weight:700;}';
+    var d=INFORME_DATA, t=d.totals||{};
+    function kpi(l,v){ return '<div class="kpi"><div class="l">'+l+'</div><div class="v">'+v+'</div></div>'; }
+    var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Informe a Dirección — PASEM</title><style>'+css+'</style></head><body>'+
+      '<div class="hd">'+(snte?'<img src="'+snte+'">':'')+'<div style="text-align:center;"><div style="font-size:12px;color:#767676;">Programa de Apoyo de Servicios Médicos</div><div style="font-size:22px;font-weight:900;color:#DD6B20;">PASEM</div><div style="font-size:11px;color:#767676;">Sección 26 del SNTE · San Luis Potosí</div></div>'+(bida?'<img src="'+bida+'">':'')+'</div>'+
+      '<h1>Informe a la Dirección General</h1><div class="muted">Generado: '+esc(fmtDate(d.generatedAt))+'</div>'+
+      '<div class="bar">1. Padrón de titulares</div><div style="font-size:14px;">Total de titulares en el padrón actual: <strong>'+Number(d.padronTotal||0).toLocaleString('es-MX')+'</strong></div>'+
+      '<div class="bar">2. Actualizaciones de datos recibidas</div><div class="kpis">'+kpi('Altas recibidas',Number(t.altas||0).toLocaleString('es-MX'))+kpi('Titulares únicos',Number(t.titularesUnicos||0).toLocaleString('es-MX'))+kpi('Dependientes',Number(t.dependientes||0).toLocaleString('es-MX'))+kpi('Ya en padrón',Number(t.titularesEnPadron||0).toLocaleString('es-MX'))+kpi('Nuevos',Number(t.titularesNuevos||0).toLocaleString('es-MX'))+'</div>';
+    var dia=d.diario||[];
+    html+='<div class="bar">3. Acumulado diario</div>';
+    if(dia.length){ html+='<table><thead><tr><th>Fecha</th><th>Altas</th><th>Titulares</th><th>Dependientes</th></tr></thead><tbody>'; dia.forEach(function(r){ html+='<tr><td>'+esc(r.fecha)+'</td><td>'+r.altas+'</td><td>'+r.titulares+'</td><td>'+r.dependientes+'</td></tr>'; }); html+='</tbody></table>'; } else { html+='<div>Sin datos.</div>'; }
+    var nv=d.nuevos||[];
+    html+='<div class="bar">4. Titulares nuevos para inclusión ('+nv.length+')</div>';
+    if(nv.length){ html+='<table><thead><tr><th>CURP</th><th>Nombre</th><th>Contacto</th><th>Teléfono</th><th>Fecha</th><th>Docs</th></tr></thead><tbody>'; nv.forEach(function(r){ html+='<tr><td>'+esc(r.curp)+'</td><td>'+esc(r.nombre||'—')+'</td><td>'+esc(r.contacto||'—')+'</td><td>'+esc(r.telefono||'—')+'</td><td>'+esc(fmtDate(r.fecha))+'</td><td>'+(r.docs||0)+'</td></tr>'; }); html+='</tbody></table>'; } else { html+='<div>Todos los titulares que actualizaron ya están en el padrón.</div>'; }
+    var pr=d.procedimientos||[];
+    html+='<div class="bar">5. Procedimientos abiertos ('+pr.length+')</div>';
+    if(pr.length){ html+='<table><thead><tr><th>Folio</th><th>Nombre</th><th>Trámite solicitado</th><th>Etapa actual</th><th>Tiempo en etapa</th><th>Detalle</th></tr></thead><tbody>'; pr.forEach(function(s){ var cls=(s.diasEnEtapa>=15?'red':(s.diasEnEtapa>=7?'amber':'')); html+='<tr><td>'+esc(s.folio||'—')+'</td><td>'+esc(s.nombre||'—')+'</td><td><strong>'+esc(s.tipoTramite||'—')+'</strong></td><td>'+esc(s.etapa+'. '+s.etapaLabel)+'</td><td class="'+cls+'">'+diasTxt(s.diasEnEtapa)+'</td><td>'+esc(s.comentarios||'—')+'</td></tr>'; }); html+='</tbody></table>'; } else { html+='<div>No hay procedimientos abiertos.</div>'; }
+    html+='<p class="muted" style="margin-top:18px;">PASEM · Sección 26 del SNTE · Administrado por MULTICATERIN, S.A. de C.V. con respaldo de BIDA Seguros.</p>';
+    html+='</body></html>';
+    w.document.open(); w.document.write(html); w.document.close(); w.focus(); setTimeout(function(){ w.print(); }, 400);
+  }
+
+  async function sendInforme(){
+    var msg=document.getElementById('informe-msg'); var btn=document.getElementById('btn-informe-send');
+    if(!confirm('¿Enviar el informe por correo a Dirección (bidaseguros@bidaseguros.org)?')) return;
+    btn.disabled=true; btn.textContent='Enviando…'; msg.textContent='';
+    try{
+      var r=await api(INFORME,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'enviar'})});
+      var d=await r.json(); if(!r.ok) throw new Error((d&&d.error)||('HTTP '+r.status));
+      msg.innerHTML='<span style="color:#1e9e52;font-weight:700;">✓ Informe enviado a '+esc(d.to||'Dirección')+'.</span>';
+    }catch(e){ msg.innerHTML='<span style="color:#b23b3b;font-weight:700;">No se pudo enviar: '+esc(e.message)+'</span>'; }
+    finally{ btn.disabled=false; btn.textContent='Enviar a Dirección'; }
+  }
+
+  (function(){
+    var b=document.getElementById('btn-informe'); if(b) b.addEventListener('click', loadInforme);
+    var pb=document.getElementById('btn-informe-print'); if(pb) pb.addEventListener('click', printInforme);
+    var sb=document.getElementById('btn-informe-send'); if(sb) sb.addEventListener('click', sendInforme);
   })();
 })();
 </script>

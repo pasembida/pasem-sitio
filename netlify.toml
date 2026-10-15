@@ -9,3 +9,16 @@
   from = "/admin"
   to = "/admin.html"
   status = 200
+
+# Forzar que /enlaces y /alta usen las carpetas nuevas (aunque exista un .html viejo en la raíz)
+[[redirects]]
+  from = "/enlaces"
+  to = "/enlaces/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/alta"
+  to = "/alta/index.html"
+  status = 200
+  force = true
