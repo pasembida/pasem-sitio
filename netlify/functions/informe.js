@@ -1,8 +1,7 @@
-import { getStore } from '@netlify/blobs';
 import crypto from 'node:crypto';
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-let BASE=[]; try{ BASE=require('./lib/beneficiarios.json'); }catch(e){ BASE=[]; }
+import BASE_RAW from './lib/beneficiarios.json';
+import { getStore } from '@netlify/blobs';
+const BASE = Array.isArray(BASE_RAW) ? BASE_RAW : [];
 
 function makeStore(name){ const siteID=process.env.NETLIFY_SITE_ID||process.env.SITE_ID; const token=process.env.NETLIFY_API_TOKEN||process.env.NETLIFY_AUTH_TOKEN; if(siteID&&token) return getStore({name,siteID,token}); return getStore(name); }
 const SECRET = process.env.SESSION_SECRET || 'pasem-secret-cambiar';
