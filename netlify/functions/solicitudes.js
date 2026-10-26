@@ -45,13 +45,13 @@ export const handler = async (event) => {
         while(existing.has(folio)){ n++; folio=prefix+String(n).padStart(3,'0'); }
         const id='SOL-'+Date.now().toString(36).toUpperCase()+'-'+Math.random().toString(36).slice(2,6).toUpperCase();
         const now=new Date().toISOString();
-        const s={ id, folio, folioEleonor:body.folioEleonor||'', nombre:body.nombre||'', rfc:body.rfc||'', curp:body.curp||'', certificado:cert, tipoTramite:body.tipoTramite||'', comentarios:body.comentarios||'', estado:1, etapas:{'1':now}, autorizada:false, createdAt:now, capturadoPor:p.email||'usuario' };
+        const s={ id, folio, folioEleonor:body.folioEleonor||'', nombre:body.nombre||'', rfc:body.rfc||'', curp:body.curp||'', certificado:cert, tipoTramite:body.tipoTramite||'', reserva:body.reserva||'', comentarios:body.comentarios||'', estado:1, etapas:{'1':now}, autorizada:false, createdAt:now, capturadoPor:p.email||'usuario' };
         await store.setJSON(id,s);
         return {statusCode:200,headers,body:JSON.stringify(s)};
       }
       if(body.action==='update'){
         const s=await store.get(body.id,{type:'json'}); if(!s) return {statusCode:404,headers,body:JSON.stringify({error:'No encontrada'})};
-        ['folioEleonor','nombre','curp','rfc','certificado','tipoTramite','comentarios'].forEach(function(k){ if(body[k]!=null) s[k]=body[k]; });
+        ['folioEleonor','nombre','curp','rfc','certificado','tipoTramite','reserva','comentarios'].forEach(function(k){ if(body[k]!=null) s[k]=body[k]; });
         s.updatedAt=new Date().toISOString(); s.updatedBy=p.email||'usuario';
         await store.setJSON(s.id,s);
         return {statusCode:200,headers,body:JSON.stringify(s)};

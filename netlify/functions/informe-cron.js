@@ -5,7 +5,6 @@ const BASE = Array.isArray(BASE_RAW) ? BASE_RAW : [];
 
 function makeStore(name){ const siteID=process.env.NETLIFY_SITE_ID||process.env.SITE_ID; const token=process.env.NETLIFY_API_TOKEN||process.env.NETLIFY_AUTH_TOKEN; if(siteID&&token) return getStore({name,siteID,token}); return getStore(name); }
 
-
 const norm=s=>String(s==null?'':s).trim().toUpperCase();
 const dayOf=iso=>{ try{ return new Date(iso).toISOString().slice(0,10); }catch(e){ return ''; } };
 const ETAPAS={'1':'Solicitud de atención','2':'Solicitud de documentación','3':'Autorización generada','4':'Servicio otorgado'};
@@ -22,7 +21,11 @@ function informeEmailHtml(d){
   const kpi=(l,v)=>'<td style="border:1px solid #E2E8EA;border-radius:8px;padding:8px 10px;"><div style="font-size:10px;text-transform:uppercase;color:#767676;font-weight:700;">'+esc(l)+'</div><div style="font-size:20px;font-weight:900;color:#1f3442;">'+esc(v)+'</div></td>';
   const diaRows=(d.diario||[]).map(r=>'<tr><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(r.fecha)+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+r.altas+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+r.titulares+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+r.dependientes+'</td></tr>').join('')||'<tr><td colspan="4" style="border:1px solid #E2E8EA;padding:6px 8px;">Sin datos.</td></tr>';
   const nvRows=(d.nuevos||[]).map(r=>'<tr><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(r.curp)+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(r.nombre||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(r.contacto||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(r.telefono||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(fmtFecha(r.fecha))+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+(r.docs||0)+'</td></tr>').join('')||'<tr><td colspan="6" style="border:1px solid #E2E8EA;padding:6px 8px;">Todos los titulares que actualizaron ya están en el padrón.</td></tr>';
-  const prRows=(d.procedimientos||[]).map(s=>{ const col=(s.diasEnEtapa>=15?'color:#b23b3b;font-weight:800;':(s.diasEnEtapa>=7?'color:#b9770e;font-weight:700;':'')); return '<tr><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(s.folio||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(s.nombre||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;"><strong>'+esc(s.tipoTramite||'—')+'</strong></td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(s.etapa+'. '+s.etapaLabel)+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;'+col+'">'+esc(diasTxt(s.diasEnEtapa))+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(s.comentarios||'—')+'</td></tr>'; }).join('')||'<tr><td colspan="6" style="border:1px solid #E2E8EA;padding:6px 8px;">No hay procedimientos abiertos.</td></tr>';
+  const money=n=>'$'+Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const prList=(d.procedimientos||[]);
+  const prRows=prList.map(s=>{ const col=(s.diasEnEtapa>=15?'color:#b23b3b;font-weight:800;':(s.diasEnEtapa>=7?'color:#b9770e;font-weight:700;':'')); return '<tr><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(s.folio||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(s.nombre||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;"><strong>'+esc(s.tipoTramite||'—')+'</strong></td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(s.etapa+'. '+s.etapaLabel)+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;'+col+'">'+esc(diasTxt(s.diasEnEtapa))+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;text-align:right;">'+(s.reservaNum?money(s.reservaNum):'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(s.comentarios||'—')+'</td></tr>'; }).join('');
+  const prTotal = prList.length ? ('<tr><td colspan="5" style="border:1px solid #E2E8EA;padding:6px 8px;text-align:right;font-weight:700;background:#FFF3EA;">Total de Presupuesto de Reserva</td><td style="border:1px solid #E2E8EA;padding:6px 8px;text-align:right;font-weight:800;background:#FFF3EA;">'+money(d.reservaTotal||0)+'</td><td style="border:1px solid #E2E8EA;background:#FFF3EA;"></td></tr>') : '';
+  const prBody = (prRows||'<tr><td colspan="7" style="border:1px solid #E2E8EA;padding:6px 8px;">No hay procedimientos abiertos.</td></tr>') + prTotal;
   return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;background:#EAF6F6;font-family:Arial,Helvetica,sans-serif;color:#1f3442;">'+
     '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EAF6F6;padding:16px 10px;"><tr><td align="center">'+
     '<table role="presentation" width="720" cellpadding="0" cellspacing="0" style="max-width:720px;width:100%;background:#fff;border:1px solid #D9E9E9;border-radius:12px;overflow:hidden;">'+
@@ -42,7 +45,7 @@ function informeEmailHtml(d){
         bar('4. Titulares nuevos para inclusión ('+(d.nuevos||[]).length+')')+
         '<tr><td colspan="6">'+tbl(['CURP','Nombre','Contacto','Teléfono','Fecha','Docs'], nvRows)+'</td></tr>'+
         bar('5. Procedimientos abiertos ('+(d.procedimientos||[]).length+')')+
-        '<tr><td colspan="6">'+tbl(['Folio','Nombre','Trámite solicitado','Etapa actual','Tiempo en etapa','Detalle'], prRows)+'</td></tr>'+
+        '<tr><td colspan="6">'+tbl(['Folio','Nombre','Trámite solicitado','Etapa actual','Tiempo en etapa','Reserva','Detalle'], prBody)+'</td></tr>'+
         '</table>'+
       '</td></tr>'+
       '<tr><td style="padding:10px 18px 18px;color:#767676;font-size:11px;">PASEM · Sección 26 del SNTE · Administrado por MULTICATERIN, S.A. de C.V. con respaldo de BIDA Seguros.</td></tr>'+
@@ -117,13 +120,17 @@ async function computeInforme(){
     const ss=makeStore('pasem-solicitudes');
     let sols=[]; try{ const {blobs}=await ss.list(); sols=(await Promise.all(blobs.map(b=>ss.get(b.key,{type:'json'})))).filter(Boolean); }catch(e){ sols=[]; }
     const now=Date.now();
+    const parseMoney=v=>{ const n=Number(String(v==null?'':v).replace(/[^0-9.]/g,'')); return isFinite(n)?n:0; };
+    let reservaTotal=0;
     const procedimientos=sols.filter(s=>Number(s.estado||1)<4).map(s=>{
       const et=s.etapas||{}; let maxEt='1'; Object.keys(et).forEach(k=>{ if(['1','2','3','4'].indexOf(k)>=0 && Number(k)>Number(maxEt)) maxEt=k; });
       const desde=et[maxEt]||s.updatedAt||s.createdAt;
       const dias=desde?Math.floor((now-new Date(desde).getTime())/86400000):null;
+      const reservaNum=parseMoney(s.reserva); reservaTotal+=reservaNum;
       return {
         folio:s.folio||'', folioEleonor:s.folioEleonor||'', nombre:s.nombre||'', certificado:s.certificado||'',
         tipoTramite:s.tipoTramite||'', comentarios:s.comentarios||'',
+        reserva:s.reserva||'', reservaNum:reservaNum,
         etapa:maxEt, etapaLabel:ETAPAS[maxEt]||maxEt, desde:desde||'', diasEnEtapa:dias,
         createdAt:s.createdAt||''
       };
@@ -137,8 +144,10 @@ async function computeInforme(){
       totals:{ altas:altas.length, titularesUnicos:tCurpVistos.size, titularesConDatos:totalTitulares, dependientes:totalDependientes, titularesEnPadron:enPadronSet.size, titularesNuevos:nuevos.length },
       diario:diarioArr,
       nuevos,
-      procedimientos
+      procedimientos,
+      reservaTotal
     };
+  }
 }
 
 // Función PROGRAMADA: se ejecuta sola según netlify.toml (9:00 am SLP = 15:00 UTC).
@@ -154,7 +163,7 @@ export const handler = async () => {
       from, to:[to],
       subject:'PASEM — Informe diario a la Dirección General ('+dayOf(data.generatedAt)+')',
       html: informeEmailHtml(data),
-      text: 'Informe a la Dirección General — PASEM\nGenerado: '+fmtFecha(data.generatedAt)+'\n\nTitulares en el padrón: '+data.padronTotal+'\nDependientes dados de alta: '+data.dependientesPadron+'\nTotal de personas: '+data.padronPersonas+'\nAltas: '+t.altas+' · Titulares únicos: '+t.titularesUnicos+' · Dependientes: '+t.dependientes+'\nProcedimientos abiertos: '+(data.procedimientos||[]).length
+      text: 'Informe a la Dirección General — PASEM\nGenerado: '+fmtFecha(data.generatedAt)+'\n\nTitulares en el padrón: '+data.padronTotal+'\nDependientes dados de alta: '+data.dependientesPadron+'\nTotal de personas: '+data.padronPersonas+'\nAltas: '+t.altas+' · Titulares únicos: '+t.titularesUnicos+' · Dependientes: '+t.dependientes+'\nProcedimientos abiertos: '+(data.procedimientos||[]).length+'\nTotal de reserva: '+(data.reservaTotal||0)
     };
     const r=await fetch('https://api.resend.com/emails',{ method:'POST', headers:{ 'Authorization':'Bearer '+key, 'Content-Type':'application/json' }, body:JSON.stringify(payload) });
     const rd=await r.json().catch(()=>({}));
