@@ -20,13 +20,28 @@ function informeEmailHtml(d){
   const bar=(txt)=>'<tr><td colspan="6" style="background:#DD6B20;color:#fff;font-weight:700;font-size:13px;padding:8px 10px;">'+esc(txt)+'</td></tr>';
   function tbl(headers, rows){ return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:12px;margin:6px 0 14px;"><thead><tr>'+headers.map(h=>'<th style="border:1px solid #E2E8EA;background:#FFF3EA;padding:6px 8px;text-align:left;">'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+rows+'</tbody></table>'; }
   const kpi=(l,v)=>'<td style="border:1px solid #E2E8EA;border-radius:8px;padding:8px 10px;"><div style="font-size:10px;text-transform:uppercase;color:#767676;font-weight:700;">'+esc(l)+'</div><div style="font-size:20px;font-weight:900;color:#1f3442;">'+esc(v)+'</div></td>';
-  const diaRows=(d.diario||[]).map(r=>'<tr><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(r.fecha)+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+r.altas+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+r.titulares+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+r.dependientes+'</td></tr>').join('')||'<tr><td colspan="4" style="border:1px solid #E2E8EA;padding:6px 8px;">Sin datos.</td></tr>';
+  // Acumulado diario compacto: una celda por día (Fecha · A/T/D) en varias columnas para ahorrar espacio
+  const COLS=3, tdpad='padding:5px 8px;border:1px solid #E2E8EA;font-size:12px;vertical-align:top;';
+  const dias=(d.diario||[]);
+  let diaCompact='';
+  if(dias.length){
+    for(let i=0;i<dias.length;i+=COLS){
+      diaCompact+='<tr>';
+      for(let c=0;c<COLS;c++){ const r=dias[i+c];
+        diaCompact += r
+          ? '<td style="'+tdpad+'"><b>'+esc(r.fecha)+'</b><br><span style="color:#555;">Altas '+r.altas+' · Tit. '+r.titulares+' · Dep. '+r.dependientes+'</span></td>'
+          : '<td style="'+tdpad+'border:none;"></td>';
+      }
+      diaCompact+='</tr>';
+    }
+  } else { diaCompact='<tr><td style="'+tdpad+'">Sin datos.</td></tr>'; }
   const nvRows=(d.nuevos||[]).map(r=>'<tr><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(r.curp)+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(r.nombre||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(r.contacto||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(r.telefono||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(fmtFecha(r.fecha))+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+(r.docs||0)+'</td></tr>').join('')||'<tr><td colspan="6" style="border:1px solid #E2E8EA;padding:6px 8px;">Todos los titulares que actualizaron ya están en el padrón.</td></tr>';
   const money=n=>'$'+Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
   const prList=(d.procedimientos||[]);
-  const prRows=prList.map(s=>{ const col=(s.diasEnEtapa>=15?'color:#b23b3b;font-weight:800;':(s.diasEnEtapa>=7?'color:#b9770e;font-weight:700;':'')); return '<tr><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(s.folio||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(s.nombre||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;"><strong>'+esc(s.tipoTramite||'—')+'</strong></td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(s.etapa+'. '+s.etapaLabel)+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;'+col+'">'+esc(diasTxt(s.diasEnEtapa))+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;text-align:right;">'+(s.reservaNum?money(s.reservaNum):'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(s.comentarios||'—')+'</td></tr>'; }).join('');
-  const prTotal = prList.length ? ('<tr><td colspan="5" style="border:1px solid #E2E8EA;padding:6px 8px;text-align:right;font-weight:700;background:#FFF3EA;">Total de Presupuesto de Reserva</td><td style="border:1px solid #E2E8EA;padding:6px 8px;text-align:right;font-weight:800;background:#FFF3EA;">'+money(d.reservaTotal||0)+'</td><td style="border:1px solid #E2E8EA;background:#FFF3EA;"></td></tr>') : '';
-  const prBody = (prRows||'<tr><td colspan="7" style="border:1px solid #E2E8EA;padding:6px 8px;">No hay procedimientos abiertos.</td></tr>') + prTotal;
+  const pagoBadge=s=> s.pagoSolicitado ? '<span style="background:#E8F8EE;color:#1e7e3e;border:1px solid #bfe6cc;border-radius:999px;padding:1px 7px;font-size:11px;font-weight:700;">Pago solicitado</span>' : '<span style="color:#9aa;">—</span>';
+  const prRows=prList.map(s=>{ const col=(s.diasEnEtapa>=15?'color:#b23b3b;font-weight:800;':(s.diasEnEtapa>=7?'color:#b9770e;font-weight:700;':'')); const hl=s.pagoSolicitado?'background:#F3FBF5;':''; return '<tr><td style="border:1px solid #E2E8EA;padding:6px 8px;'+hl+'">'+esc(s.folio||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;'+hl+'">'+esc(s.nombre||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;'+hl+'"><strong>'+esc(s.tipoTramite||'—')+'</strong></td><td style="border:1px solid #E2E8EA;padding:6px 8px;'+hl+'">'+esc(s.etapa+'. '+s.etapaLabel)+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;'+col+hl+'">'+esc(diasTxt(s.diasEnEtapa))+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;text-align:right;'+hl+'">'+(s.reservaNum?money(s.reservaNum):'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;text-align:center;'+hl+'">'+pagoBadge(s)+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;'+hl+'">'+esc(s.comentarios||'—')+'</td></tr>'; }).join('');
+  const prTotal = prList.length ? ('<tr><td colspan="5" style="border:1px solid #E2E8EA;padding:6px 8px;text-align:right;font-weight:700;background:#FFF3EA;">Total de Presupuesto de Reserva</td><td style="border:1px solid #E2E8EA;padding:6px 8px;text-align:right;font-weight:800;background:#FFF3EA;">'+money(d.reservaTotal||0)+'</td><td colspan="2" style="border:1px solid #E2E8EA;background:#FFF3EA;"></td></tr>') : '';
+  const prBody = (prRows||'<tr><td colspan="8" style="border:1px solid #E2E8EA;padding:6px 8px;">No hay procedimientos abiertos.</td></tr>') + prTotal;
   return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;background:#EAF6F6;font-family:Arial,Helvetica,sans-serif;color:#1f3442;">'+
     '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EAF6F6;padding:16px 10px;"><tr><td align="center">'+
     '<table role="presentation" width="720" cellpadding="0" cellspacing="0" style="max-width:720px;width:100%;background:#fff;border:1px solid #D9E9E9;border-radius:12px;overflow:hidden;">'+
@@ -42,11 +57,11 @@ function informeEmailHtml(d){
         bar('2. Actualizaciones de datos recibidas')+
         '<tr><td colspan="6" style="padding:6px 0 12px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="6"><tr>'+kpi('Altas',Number(t.altas||0).toLocaleString('es-MX'))+kpi('Titulares únicos',Number(t.titularesUnicos||0).toLocaleString('es-MX'))+kpi('Dependientes',Number(t.dependientes||0).toLocaleString('es-MX'))+kpi('Ya en padrón',Number(t.titularesEnPadron||0).toLocaleString('es-MX'))+kpi('Nuevos',Number(t.titularesNuevos||0).toLocaleString('es-MX'))+'</tr></table></td></tr>'+
         bar('3. Acumulado diario')+
-        '<tr><td colspan="6">'+tbl(['Fecha','Altas','Titulares','Dependientes'], diaRows)+'</td></tr>'+
+        '<tr><td colspan="6"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:4px 0 14px;">'+diaCompact+'</table></td></tr>'+
         bar('4. Titulares nuevos para inclusión ('+(d.nuevos||[]).length+')')+
         '<tr><td colspan="6">'+tbl(['CURP','Nombre','Contacto','Teléfono','Fecha','Docs'], nvRows)+'</td></tr>'+
         bar('5. Procedimientos abiertos ('+(d.procedimientos||[]).length+')')+
-        '<tr><td colspan="6">'+tbl(['Folio','Nombre','Trámite solicitado','Etapa actual','Tiempo en etapa','Reserva','Detalle'], prBody)+'</td></tr>'+
+        '<tr><td colspan="6">'+tbl(['Folio','Nombre','Trámite solicitado','Etapa actual','Tiempo en etapa','Reserva','Pago','Detalle'], prBody)+'</td></tr>'+
         '</table>'+
       '</td></tr>'+
       '<tr><td style="padding:10px 18px 18px;color:#767676;font-size:11px;">PASEM · Sección 26 del SNTE · Administrado por MULTICATERIN, S.A. de C.V. con respaldo de BIDA Seguros.</td></tr>'+
@@ -122,6 +137,16 @@ async function computeInforme(){
     let sols=[]; try{ const {blobs}=await ss.list(); sols=(await Promise.all(blobs.map(b=>ss.get(b.key,{type:'json'})))).filter(Boolean); }catch(e){ sols=[]; }
     const now=Date.now();
     const parseMoney=v=>{ const n=Number(String(v==null?'':v).replace(/[^0-9.]/g,'')); return isFinite(n)?n:0; };
+
+    // Órdenes de pago YA solicitadas (correo enviado), ligadas por folio de autorización / solicitud
+    const foliosPagoSolicitado=new Set();
+    try{
+      const os=makeStore('pasem-ordenes');
+      const { blobs }=await os.list({prefix:'orden:'});
+      const ordenes=(await Promise.all(blobs.map(b=>os.get(b.key,{type:'json'})))).filter(Boolean);
+      ordenes.forEach(o=>{ if(o.estado==='solicitada'){ const f=norm(o.folioAutorizacion); if(f) foliosPagoSolicitado.add(f); } });
+    }catch(e){}
+
     let reservaTotal=0;
     const procedimientos=sols.filter(s=>Number(s.estado||1)<4).map(s=>{
       const et=s.etapas||{}; let maxEt='1'; Object.keys(et).forEach(k=>{ if(['1','2','3','4'].indexOf(k)>=0 && Number(k)>Number(maxEt)) maxEt=k; });
@@ -132,6 +157,7 @@ async function computeInforme(){
         folio:s.folio||'', folioEleonor:s.folioEleonor||'', nombre:s.nombre||'', certificado:s.certificado||'',
         tipoTramite:s.tipoTramite||'', comentarios:s.comentarios||'',
         reserva:s.reserva||'', reservaNum:reservaNum,
+        pagoSolicitado: foliosPagoSolicitado.has(norm(s.folio)),
         etapa:maxEt, etapaLabel:ETAPAS[maxEt]||maxEt, desde:desde||'', diasEnEtapa:dias,
         createdAt:s.createdAt||''
       };
@@ -151,7 +177,7 @@ async function computeInforme(){
   }
 }
 
-// Función PROGRAMADA: 9:00 am SLP = 15:00 UTC (declarada con el helper schedule).
+// Función PROGRAMADA: 9:00 am SLP = 15:00 UTC (helper schedule).
 const run = async () => {
   try{
     const key=process.env.RESEND_API_KEY;

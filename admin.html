@@ -2186,9 +2186,9 @@
     var dia=data.diario||[];
     h+='<div class="card" style="padding:16px;margin:0 0 14px;"><div style="font-family:var(--serif);color:var(--ochre);font-size:13px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">3. Acumulado diario</div>';
     if(dia.length){
-      h+='<div class="table-wrap"><table class="dtable"><thead><tr><th>Fecha</th><th>Altas</th><th>Titulares</th><th>Dependientes</th></tr></thead><tbody>';
-      dia.forEach(function(r){ h+='<tr><td>'+esc(r.fecha)+'</td><td>'+r.altas+'</td><td>'+r.titulares+'</td><td>'+r.dependientes+'</td></tr>'; });
-      h+='</tbody></table></div>';
+      h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;">';
+      dia.forEach(function(r){ h+='<div style="border:1px solid var(--border);border-radius:10px;padding:8px 10px;"><div style="font-weight:800;color:var(--brown-deep);font-size:13px;">'+esc(r.fecha)+'</div><div style="font-size:12px;color:var(--ink);margin-top:2px;">Altas '+r.altas+' · Tit. '+r.titulares+' · Dep. '+r.dependientes+'</div></div>'; });
+      h+='</div>';
     } else { h+='<div style="font-size:14px;color:var(--ink);">Aún no hay actualizaciones registradas.</div>'; }
     h+='</div>';
 
@@ -2207,9 +2207,9 @@
     h+='<div class="card" style="padding:16px;margin:0 0 14px;"><div style="font-family:var(--serif);color:var(--ochre);font-size:13px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">5. Procedimientos abiertos ('+pr.length+')</div>';
     if(pr.length){
       var money=function(n){ return '$'+Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}); };
-      h+='<div class="table-wrap"><table class="dtable"><thead><tr><th>Folio</th><th>Nombre</th><th>Trámite solicitado</th><th>Etapa actual</th><th>Tiempo en etapa</th><th>Presupuesto de Reserva</th><th>Detalle</th></tr></thead><tbody>';
-      pr.forEach(function(s){ h+='<tr><td>'+esc(s.folio||'—')+'</td><td>'+esc(s.nombre||'—')+'</td><td><strong>'+esc(s.tipoTramite||'—')+'</strong></td><td>'+esc(s.etapa+'. '+s.etapaLabel)+'</td><td style="'+diasColor(s.diasEnEtapa)+'">'+diasTxt(s.diasEnEtapa)+'</td><td style="text-align:right">'+(s.reservaNum?money(s.reservaNum):'—')+'</td><td>'+esc(s.comentarios||'—')+'</td></tr>'; });
-      h+='<tr><td colspan="5" style="text-align:right;font-weight:800;background:var(--cream-2)">Total de Presupuesto de Reserva</td><td style="text-align:right;font-weight:800;background:var(--cream-2)">'+money(data.reservaTotal||0)+'</td><td style="background:var(--cream-2)"></td></tr>';
+      h+='<div class="table-wrap"><table class="dtable"><thead><tr><th>Folio</th><th>Nombre</th><th>Trámite solicitado</th><th>Etapa actual</th><th>Tiempo en etapa</th><th>Presupuesto de Reserva</th><th>Pago</th><th>Detalle</th></tr></thead><tbody>';
+      pr.forEach(function(s){ var badge=s.pagoSolicitado?'<span style="background:#E8F8EE;color:#1e7e3e;border:1px solid #bfe6cc;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700;">Pago solicitado</span>':'—'; var hl=s.pagoSolicitado?' style="background:#F3FBF5"':''; h+='<tr'+hl+'><td>'+esc(s.folio||'—')+'</td><td>'+esc(s.nombre||'—')+'</td><td><strong>'+esc(s.tipoTramite||'—')+'</strong></td><td>'+esc(s.etapa+'. '+s.etapaLabel)+'</td><td style="'+diasColor(s.diasEnEtapa)+'">'+diasTxt(s.diasEnEtapa)+'</td><td style="text-align:right">'+(s.reservaNum?money(s.reservaNum):'—')+'</td><td style="text-align:center">'+badge+'</td><td>'+esc(s.comentarios||'—')+'</td></tr>'; });
+      h+='<tr><td colspan="5" style="text-align:right;font-weight:800;background:var(--cream-2)">Total de Presupuesto de Reserva</td><td style="text-align:right;font-weight:800;background:var(--cream-2)">'+money(data.reservaTotal||0)+'</td><td colspan="2" style="background:var(--cream-2)"></td></tr>';
       h+='</tbody></table></div><div style="font-size:12px;color:var(--ink);margin-top:6px;">Los tiempos en amarillo llevan 7 días o más; en rojo, 15 días o más.</div>';
     } else { h+='<div style="font-size:14px;color:var(--ink);">No hay procedimientos abiertos.</div>'; }
     h+='</div>';
@@ -2323,8 +2323,11 @@
         [[String(t.altas||0), String(t.titularesUnicos||0), String(t.dependientes||0), String(t.titularesEnPadron||0), String(t.titularesNuevos||0)]]);
 
       bar('3. Acumulado diario');
-      var dia=(d.diario||[]).map(function(r){ return [r.fecha, String(r.altas), String(r.titulares), String(r.dependientes)]; });
-      table(['Fecha','Altas','Titulares','Dependientes'], dia.length?dia:[['Sin datos','','','']]);
+      var diaArr=(d.diario||[]); var COLS=3; var diaRows=[];
+      if(diaArr.length){ for(var di=0; di<diaArr.length; di+=COLS){ var fila=[]; for(var dc=0; dc<COLS; dc++){ var rr=diaArr[di+dc]; fila.push(rr?(rr.fecha+'\nAltas '+rr.altas+' · Tit. '+rr.titulares+' · Dep. '+rr.dependientes):''); } diaRows.push(fila); } }
+      else { diaRows=[['Sin datos','','']]; }
+      doc.autoTable({ startY:y, body:diaRows, margin:{left:M,right:M}, styles:{fontSize:8, cellPadding:1.6, textColor:INK, lineColor:[226,232,234], lineWidth:0.1}, theme:'grid', columnStyles:{0:{cellWidth:(W-2*M)/3},1:{cellWidth:(W-2*M)/3},2:{cellWidth:(W-2*M)/3}} });
+      y=doc.lastAutoTable.finalY+4;
 
       var nv=d.nuevos||[];
       bar('4. Titulares nuevos para inclusión ('+nv.length+')');
@@ -2334,9 +2337,9 @@
       var pr=d.procedimientos||[];
       var money=function(n){ return '$'+Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}); };
       bar('5. Procedimientos abiertos ('+pr.length+')');
-      var prr=pr.map(function(s){ return [s.folio||'—', s.nombre||'—', s.tipoTramite||'—', s.etapa+'. '+s.etapaLabel, diasTxt(s.diasEnEtapa), s.reservaNum?money(s.reservaNum):'—', s.comentarios||'—']; });
-      if(pr.length){ prr.push([{content:'Total de Presupuesto de Reserva', colSpan:5, styles:{halign:'right', fontStyle:'bold', fillColor:[255,243,234]}}, {content:money(d.reservaTotal||0), styles:{halign:'right', fontStyle:'bold', fillColor:[255,243,234]}}, {content:'', styles:{fillColor:[255,243,234]}}]); }
-      table(['Folio','Nombre','Trámite solicitado','Etapa actual','Tiempo en etapa','Reserva','Detalle'], prr.length?prr:[['No hay procedimientos abiertos.','','','','','','']]);
+      var prr=pr.map(function(s){ return [s.folio||'—', s.nombre||'—', s.tipoTramite||'—', s.etapa+'. '+s.etapaLabel, diasTxt(s.diasEnEtapa), s.reservaNum?money(s.reservaNum):'—', s.pagoSolicitado?'Pago solicitado':'—', s.comentarios||'—']; });
+      if(pr.length){ prr.push([{content:'Total de Presupuesto de Reserva', colSpan:5, styles:{halign:'right', fontStyle:'bold', fillColor:[255,243,234]}}, {content:money(d.reservaTotal||0), styles:{halign:'right', fontStyle:'bold', fillColor:[255,243,234]}}, {content:'', colSpan:2, styles:{fillColor:[255,243,234]}}]); }
+      table(['Folio','Nombre','Trámite solicitado','Etapa actual','Tiempo en etapa','Reserva','Pago','Detalle'], prr.length?prr:[['No hay procedimientos abiertos.','','','','','','','']]);
 
       doc.setFont('helvetica','normal'); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]); doc.setFontSize(7.5);
       doc.text('PASEM · Sección 26 del SNTE · Administrado por MULTICATERIN, S.A. de C.V. con respaldo de BIDA Seguros.', M, Math.min(y+4, doc.internal.pageSize.getHeight()-8));
