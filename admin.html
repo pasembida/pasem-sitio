@@ -356,6 +356,8 @@
         <button class="tab" type="button" data-pane="descargas">Descargas</button>
         <button class="tab" type="button" data-pane="expediente">Expediente</button>
         <button class="tab" type="button" data-pane="altas">Altas recibidas</button>
+        <button class="tab" type="button" data-pane="ordenpago">Orden de pago</button>
+        <button class="tab" type="button" data-pane="proveedores" id="tab-prov-btn" style="display:none;">Proveedores</button>
         <button class="tab" type="button" data-pane="informe" id="tab-informe-btn" style="display:none;">Informe a Dirección</button>
         <button class="tab" type="button" data-pane="usuarios" id="tab-usuarios-btn" style="display:none;">Usuarios</button>
       </div>
@@ -416,6 +418,7 @@
           <p id="auth-loaded" style="font-size:13px;color:var(--ochre);margin:8px 0 0;"></p>
         </div>
         <form id="form-atencion" class="admin-form card">
+          <div id="aut-edit-banner" style="display:none;background:#FFF3EA;border:1px solid var(--brown);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:var(--brown-deep);">Editando autorización. <button type="button" class="btn-mini" id="aut-edit-cancel" style="margin-left:8px;">Cancelar edición</button></div>
           <input type="hidden" name="solicitudId" id="f-solicitudId">
           <fieldset><legend>Control</legend>
             <div class="fgrid">
@@ -845,6 +848,96 @@
         <div id="informe-out"></div>
       </div>
 
+      <!-- Proveedores -->
+      <div class="tabpane" id="pane-proveedores">
+        <h3 style="font-family:var(--serif);color:var(--brown-deep);margin:0 0 6px;">Registro de proveedor</h3>
+        <p style="color:var(--ink);font-size:14px;margin:0 0 14px;">Da de alta hospitales, laboratorios y médicos a los que después podrás generar una orden de pago. Solo administración gestiona esta sección.</p>
+        <form id="form-prov" class="admin-form card">
+          <input type="hidden" id="prov-id">
+          <div class="fgrid">
+            <div class="field"><label>Tipo de proveedor <span style="color:var(--brown)">*</span></label>
+              <select id="prov-tipo"><option value="">Selecciona…</option><option>Hospital</option><option>Laboratorio</option><option>Médico General</option><option>Especialista</option></select></div>
+            <div class="field"><label>Programa <span style="color:var(--brown)">*</span></label><select id="prov-programa"><option>PASEM</option><option>ABC</option></select></div>
+            <div class="field"><label>Fecha de alta del proveedor</label><input id="prov-fechaAlta" type="date"></div>
+          </div>
+          <div id="grp-hosp" style="display:none">
+            <div style="font-family:var(--serif);color:var(--ochre);font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin:12px 0 6px;">Datos del hospital / laboratorio</div>
+            <div class="fgrid">
+              <div class="field full"><label>Razón social</label><input id="prov-razonSocial" type="text"></div>
+              <div class="field"><label>RFC</label><input id="prov-rfcH" type="text"></div>
+              <div class="field"><label>Sucursal</label><input id="prov-sucursal" type="text"></div>
+              <div class="field full"><label>Dirección</label><input id="prov-direccionH" type="text"></div>
+              <div class="field"><label>Teléfono del hospital / laboratorio</label><input id="prov-telHospital" type="text"></div>
+              <div class="field"><label>Nombre del responsable</label><input id="prov-nombreResp" type="text"></div>
+              <div class="field"><label>Teléfono del responsable</label><input id="prov-telResp" type="text"></div>
+              <div class="field"><label>Correo electrónico</label><input id="prov-correoH" type="email"></div>
+            </div>
+          </div>
+          <div id="grp-med" style="display:none">
+            <div style="font-family:var(--serif);color:var(--ochre);font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin:12px 0 6px;">Datos del médico</div>
+            <div class="fgrid">
+              <div class="field full"><label>Nombre del doctor</label><input id="prov-nombreDoctor" type="text"></div>
+              <div class="field"><label>RFC</label><input id="prov-rfcM" type="text"></div>
+              <div class="field"><label>Especialidad</label><input id="prov-especialidad" type="text"></div>
+              <div class="field full"><label>Dirección</label><input id="prov-direccionM" type="text"></div>
+              <div class="field"><label>Teléfono de contacto</label><input id="prov-telContacto" type="text"></div>
+              <div class="field"><label>Correo electrónico</label><input id="prov-correoM" type="email"></div>
+            </div>
+          </div>
+          <div style="font-family:var(--serif);color:var(--ochre);font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin:12px 0 6px;">Datos bancarios (para la orden de pago)</div>
+          <div class="fgrid">
+            <div class="field"><label>Banco <span style="color:var(--brown)">*</span></label><select id="prov-banco"></select></div>
+            <div class="field"><label>Número de cuenta</label><input id="prov-cuenta" type="text" inputmode="numeric"></div>
+            <div class="field"><label>CLABE (18 dígitos)</label><input id="prov-clabe" type="text" inputmode="numeric" maxlength="18"></div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;">
+            <button class="btn btn-primary" type="submit" id="prov-save">Guardar proveedor</button>
+            <button class="btn btn-ghost" type="button" id="prov-cancel" style="display:none;">Cancelar edición</button>
+          </div>
+          <p id="prov-msg" style="font-size:13px;margin-top:8px;"></p>
+        </form>
+        <h3 style="font-family:var(--serif);color:var(--brown-deep);margin:18px 0 8px;">Proveedores registrados</h3>
+        <div id="prov-count" style="color:var(--ink);font-size:14px;margin-bottom:8px;"></div>
+        <div class="table-wrap"><table class="dtable" id="prov-table"><thead><tr><th>Tipo</th><th>Nombre</th><th>RFC</th><th>Teléfono</th><th>Banco</th><th>Programa</th><th></th></tr></thead><tbody></tbody></table></div>
+      </div>
+
+      <!-- Orden de pago -->
+      <div class="tabpane" id="pane-ordenpago">
+        <h3 style="font-family:var(--serif);color:var(--brown-deep);margin:0 0 6px;">Orden de pago</h3>
+        <p style="color:var(--ink);font-size:14px;margin:0 0 14px;">Genera la instrucción de pago a proveedores a partir de una autorización. La suma de pagos no puede superar la Reserva autorizada.</p>
+        <form id="form-op" class="admin-form card">
+          <input type="hidden" id="op-id">
+          <div class="fgrid">
+            <div class="field full"><label>Autorización autorizada <span style="color:var(--brown)">*</span></label><select id="op-aut"><option value="">Selecciona una autorización…</option></select></div>
+          </div>
+          <div id="op-datos" style="display:none;">
+            <div style="font-family:var(--serif);color:var(--ochre);font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin:6px 0 6px;">Datos del servicio</div>
+            <div class="fgrid">
+              <div class="field"><label>Paciente</label><input id="op-paciente" type="text" readonly></div>
+              <div class="field"><label>CURP</label><input id="op-curp" type="text" readonly></div>
+              <div class="field"><label>Certificado / afiliación</label><input id="op-certificado" type="text" readonly></div>
+              <div class="field"><label>Tipo de trámite</label><input id="op-tipoTramite" type="text" readonly></div>
+              <div class="field"><label>Cirugía / servicio</label><input id="op-servicio" type="text" readonly></div>
+              <div class="field"><label>Hospital / lugar</label><input id="op-hospital" type="text" readonly></div>
+              <div class="field"><label>Fecha del procedimiento</label><input id="op-fechaProc" type="text" readonly></div>
+              <div class="field"><label>Programa</label><select id="op-programa"><option>PASEM</option><option>ABC</option></select></div>
+              <div class="field"><label>Reserva autorizada</label><input id="op-reserva" type="text" readonly style="font-weight:800;color:var(--brown-deep);"></div>
+            </div>
+          </div>
+          <div style="font-family:var(--serif);color:var(--ochre);font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px;">Receptores del pago (hasta 5)</div>
+          <div id="op-receptores"></div>
+          <div id="op-resumen" style="margin-top:10px;font-size:14px;"></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;">
+            <button class="btn btn-primary" type="submit" id="op-save">Registrar orden de pago</button>
+            <button class="btn btn-ghost" type="button" id="op-cancel" style="display:none;">Cancelar edición</button>
+          </div>
+          <p id="op-msg" style="font-size:13px;margin-top:8px;"></p>
+        </form>
+        <h3 style="font-family:var(--serif);color:var(--brown-deep);margin:18px 0 8px;">Órdenes registradas</h3>
+        <div id="op-count" style="color:var(--ink);font-size:14px;margin-bottom:8px;"></div>
+        <div class="table-wrap"><table class="dtable" id="op-table"><thead><tr><th>Folio</th><th>Paciente</th><th>Trámite</th><th>Total</th><th>Reserva</th><th>Estado</th><th></th></tr></thead><tbody></tbody></table></div>
+      </div>
+
       <!-- Usuarios -->
       <div class="tabpane" id="pane-usuarios">
         <h3 style="font-family:var(--serif); color:var(--brown-deep); margin:0 0 6px;">Usuarios y roles</h3>
@@ -904,7 +997,7 @@
 </script>
 <script>
 (function(){
-  var AUTH='/.netlify/functions/auth', RECORDS='/.netlify/functions/records', USERS='/.netlify/functions/usuarios', BEN='/.netlify/functions/beneficiarios', EXPED='/.netlify/functions/expediente', ALTAS='/.netlify/functions/alta', INFORME='/.netlify/functions/informe';
+  var AUTH='/.netlify/functions/auth', RECORDS='/.netlify/functions/records', USERS='/.netlify/functions/usuarios', BEN='/.netlify/functions/beneficiarios', EXPED='/.netlify/functions/expediente', ALTAS='/.netlify/functions/alta', INFORME='/.netlify/functions/informe', PROV='/.netlify/functions/proveedores', ORDENES='/.netlify/functions/ordenes';
   var SOLIC='/.netlify/functions/solicitudes', DEPS='/.netlify/functions/dependientes', TITU='/.netlify/functions/titulares';
   var STAGE_MAIL='telesecundariaseccion26@pasem.com';
   var MAIL='/.netlify/functions/enviar-correo', MAIL_TO='telesecundariaseccion26@pasem.com', MAIL_CC='bidaseguros@bidaseguros.org';
@@ -969,6 +1062,8 @@
     if(name==='usuarios' && isAdmin()) loadUsers();
     if(name==='altas') loadAltas();
     if(name==='expediente') loadExp();
+    if(name==='proveedores' && isAdmin()) loadProv();
+    if(name==='ordenpago') initOrdenPago();
     if(name==='solicitud') loadSolic();
     if(name==='autorizacion'){ loadRecords(); loadAuthPicker(); }
     if(name==='dependientes') loadDeps();
@@ -1021,6 +1116,7 @@
     userLbl.innerHTML='<span class="who-email">'+esc(email())+'</span><br><span class="who-chip">'+esc(roleLabel(role()))+'</span>';
     var av=document.getElementById('admin-av'); if(av) av.textContent=(email()||'?').charAt(0).toUpperCase();
     document.getElementById('tab-usuarios-btn').style.display = isAdmin()?'':'none';
+    var tp=document.getElementById('tab-prov-btn'); if(tp) tp.style.display = isAdmin()?'':'none';
     var ti=document.getElementById('tab-informe-btn'); if(ti) ti.style.display = isAdmin()?'':'none';
     activate('solicitud');
   }
@@ -1061,6 +1157,7 @@
     records.forEach(function(rec){
       var tr=document.createElement('tr'); var serv=(rec.servicios||[]).join(', ');
       var acts='<button class="btn-mini" data-act="print" data-id="'+esc(rec.id)+'">Imprimir</button> '+
+               '<button class="btn-mini" data-act="editrec" data-id="'+esc(rec.id)+'">Editar</button> '+
                '<button class="btn-mini" data-act="notify" data-id="'+esc(rec.id)+'">Notificar SNTE</button>'+
                (isAdmin()?' <button class="btn-del" data-act="del" data-id="'+esc(rec.id)+'">Eliminar</button>':'');
       tr.innerHTML='<td>'+esc(rec.folio)+'</td><td>'+esc(rec.fechaEmision)+'</td><td>'+esc(rec.paciente)+'</td><td>'+esc(rec.curp)+'</td><td>'+esc(rec.rfc)+'</td><td>'+esc(rec.numAfiliado)+'</td><td>'+esc(rec.tipoTramite)+'</td><td>'+esc(rec.tipoServicio)+'</td><td>'+esc(serv)+'</td><td>'+esc(rec.hospital)+'</td><td>'+esc(rec.fechaProc)+'</td><td>'+esc(rec.capturadoPor)+'</td><td>'+(rec.notifiedAt?esc(fmtDate(rec.notifiedAt)):'—')+'</td><td style="white-space:nowrap;">'+acts+'</td>';
@@ -1069,6 +1166,38 @@
     tbody.querySelectorAll('[data-act=print]').forEach(function(b){ b.addEventListener('click', function(){ printRecord(recById(b.getAttribute('data-id'))); }); });
     tbody.querySelectorAll('[data-act=notify]').forEach(function(b){ b.addEventListener('click', function(){ notifyRecord(recById(b.getAttribute('data-id'))); }); });
     tbody.querySelectorAll('[data-act=del]').forEach(function(b){ b.addEventListener('click', function(){ delRecord(b.getAttribute('data-id')); }); });
+    tbody.querySelectorAll('[data-act=editrec]').forEach(function(b){ b.addEventListener('click', function(){ editRecord(b.getAttribute('data-id')); }); });
+  }
+  var editAtencionId=null;
+  function fillFormFromRec(frm, rec){
+    frm.querySelectorAll('[name]').forEach(function(el){
+      var k=el.getAttribute('name'); if(!(k in rec)) { if(el.type==='checkbox'&&el.name==='servicios'){ el.checked=false; } return; }
+      var v=rec[k];
+      if(el.type==='checkbox' && el.name==='servicios'){ el.checked=Array.isArray(v) && v.indexOf(el.value)>=0; }
+      else if(el.type==='radio'){ el.checked=(String(el.value)===String(v)); }
+      else { el.value=(v==null?'':v); }
+    });
+  }
+  function editRecord(id){
+    var rec=recById(id); if(!rec) return;
+    activate('autorizacion');
+    var frm=document.getElementById('form-atencion');
+    frm.reset();
+    fillFormFromRec(frm, rec);
+    document.getElementById('f-solicitudId').value=rec.solicitudId||'';
+    document.getElementById('f-certificado').value=rec.certificado||'';
+    editAtencionId=id;
+    try{ syncProc(); }catch(e){}
+    var h=document.getElementById('form-atencion'); if(h&&h.scrollIntoView) h.scrollIntoView({behavior:'smooth',block:'start'});
+    var sb=frm.querySelector('button[type=submit]'); if(sb) sb.textContent='Guardar cambios';
+    var banner=document.getElementById('aut-edit-banner'); if(banner){ banner.style.display=''; banner.textContent='Editando autorización '+(rec.folio||rec.id)+'. Al guardar se actualiza (no crea una nueva).'; }
+  }
+  function cancelEditRecord(){
+    editAtencionId=null;
+    var frm=document.getElementById('form-atencion'); if(frm){ frm.reset(); var sb=frm.querySelector('button[type=submit]'); if(sb) sb.textContent='Registrar autorización'; }
+    document.getElementById('f-solicitudId').value=''; document.getElementById('f-certificado').value='';
+    var banner=document.getElementById('aut-edit-banner'); if(banner) banner.style.display='none';
+    try{ syncProc(); }catch(e){}
   }
   function val(v){ return (v==null||v==='')?'&nbsp;':esc(v); }
   function printRecord(rec){
@@ -1200,16 +1329,19 @@
     e.preventDefault(); var fd=new FormData(form);
     var data=formObj(form); data.servicios=fd.getAll('servicios');
     var btn=form.querySelector('button[type=submit]'); var old=btn.textContent; btn.disabled=true; btn.textContent='Guardando…';
+    var editing=!!editAtencionId;
     try{
-      var r=await api(RECORDS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}); if(!r.ok) throw new Error('HTTP '+r.status);
+      if(editing){ data.action='update'; data.id=editAtencionId; }
+      var r=await api(RECORDS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}); if(!r.ok){ var de={}; try{ de=await r.json(); }catch(_){ } throw new Error(de.error||('HTTP '+r.status)); }
       var created=await r.json();
-      if(data.solicitudId){ try{ await api(SOLIC,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'authorize', id:data.solicitudId, atencionId:created.id})}); }catch(e){} }
+      if(!editing && data.solicitudId){ try{ await api(SOLIC,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'authorize', id:data.solicitudId, atencionId:created.id})}); }catch(e){} }
       var afEl=document.getElementById('auth-file'); var af=afEl&&afEl.files[0]; var cref=(data.curp||data.certificado||data.numAfiliado||'');
-      if(af && cref){ try{ await uploadDoc(af, cref, 'Adjunto al registrar autorización'); }catch(e){ alert('La autorización se guardó, pero el documento no se pudo adjuntar: '+e.message); } }
-      form.reset(); document.getElementById('f-solicitudId').value=''; document.getElementById('f-certificado').value=''; var al=document.getElementById('auth-loaded'); if(al) al.textContent=''; syncProc(); loadRecords();
-      alert('Autorización registrada. La atención quedó en el registro'+(data.solicitudId?' y la solicitud pasó a «Autorización generada».':'.'));
+      if(af && cref){ try{ await uploadDoc(af, cref, editing?'Adjunto al editar autorización':'Adjunto al registrar autorización'); }catch(e){ alert('Se guardó, pero el documento no se pudo adjuntar: '+e.message); } }
+      editAtencionId=null;
+      form.reset(); document.getElementById('f-solicitudId').value=''; document.getElementById('f-certificado').value=''; var al=document.getElementById('auth-loaded'); if(al) al.textContent=''; var bn=document.getElementById('aut-edit-banner'); if(bn) bn.style.display='none'; btn.textContent='Registrar autorización'; syncProc(); loadRecords();
+      alert(editing?'Autorización actualizada.':('Autorización registrada. La atención quedó en el registro'+(data.solicitudId?' y la solicitud pasó a «Autorización generada».':'.')));
     }
-    catch(err){ alert('Error al registrar: '+err.message); } finally{ btn.disabled=false; btn.textContent=old; }
+    catch(err){ alert('Error al guardar: '+err.message); } finally{ btn.disabled=false; if(!editAtencionId && btn.textContent==='Guardando…') btn.textContent=old; }
   });
   function exportCSV(){
     if(!records.length){ alert('No hay registros para exportar.'); return; }
@@ -1579,6 +1711,294 @@
     });
   }
   (function(){ var panel=document.getElementById('admin-panel'); if(!panel||!window.MutationObserver) return; var tmo; var obs=new MutationObserver(function(){ clearTimeout(tmo); tmo=setTimeout(labelTables, 60); }); obs.observe(panel,{childList:true,subtree:true}); })();
+
+  // Cancelar edición de autorización
+  (function(){ var c=document.getElementById('aut-edit-cancel'); if(c) c.addEventListener('click', cancelEditRecord); })();
+
+  // ===================== BANCOS DE MÉXICO =====================
+  var BANCOS=[' actinver','afirme','albo','arcus','autofin','azteca','banamex (citibanamex)','banbajio','banca mifel','banco covalto','banco s3','bancoppel','bancrea','bankaool','banjercito','banorte','banregio','bansi','banxico','barclays','bbva méxico','bofa (bank of america)','caja pop mexicana','cibanco','compartamos','consubanco','credit suisse','deutsche bank','finterra','fondeadora','gbm','hey banco','hsbc','inbursa','intercam banco','invex','jp morgan','klar','kuspit','mercado pago (cuenca)','mizuho bank','monex','mufg bank','multiva','nafin','nu méxico','pagatodo','sabadell','santander','scotiabank','shinhan','stp','ual','ve por más (banco base)'].map(function(s){ return s.toUpperCase(); });
+  function fillBancos(sel, val){ if(!sel) return; sel.innerHTML='<option value="">Selecciona…</option>'+BANCOS.map(function(b){ return '<option'+(b===val?' selected':'')+'>'+b+'</option>'; }).join(''); if(val) sel.value=val; }
+
+  function money(n){ return '$'+Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function parseMoney(v){ var n=Number(String(v==null?'':v).replace(/[^0-9.]/g,'')); return isFinite(n)?n:0; }
+
+  // ===================== PROVEEDORES =====================
+  var PROV_CACHE=[]; var provInit=false;
+  function provTipoToggle(){
+    var t=document.getElementById('prov-tipo').value;
+    var esMed=(t==='Médico General'||t==='Especialista');
+    document.getElementById('grp-hosp').style.display=(t==='Hospital'||t==='Laboratorio')?'':'none';
+    document.getElementById('grp-med').style.display=esMed?'':'none';
+  }
+  function provUnified(o){
+    var med=(o.tipo==='Médico General'||o.tipo==='Especialista');
+    o.nombre = med ? (o.nombreDoctor||'') : (o.razonSocial||'');
+    o.rfc = med ? (o.rfcM||'') : (o.rfcH||'');
+    o.direccion = med ? (o.direccionM||'') : (o.direccionH||'');
+    o.telefono = med ? (o.telContacto||'') : (o.telHospital||'');
+    o.correo = med ? (o.correoM||'') : (o.correoH||'');
+    return o;
+  }
+  function provFormRead(){
+    var g=function(id){ var e=document.getElementById(id); return e?e.value.trim():''; };
+    var o={ tipo:g('prov-tipo'), programa:g('prov-programa'), fechaAlta:g('prov-fechaAlta'),
+      razonSocial:g('prov-razonSocial'), rfcH:g('prov-rfcH'), sucursal:g('prov-sucursal'), direccionH:g('prov-direccionH'),
+      telHospital:g('prov-telHospital'), nombreResp:g('prov-nombreResp'), telResp:g('prov-telResp'), correoH:g('prov-correoH'),
+      nombreDoctor:g('prov-nombreDoctor'), rfcM:g('prov-rfcM'), especialidad:g('prov-especialidad'), direccionM:g('prov-direccionM'),
+      telContacto:g('prov-telContacto'), correoM:g('prov-correoM'),
+      banco:g('prov-banco'), cuenta:g('prov-cuenta'), clabe:g('prov-clabe') };
+    return provUnified(o);
+  }
+  function provFormFill(o){
+    var s=function(id,v){ var e=document.getElementById(id); if(e) e.value=(v==null?'':v); };
+    s('prov-id',o.id); document.getElementById('prov-tipo').value=o.tipo||''; document.getElementById('prov-programa').value=o.programa||'PASEM';
+    s('prov-fechaAlta',o.fechaAlta); s('prov-razonSocial',o.razonSocial); s('prov-rfcH',o.rfcH); s('prov-sucursal',o.sucursal); s('prov-direccionH',o.direccionH);
+    s('prov-telHospital',o.telHospital); s('prov-nombreResp',o.nombreResp); s('prov-telResp',o.telResp); s('prov-correoH',o.correoH);
+    s('prov-nombreDoctor',o.nombreDoctor); s('prov-rfcM',o.rfcM); s('prov-especialidad',o.especialidad); s('prov-direccionM',o.direccionM);
+    s('prov-telContacto',o.telContacto); s('prov-correoM',o.correoM);
+    fillBancos(document.getElementById('prov-banco'), o.banco||''); s('prov-cuenta',o.cuenta); s('prov-clabe',o.clabe);
+    provTipoToggle();
+  }
+  function provReset(){
+    document.getElementById('form-prov').reset(); document.getElementById('prov-id').value='';
+    fillBancos(document.getElementById('prov-banco'),''); provTipoToggle();
+    document.getElementById('prov-save').textContent='Guardar proveedor';
+    document.getElementById('prov-cancel').style.display='none';
+    document.getElementById('prov-msg').textContent='';
+  }
+  async function loadProv(){
+    if(!provInit){
+      provInit=true;
+      fillBancos(document.getElementById('prov-banco'),'');
+      document.getElementById('prov-tipo').addEventListener('change', provTipoToggle);
+      document.getElementById('prov-cancel').addEventListener('click', provReset);
+      document.getElementById('form-prov').addEventListener('submit', saveProv);
+    }
+    var tb=document.querySelector('#prov-table tbody'); tb.innerHTML='<tr><td colspan="7">Cargando…</td></tr>';
+    try{ var r=await api(PROV); var items=await r.json(); if(!r.ok) throw new Error((items&&items.error)||('HTTP '+r.status));
+      PROV_CACHE=Array.isArray(items)?items:[]; renderProv();
+    }catch(e){ tb.innerHTML='<tr><td colspan="7">Error: '+esc(e.message)+'</td></tr>'; }
+  }
+  function renderProv(){
+    var tb=document.querySelector('#prov-table tbody');
+    document.getElementById('prov-count').textContent=PROV_CACHE.length+' proveedor(es).';
+    if(!PROV_CACHE.length){ tb.innerHTML='<tr><td colspan="7">Sin proveedores aún.</td></tr>'; return; }
+    tb.innerHTML='';
+    PROV_CACHE.forEach(function(o,idx){
+      var tr=document.createElement('tr');
+      tr.innerHTML='<td>'+esc(o.tipo||'')+'</td><td>'+esc(o.nombre||'')+'</td><td>'+esc(o.rfc||'')+'</td><td>'+esc(o.telefono||'')+'</td><td>'+esc(o.banco||'')+'</td><td>'+esc(o.programa||'')+'</td>'+
+        '<td style="white-space:nowrap"><button class="btn-mini" data-ped="'+idx+'">Editar</button> <button class="btn-del" data-pdel="'+idx+'">Eliminar</button></td>';
+      tb.appendChild(tr);
+    });
+    tb.querySelectorAll('[data-ped]').forEach(function(b){ b.addEventListener('click', function(){ provFormFill(PROV_CACHE[+b.getAttribute('data-ped')]); document.getElementById('prov-save').textContent='Guardar cambios'; document.getElementById('prov-cancel').style.display=''; window.scrollTo({top:0,behavior:'smooth'}); }); });
+    tb.querySelectorAll('[data-pdel]').forEach(function(b){ b.addEventListener('click', function(){ delProv(PROV_CACHE[+b.getAttribute('data-pdel')]); }); });
+  }
+  async function saveProv(e){
+    e.preventDefault();
+    var o=provFormRead();
+    if(!o.tipo){ document.getElementById('prov-msg').textContent='Selecciona el tipo de proveedor.'; return; }
+    if(!o.banco){ document.getElementById('prov-msg').textContent='Selecciona el banco.'; return; }
+    var id=document.getElementById('prov-id').value;
+    var payload=Object.assign({}, o); if(id){ payload.action='update'; payload.id=id; }
+    var btn=document.getElementById('prov-save'); btn.disabled=true; var old=btn.textContent; btn.textContent='Guardando…';
+    try{ var r=await api(PROV,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); var d=await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
+      document.getElementById('prov-msg').innerHTML='<span style="color:#1e9e52;font-weight:700;">✓ Proveedor guardado.</span>'; provReset(); loadProv();
+    }catch(err){ document.getElementById('prov-msg').textContent='Error: '+err.message; }
+    finally{ btn.disabled=false; btn.textContent=old; }
+  }
+  async function delProv(o){
+    if(!o) return; if(!confirm('¿Eliminar al proveedor "'+(o.nombre||'')+'"?')) return;
+    try{ var r=await api(PROV,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id:o.id})}); var d=await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status)); loadProv(); }
+    catch(e){ alert('No se pudo eliminar: '+e.message); }
+  }
+
+  // ===================== ORDEN DE PAGO =====================
+  var OP_AUTS=[]; var OP_CACHE=[]; var opInit=false; var N_RCP=5;
+  function provFilterFor(tipo){
+    if(tipo==='Gastos Hospitalarios') return function(pv){return pv.tipo==='Hospital';};
+    if(tipo==='Laboratorios') return function(pv){return pv.tipo==='Laboratorio';};
+    if(tipo==='Honorarios Médicos') return function(pv){return pv.tipo==='Médico General'||pv.tipo==='Especialista';};
+    if(tipo==='Médico General') return function(pv){return pv.tipo==='Médico General';};
+    if(tipo==='Médico Especialista') return function(pv){return pv.tipo==='Especialista';};
+    return function(){return false;};
+  }
+  function buildReceptores(pre){
+    var wrap=document.getElementById('op-receptores'); wrap.innerHTML='';
+    for(var i=0;i<N_RCP;i++){
+      var r=(pre&&pre[i])||{};
+      var div=document.createElement('div'); div.className='card'; div.style.cssText='padding:12px;margin-bottom:10px;border:1px solid var(--border);';
+      div.innerHTML='<div class="fgrid">'+
+        '<div class="field"><label>Receptor '+(i+1)+' — Tipo</label><select class="rcp-tipo"><option value="">—</option><option>Gastos Hospitalarios</option><option>Honorarios Médicos</option><option>Laboratorios</option><option>Médico General</option><option>Médico Especialista</option></select></div>'+
+        '<div class="field"><label>Proveedor</label><select class="rcp-prov"><option value="">—</option></select></div>'+
+        '<div class="field"><label>Monto a pagar</label><input class="rcp-monto" type="text" inputmode="decimal" placeholder="$ 0.00"></div>'+
+        '</div><div class="rcp-info" style="font-size:12px;color:var(--ink);margin-top:2px;"></div>';
+      wrap.appendChild(div);
+      (function(div,r){
+        var selT=div.querySelector('.rcp-tipo'), selP=div.querySelector('.rcp-prov'), inM=div.querySelector('.rcp-monto'), info=div.querySelector('.rcp-info');
+        function fillProv(selectedId){
+          var f=provFilterFor(selT.value); var list=PROV_CACHE.filter(f);
+          selP.innerHTML='<option value="">—</option>'+list.map(function(pv){ return '<option value="'+esc(pv.id)+'"'+(pv.id===selectedId?' selected':'')+'>'+esc(pv.nombre||'(sin nombre)')+(pv.rfc?(' · '+esc(pv.rfc)):'')+'</option>'; }).join('');
+        }
+        function showInfo(){
+          var pv=PROV_CACHE.filter(function(x){return x.id===selP.value;})[0];
+          info.innerHTML = pv ? ('Banco: <b>'+esc(pv.banco||'—')+'</b> · Cuenta: '+esc(pv.cuenta||'—')+' · CLABE: '+esc(pv.clabe||'—')+(pv.correo?(' · '+esc(pv.correo)):'')) : '';
+        }
+        selT.addEventListener('change', function(){ fillProv(''); showInfo(); });
+        selP.addEventListener('change', showInfo);
+        inM.addEventListener('input', recomputeOP);
+        if(r.tipo){ selT.value=r.tipo; fillProv(r.provId||''); }
+        if(r.monto!=null) inM.value=r.monto;
+        showInfo();
+      })(div,r);
+    }
+    recomputeOP();
+  }
+  function readReceptores(){
+    var out=[]; var divs=document.querySelectorAll('#op-receptores .card');
+    divs.forEach(function(div){
+      var tipo=div.querySelector('.rcp-tipo').value; var provId=div.querySelector('.rcp-prov').value; var monto=div.querySelector('.rcp-monto').value;
+      if(!tipo && !provId && !parseMoney(monto)) return;
+      var pv=PROV_CACHE.filter(function(x){return x.id===provId;})[0]||{};
+      out.push({ tipo:tipo, provId:provId, nombre:pv.nombre||'', rfc:pv.rfc||'', banco:pv.banco||'', cuenta:pv.cuenta||'', clabe:pv.clabe||'', correo:pv.correo||'', telefono:pv.telefono||'', monto:monto });
+    });
+    return out;
+  }
+  function currentReserva(){ return parseMoney(document.getElementById('op-reserva').value); }
+  function recomputeOP(){
+    var recs=readReceptores(); var suma=recs.reduce(function(a,r){return a+parseMoney(r.monto);},0);
+    var reserva=currentReserva(); var disp=reserva-suma;
+    var el=document.getElementById('op-resumen');
+    var color = (!(reserva>0)) ? '#b23b3b' : (suma>reserva+0.001 ? '#b23b3b' : '#1e9e52');
+    var msg='Reserva: <b>'+money(reserva)+'</b> · Suma de pagos: <b>'+money(suma)+'</b> · Disponible: <b style="color:'+color+'">'+money(disp)+'</b>';
+    if(!(reserva>0)) msg+=' <span style="color:#b23b3b;font-weight:700;">— Esta autorización no tiene Reserva; no se puede registrar.</span>';
+    else if(suma>reserva+0.001) msg+=' <span style="color:#b23b3b;font-weight:700;">— La suma supera la Reserva.</span>';
+    el.innerHTML=msg;
+    var btn=document.getElementById('op-save'); btn.disabled = !(reserva>0) || suma>reserva+0.001 || suma<=0;
+  }
+  function opAutLabel(rec){ return (rec.folio||rec.id)+' · '+(rec.paciente||'')+' · '+(rec.tipoTramite||''); }
+  function opFillFromAut(rec){
+    var s=function(id,v){ document.getElementById(id).value=(v==null?'':v); };
+    document.getElementById('op-datos').style.display = rec?'':'none';
+    if(!rec){ recomputeOP(); return; }
+    s('op-paciente',rec.paciente); s('op-curp',rec.curp); s('op-certificado',rec.numAfiliado||rec.certificado);
+    s('op-tipoTramite',rec.tipoTramite); s('op-servicio',rec.tipoServicio||rec.diagnostico||rec.procedimientoTecnica||'');
+    s('op-hospital',rec.hospital); s('op-fechaProc',rec.fechaProc);
+    s('op-reserva', rec.reserva?money(parseMoney(rec.reserva)):'');
+    recomputeOP();
+  }
+  async function initOrdenPago(){
+    if(!opInit){
+      opInit=true; buildReceptores(null);
+      document.getElementById('op-aut').addEventListener('change', function(){ var rec=OP_AUTS.filter(function(r){return r.id===this.value;}.bind(this))[0]; opFillFromAut(rec||null); });
+      document.getElementById('op-cancel').addEventListener('click', opReset);
+      document.getElementById('form-op').addEventListener('submit', saveOP);
+    }
+    // cargar proveedores (lectura) y autorizaciones
+    try{ var rp=await api(PROV); if(rp.ok) PROV_CACHE=await rp.json(); }catch(e){}
+    try{ var ra=await api(RECORDS); var recs=await ra.json(); if(ra.ok){ OP_AUTS=Array.isArray(recs)?recs:[]; var sel=document.getElementById('op-aut'); sel.innerHTML='<option value="">Selecciona una autorización…</option>'+OP_AUTS.map(function(r){ return '<option value="'+esc(r.id)+'">'+esc(opAutLabel(r))+'</option>'; }).join(''); } }catch(e){}
+    loadOrdenes();
+  }
+  function opReset(){
+    document.getElementById('form-op').reset(); document.getElementById('op-id').value='';
+    document.getElementById('op-datos').style.display='none';
+    buildReceptores(null);
+    document.getElementById('op-save').textContent='Registrar orden de pago';
+    document.getElementById('op-cancel').style.display='none';
+    document.getElementById('op-msg').textContent='';
+  }
+  async function saveOP(e){
+    e.preventDefault();
+    var autId=document.getElementById('op-aut').value;
+    if(!autId){ document.getElementById('op-msg').textContent='Selecciona una autorización.'; return; }
+    var rec=OP_AUTS.filter(function(r){return r.id===autId;})[0]||{};
+    var reserva=parseMoney(rec.reserva);
+    if(!(reserva>0)){ document.getElementById('op-msg').textContent='La autorización no tiene Reserva; no se puede registrar.'; return; }
+    var receptores=readReceptores();
+    var suma=receptores.reduce(function(a,r){return a+parseMoney(r.monto);},0);
+    if(suma<=0){ document.getElementById('op-msg').textContent='Captura al menos un receptor con monto.'; return; }
+    if(suma>reserva+0.001){ document.getElementById('op-msg').textContent='La suma ('+money(suma)+') supera la Reserva ('+money(reserva)+').'; return; }
+    var o={ autId:autId, folioAutorizacion:rec.folio||'', paciente:rec.paciente||'', curp:rec.curp||'', certificado:rec.numAfiliado||rec.certificado||'',
+      tipoTramite:rec.tipoTramite||'', servicio:document.getElementById('op-servicio').value, hospital:rec.hospital||'', fechaProc:rec.fechaProc||'',
+      programa:document.getElementById('op-programa').value, reserva:rec.reserva||'', receptores:receptores };
+    var id=document.getElementById('op-id').value; if(id){ o.action='update'; o.id=id; }
+    var btn=document.getElementById('op-save'); btn.disabled=true; var old=btn.textContent; btn.textContent='Guardando…';
+    try{ var r=await api(ORDENES,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o)}); var d=await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
+      document.getElementById('op-msg').innerHTML='<span style="color:#1e9e52;font-weight:700;">✓ Orden registrada ('+esc(d.folio||'')+').</span>'; opReset(); loadOrdenes();
+    }catch(err){ document.getElementById('op-msg').textContent='Error: '+err.message; }
+    finally{ btn.disabled=false; btn.textContent=old; }
+  }
+  async function loadOrdenes(){
+    var tb=document.querySelector('#op-table tbody'); if(!tb) return; tb.innerHTML='<tr><td colspan="7">Cargando…</td></tr>';
+    try{ var r=await api(ORDENES); var items=await r.json(); if(!r.ok) throw new Error((items&&items.error)||('HTTP '+r.status));
+      OP_CACHE=Array.isArray(items)?items:[]; renderOrdenes();
+    }catch(e){ tb.innerHTML='<tr><td colspan="7">Error: '+esc(e.message)+'</td></tr>'; }
+  }
+  function opTotal(o){ return (o.receptores||[]).reduce(function(a,r){return a+parseMoney(r.monto);},0); }
+  function renderOrdenes(){
+    var tb=document.querySelector('#op-table tbody');
+    document.getElementById('op-count').textContent=OP_CACHE.length+' orden(es).';
+    if(!OP_CACHE.length){ tb.innerHTML='<tr><td colspan="7">Sin órdenes aún.</td></tr>'; return; }
+    tb.innerHTML='';
+    OP_CACHE.forEach(function(o,idx){
+      var estado=o.estado==='solicitada'?'<span style="color:#1e9e52;font-weight:700;">Solicitada</span>':'Registrada';
+      var acts='<button class="btn-mini" data-oprint="'+idx+'">Imprimir</button> '+
+               '<button class="btn-mini" data-oedit="'+idx+'">Editar</button> '+
+               '<button class="btn-mini" data-osol="'+idx+'" style="color:#0E9A9C">Solicitar pago</button>'+
+               (isAdmin()?' <button class="btn-del" data-odel="'+idx+'">Eliminar</button>':'');
+      var tr=document.createElement('tr');
+      tr.innerHTML='<td>'+esc(o.folio||'')+'</td><td>'+esc(o.paciente||'')+'</td><td>'+esc(o.tipoTramite||'')+'</td><td>'+money(opTotal(o))+'</td><td>'+money(parseMoney(o.reserva))+'</td><td>'+estado+'</td><td style="white-space:nowrap">'+acts+'</td>';
+      tb.appendChild(tr);
+    });
+    tb.querySelectorAll('[data-oprint]').forEach(function(b){ b.addEventListener('click', function(){ printOrden(OP_CACHE[+b.getAttribute('data-oprint')]); }); });
+    tb.querySelectorAll('[data-oedit]').forEach(function(b){ b.addEventListener('click', function(){ editOrden(OP_CACHE[+b.getAttribute('data-oedit')]); }); });
+    tb.querySelectorAll('[data-osol]').forEach(function(b){ b.addEventListener('click', function(){ solicitarOrden(OP_CACHE[+b.getAttribute('data-osol')]); }); });
+    tb.querySelectorAll('[data-odel]').forEach(function(b){ b.addEventListener('click', function(){ delOrden(OP_CACHE[+b.getAttribute('data-odel')]); }); });
+  }
+  function editOrden(o){
+    if(!o) return; activate('ordenpago');
+    document.getElementById('op-id').value=o.id;
+    var sel=document.getElementById('op-aut');
+    if(!OP_AUTS.filter(function(r){return r.id===o.autId;})[0]){ var opt=document.createElement('option'); opt.value=o.autId; opt.textContent=o.folioAutorizacion+' · '+o.paciente; sel.appendChild(opt); OP_AUTS.push({id:o.autId,folio:o.folioAutorizacion,paciente:o.paciente,curp:o.curp,numAfiliado:o.certificado,tipoTramite:o.tipoTramite,tipoServicio:o.servicio,hospital:o.hospital,fechaProc:o.fechaProc,reserva:o.reserva}); }
+    sel.value=o.autId; var rec=OP_AUTS.filter(function(r){return r.id===o.autId;})[0]; opFillFromAut(rec);
+    document.getElementById('op-programa').value=o.programa||'PASEM';
+    buildReceptores(o.receptores||[]);
+    document.getElementById('op-save').textContent='Guardar cambios'; document.getElementById('op-cancel').style.display='';
+    recomputeOP(); window.scrollTo({top:0,behavior:'smooth'});
+  }
+  async function delOrden(o){
+    if(!o) return; if(!confirm('¿Eliminar la orden '+(o.folio||'')+'?')) return;
+    try{ var r=await api(ORDENES,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id:o.id})}); var d=await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status)); loadOrdenes(); }
+    catch(e){ alert('No se pudo eliminar: '+e.message); }
+  }
+  async function solicitarOrden(o){
+    if(!o) return;
+    if(!confirm('¿Enviar la solicitud de pago de la orden '+(o.folio||'')+' por correo al equipo de pagos?')) return;
+    try{ var r=await api(ORDENES,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'solicitar',id:o.id})}); var d=await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
+      alert('Solicitud de pago enviada ✅'); loadOrdenes();
+    }catch(e){ alert('No se pudo enviar: '+e.message); }
+  }
+  function printOrden(o){
+    if(!o) return; var w=window.open('','_blank'); if(!w){ alert('Permite ventanas emergentes.'); return; }
+    var snte=(document.querySelector('.logo-snte')||{}).src||''; var bida=(document.querySelector('.logo-bida')||{}).src||'';
+    var recs=(o.receptores||[]).filter(function(r){return parseMoney(r.monto)>0;}); var total=recs.reduce(function(a,r){return a+parseMoney(r.monto);},0);
+    var css='@page{size:letter;margin:12mm;}*{box-sizing:border-box;}body{font-family:Arial,Helvetica,sans-serif;color:#1f3442;font-size:10px;}'+
+      '.hd{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #DD6B20;padding-bottom:6px;}.hd img{height:36px;}'+
+      'h1{font-size:15px;color:#DD6B20;margin:8px 0 2px;}.bar{background:#DD6B20;color:#fff;font-weight:700;padding:5px 8px;border-radius:4px;margin:10px 0 4px;font-size:11px;}'+
+      'table{width:100%;border-collapse:collapse;font-size:9px;}th,td{border:1px solid #E2E8EA;padding:4px 6px;text-align:left;vertical-align:top;}th{background:#FFF3EA;}.r{text-align:right;}';
+    function row(k,v){ return '<tr><td style="width:34%;background:#FFF3EA;font-weight:bold;">'+k+'</td><td>'+(v||'—')+'</td></tr>'; }
+    var h='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Orden de pago '+esc(o.folio||'')+'</title><style>'+css+'</style></head><body>'+
+      '<div class="hd">'+(snte?'<img src="'+snte+'">':'')+'<div style="text-align:center"><div style="color:#767676;font-size:9px;">Programa de Apoyo de Servicios Médicos</div><div style="font-size:18px;font-weight:900;color:#DD6B20;">PASEM</div></div>'+(bida?'<img src="'+bida+'">':'')+'</div>'+
+      '<h1>Orden de pago '+esc(o.folio||'')+'</h1>'+
+      '<div class="bar">Datos del servicio</div><table>'+
+      row('Folio de autorización',esc(o.folioAutorizacion))+row('Paciente',esc(o.paciente))+row('CURP',esc(o.curp))+row('Certificado / afiliación',esc(o.certificado))+
+      row('Tipo de trámite',esc(o.tipoTramite))+row('Cirugía / servicio',esc(o.servicio))+row('Hospital / lugar',esc(o.hospital))+row('Fecha del procedimiento',esc(o.fechaProc))+
+      row('Programa',esc(o.programa))+row('Reserva autorizada',money(parseMoney(o.reserva)))+'</table>'+
+      '<div class="bar">Instrucción de pago a proveedores</div><table><thead><tr><th>#</th><th>Concepto</th><th>Proveedor</th><th>RFC</th><th>Banco</th><th>Cuenta</th><th>CLABE</th><th class="r">Monto</th></tr></thead><tbody>';
+    recs.forEach(function(r,i){ h+='<tr><td>'+(i+1)+'</td><td>'+esc(r.tipo||'')+'</td><td>'+esc(r.nombre||'')+'</td><td>'+esc(r.rfc||'')+'</td><td>'+esc(r.banco||'')+'</td><td>'+esc(r.cuenta||'')+'</td><td>'+esc(r.clabe||'')+'</td><td class="r">'+money(parseMoney(r.monto))+'</td></tr>'; });
+    h+='<tr><td colspan="7" class="r" style="font-weight:bold;background:#FFF3EA;">TOTAL A PAGAR</td><td class="r" style="font-weight:bold;background:#FFF3EA;">'+money(total)+'</td></tr>';
+    h+='</tbody></table><p style="color:#767676;font-size:8px;margin-top:14px;">MULTICATERIN, S.A. de C.V. — Pago a proveedores del programa PASEM. Generado '+esc(new Date().toLocaleString('es-MX'))+'.</p></body></html>';
+    w.document.open(); w.document.write(h); w.document.close(); w.focus(); setTimeout(function(){ w.print(); }, 400);
+  }
 
   // ===================== ALTAS RECIBIDAS =====================
   var ALTAS_CACHE=[];

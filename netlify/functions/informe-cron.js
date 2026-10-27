@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import BASE_RAW from './lib/beneficiarios.json';
 import { getStore } from '@netlify/blobs';
+import { schedule } from '@netlify/functions';
 const BASE = Array.isArray(BASE_RAW) ? BASE_RAW : [];
 
 function makeStore(name){ const siteID=process.env.NETLIFY_SITE_ID||process.env.SITE_ID; const token=process.env.NETLIFY_API_TOKEN||process.env.NETLIFY_AUTH_TOKEN; if(siteID&&token) return getStore({name,siteID,token}); return getStore(name); }
@@ -150,8 +151,8 @@ async function computeInforme(){
   }
 }
 
-// Función PROGRAMADA: se ejecuta sola según netlify.toml (9:00 am SLP = 15:00 UTC).
-export const handler = async () => {
+// Función PROGRAMADA: 9:00 am SLP = 15:00 UTC (declarada con el helper schedule).
+const run = async () => {
   try{
     const key=process.env.RESEND_API_KEY;
     if(!key){ console.log('informe-cron: falta RESEND_API_KEY'); return {statusCode:200}; }
@@ -172,3 +173,5 @@ export const handler = async () => {
   }catch(e){ console.log('informe-cron: excepción', String(e&&e.message?e.message:e)); }
   return {statusCode:200};
 };
+
+export const handler = schedule('0 15 * * *', run);

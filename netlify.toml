@@ -4,10 +4,7 @@
 
 [functions]
   node_bundler = "esbuild"
-
-# Envío automático del Informe a Dirección: todos los días 9:00 am SLP (UTC-6) = 15:00 UTC
-[functions."informe-cron"]
-  schedule = "0 15 * * *"
+# El horario del Informe a Dirección (informe-cron) se define en el propio código con el helper schedule('0 15 * * *') = 9:00 am SLP.
 
 [[redirects]]
   from = "/admin"

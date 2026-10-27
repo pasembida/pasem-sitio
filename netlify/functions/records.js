@@ -48,6 +48,15 @@ export const handler = async (event) => {
         await store.setJSON(nid,rec);
         return {statusCode:200,headers,body:JSON.stringify(rec)};
       }
+      // editar una autorización existente (conserva id, fecha y auditoría)
+      if(data.action==='update'){
+        const uid=data.id; if(!uid) return {statusCode:400,headers,body:JSON.stringify({error:'Falta id'})};
+        const rec=await store.get(uid,{type:'json'}); if(!rec) return {statusCode:404,headers,body:JSON.stringify({error:'Registro no encontrado'})};
+        const patch={...data}; delete patch.action; delete patch.id;
+        const merged={...rec, ...patch, id:uid, createdAt:rec.createdAt, capturadoPor:rec.capturadoPor, editadoPor:p.email||'usuario', editadoAt:new Date().toISOString()};
+        await store.setJSON(uid,merged);
+        return {statusCode:200,headers,body:JSON.stringify(merged)};
+      }
       const id='PASEM-'+Date.now().toString(36).toUpperCase()+'-'+Math.random().toString(36).slice(2,7).toUpperCase();
       const record={...data, id, createdAt:new Date().toISOString(), capturadoPor:p.email||'usuario'};
       await store.setJSON(id,record);
