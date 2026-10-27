@@ -2186,7 +2186,9 @@
     var dia=data.diario||[];
     h+='<div class="card" style="padding:16px;margin:0 0 14px;"><div style="font-family:var(--serif);color:var(--ochre);font-size:13px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">3. Acumulado diario</div>';
     if(dia.length){
-      h+='<div style="overflow-x:auto;"><canvas id="dia-chart" width="900" height="300" style="width:100%;max-width:920px;height:auto;"></canvas></div>';
+      h+='<div class="table-wrap"><table class="dtable"><thead><tr><th>Fecha</th><th>Altas</th><th>Titulares</th><th>Dependientes</th></tr></thead><tbody>';
+      dia.forEach(function(r){ h+='<tr><td>'+esc(r.fecha)+'</td><td>'+r.altas+'</td><td>'+r.titulares+'</td><td>'+r.dependientes+'</td></tr>'; });
+      h+='</tbody></table></div>';
     } else { h+='<div style="font-size:14px;color:var(--ink);">Aún no hay actualizaciones registradas.</div>'; }
     h+='</div>';
 
@@ -2223,7 +2225,6 @@
       INFORME_DATA=data; out.innerHTML=informeHTML(data);
       document.getElementById('btn-informe-print').style.display='';
       document.getElementById('btn-informe-send').style.display='';
-      drawDiaChartScreen(data.diario||[]);
     }catch(e){ out.innerHTML='<div style="padding:10px;color:#b23b3b;">Error: '+esc(e.message)+'</div>'; }
     finally{ btn.disabled=false; btn.textContent='Actualizar informe'; }
   }
@@ -2350,9 +2351,8 @@
         [[String(t.altas||0), String(t.titularesUnicos||0), String(t.dependientes||0), String(t.titularesEnPadron||0), String(t.titularesNuevos||0)]]);
 
       bar('3. Acumulado diario');
-      var durl=await diaChartDataURL(d.diario||[]);
-      if(durl){ var imgW=W-2*M; var imgH=imgW*300/900; try{ doc.addImage(durl,'PNG',M,y,imgW,imgH); }catch(e){} y+=imgH+4; }
-      else { doc.setFont('helvetica','normal'); doc.setTextColor(INK[0],INK[1],INK[2]); doc.setFontSize(9); doc.text('Sin datos.', M, y+2); y+=6; }
+      var dia2=(d.diario||[]).map(function(r){ return [r.fecha, String(r.altas), String(r.titulares), String(r.dependientes)]; });
+      table(['Fecha','Altas','Titulares','Dependientes'], dia2.length?dia2:[['Sin datos','','','']]);
 
       var nv=d.nuevos||[];
       bar('4. Titulares nuevos para inclusión ('+nv.length+')');

@@ -22,20 +22,7 @@ function informeEmailHtml(d){
   const bar=(txt)=>'<tr><td colspan="6" style="background:#DD6B20;color:#fff;font-weight:700;font-size:13px;padding:8px 10px;">'+esc(txt)+'</td></tr>';
   function tbl(headers, rows){ return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:12px;margin:6px 0 14px;"><thead><tr>'+headers.map(h=>'<th style="border:1px solid #E2E8EA;background:#FFF3EA;padding:6px 8px;text-align:left;">'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+rows+'</tbody></table>'; }
   const kpi=(l,v)=>'<td style="border:1px solid #E2E8EA;border-radius:8px;padding:8px 10px;"><div style="font-size:10px;text-transform:uppercase;color:#767676;font-weight:700;">'+esc(l)+'</div><div style="font-size:20px;font-weight:900;color:#1f3442;">'+esc(v)+'</div></td>';
-  // Acumulado diario como gráfica de barras agrupadas (imagen por URL para que se vea en el correo)
-  const dias=(d.diario||[]);
-  let diaChartImg='<div style="font-size:13px;color:#555;padding:4px 2px;">Sin datos.</div>';
-  if(dias.length){
-    const cfg={ type:'bar',
-      data:{ labels:dias.map(r=>r.fecha), datasets:[
-        {label:'Altas', data:dias.map(r=>r.altas), backgroundColor:'#DD6B20'},
-        {label:'Titulares', data:dias.map(r=>r.titulares), backgroundColor:'#14B4B6'},
-        {label:'Dependientes', data:dias.map(r=>r.dependientes), backgroundColor:'#1F3442'}
-      ]},
-      options:{ plugins:{legend:{position:'top'}}, scales:{ x:{grid:{display:false}}, y:{beginAtZero:true} } } };
-    const url='https://quickchart.io/chart?bkg=white&w=640&h=270&c='+encodeURIComponent(JSON.stringify(cfg));
-    diaChartImg='<img src="'+url+'" alt="Acumulado diario (altas, titulares, dependientes)" width="640" style="width:100%;max-width:640px;height:auto;border:1px solid #E9EEF0;border-radius:8px;">';
-  }
+  const diaRows=(d.diario||[]).map(r=>'<tr><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(r.fecha)+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+r.altas+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+r.titulares+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+r.dependientes+'</td></tr>').join('')||'<tr><td colspan="4" style="border:1px solid #E2E8EA;padding:6px 8px;">Sin datos.</td></tr>';
   const nvRows=(d.nuevos||[]).map(r=>'<tr><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(r.curp)+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(r.nombre||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(r.contacto||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(r.telefono||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(fmtFecha(r.fecha))+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+(r.docs||0)+'</td></tr>').join('')||'<tr><td colspan="6" style="border:1px solid #E2E8EA;padding:6px 8px;">Todos los titulares que actualizaron ya están en el padrón.</td></tr>';
   const money=n=>'$'+Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
   const prList=(d.procedimientos||[]);
@@ -58,7 +45,7 @@ function informeEmailHtml(d){
         bar('2. Actualizaciones de datos recibidas')+
         '<tr><td colspan="6" style="padding:6px 0 12px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="6"><tr>'+kpi('Altas',Number(t.altas||0).toLocaleString('es-MX'))+kpi('Titulares únicos',Number(t.titularesUnicos||0).toLocaleString('es-MX'))+kpi('Dependientes',Number(t.dependientes||0).toLocaleString('es-MX'))+kpi('Ya en padrón',Number(t.titularesEnPadron||0).toLocaleString('es-MX'))+kpi('Nuevos',Number(t.titularesNuevos||0).toLocaleString('es-MX'))+'</tr></table></td></tr>'+
         bar('3. Acumulado diario')+
-        '<tr><td colspan="6" style="padding:6px 2px 14px;">'+diaChartImg+'</td></tr>'+
+        '<tr><td colspan="6">'+tbl(['Fecha','Altas','Titulares','Dependientes'], diaRows)+'</td></tr>'+
         bar('4. Titulares nuevos para inclusión ('+(d.nuevos||[]).length+')')+
         '<tr><td colspan="6">'+tbl(['CURP','Nombre','Contacto','Teléfono','Fecha','Docs'], nvRows)+'</td></tr>'+
         bar('5. Procedimientos abiertos ('+(d.procedimientos||[]).length+')')+
@@ -177,6 +164,7 @@ export const handler = async (event) => {
     }catch(e){}
 
     let reservaTotal=0;
+    const solById={}; sols.forEach(s=>{ if(s&&s.id) solById[s.id]=s; });
     const procedimientos=sols.filter(s=>Number(s.estado||1)<4).map(s=>{
       const et=s.etapas||{}; let maxEt='1'; Object.keys(et).forEach(k=>{ if(['1','2','3','4'].indexOf(k)>=0 && Number(k)>Number(maxEt)) maxEt=k; });
       const desde=et[maxEt]||s.updatedAt||s.createdAt;
@@ -190,7 +178,35 @@ export const handler = async (event) => {
         etapa:maxEt, etapaLabel:ETAPAS[maxEt]||maxEt, desde:desde||'', diasEnEtapa:dias,
         createdAt:s.createdAt||''
       };
-    }).sort((a,b)=>(b.diasEnEtapa||0)-(a.diasEnEtapa||0));
+    });
+
+    // También incluir AUTORIZACIONES (atenciones) que no tengan una solicitud abierta con el mismo folio,
+    // para no perder casos ya autorizados (p. ej. registrados directo en Autorización o con solicitud cerrada).
+    const foliosProc=new Set(procedimientos.map(x=>norm(x.folio)));
+    try{
+      const as=makeStore('pasem-atenciones');
+      const { blobs }=await as.list();
+      const atns=(await Promise.all(blobs.map(b=>as.get(b.key,{type:'json'})))).filter(Boolean);
+      atns.forEach(a=>{
+        const f=norm(a.folio); if(!f || foliosProc.has(f)) return;
+        foliosProc.add(f);
+        // reserva: la de la atención o, si no, la de su solicitud de origen
+        let reservaStr=a.reserva||''; if(!(parseMoney(reservaStr)>0) && a.solicitudId && solById[a.solicitudId]) reservaStr=solById[a.solicitudId].reserva||'';
+        const reservaNum=parseMoney(reservaStr); reservaTotal+=reservaNum;
+        const desde=a.fechaAutorizacion||a.editadoAt||a.createdAt;
+        const dias=desde?Math.floor((now-new Date(desde).getTime())/86400000):null;
+        procedimientos.push({
+          folio:a.folio||'', folioEleonor:a.folioEleonor||'', nombre:a.paciente||'', certificado:a.numAfiliado||a.certificado||'',
+          tipoTramite:a.tipoTramite||'', comentarios:a.observaciones||'',
+          reserva:reservaStr||'', reservaNum:reservaNum,
+          pagoSolicitado: foliosPagoSolicitado.has(f),
+          etapa:'3', etapaLabel:ETAPAS['3'], desde:desde||'', diasEnEtapa:dias,
+          createdAt:a.createdAt||''
+        });
+      });
+    }catch(e){}
+
+    procedimientos.sort((a,b)=>(b.diasEnEtapa||0)-(a.diasEnEtapa||0));
 
     return {
       generatedAt:new Date().toISOString(),
