@@ -174,6 +174,22 @@
   .tab:hover{background:var(--cream-2);}
   .tab.active{background:var(--cream-2); color:var(--brown-deep); border-color:var(--ochre); box-shadow:inset 0 -2px 0 var(--brown);}
   .tabpane{display:none;} .tabpane.active{display:block;}
+  /* Menú lateral agrupado */
+  .admin-layout{display:flex; gap:16px; align-items:flex-start;}
+  .admin-content{flex:1; min-width:0;}
+  .side-nav{flex:0 0 244px; background:var(--cream); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:10px;}
+  .nav-group{font-size:10px; text-transform:uppercase; letter-spacing:.6px; color:var(--ink); font-weight:800; opacity:.6; margin:10px 10px 4px;}
+  .side-nav .tab{display:block; width:100%; text-align:left; background:transparent; border:1px solid transparent; border-left:3px solid transparent; border-radius:10px; padding:10px 12px; margin:2px 0; font-family:var(--sans); font-size:14px; font-weight:600; color:var(--ink); cursor:pointer;}
+  .side-nav .tab:hover{background:var(--cream-2);}
+  .side-nav .tab.active{background:var(--cream-2); color:var(--brown-deep); font-weight:800; border-left-color:var(--brown); box-shadow:none;}
+  .nav-toggle{display:none; width:100%; text-align:left; background:var(--cream-2); border:1px solid var(--border); border-radius:10px; padding:11px 14px; font-weight:800; font-size:15px; color:var(--brown-deep); cursor:pointer;}
+  @media(max-width:860px){
+    .admin-layout{flex-direction:column;}
+    .side-nav{width:100%; flex:none;}
+    .nav-toggle{display:block;}
+    .nav-list{display:none; margin-top:8px;}
+    .side-nav.open .nav-list{display:block;}
+  }
   .admin-form fieldset{border:1px solid var(--border); border-radius:10px; padding:14px 18px 18px; margin:0 0 16px;}
   .admin-form legend{font-family:var(--serif); color:var(--ochre); font-size:13px; text-transform:uppercase; letter-spacing:.6px; padding:0 6px;}
   .fgrid{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
@@ -347,20 +363,29 @@
         <div style="display:flex;gap:8px;"><button class="btn btn-primary" id="mail-send" type="button">Enviar</button><button class="btn btn-ghost" id="mail-cancel" type="button">Cancelar</button></div>
       </div></div>
 
-      <div class="tabs" id="tabs">
-        <button class="tab active" type="button" data-pane="solicitud">Solicitud de servicio</button>
-        <button class="tab" type="button" data-pane="autorizacion">Autorización</button>
-        <button class="tab" type="button" data-pane="consulta">Consulta de beneficiarios</button>
-        <button class="tab" type="button" data-pane="altatitular">Alta titular</button>
-        <button class="tab" type="button" data-pane="dependientes">Dependientes</button>
-        <button class="tab" type="button" data-pane="descargas">Descargas</button>
-        <button class="tab" type="button" data-pane="expediente">Expediente</button>
-        <button class="tab" type="button" data-pane="altas">Altas recibidas</button>
-        <button class="tab" type="button" data-pane="ordenpago">Orden de pago</button>
-        <button class="tab" type="button" data-pane="proveedores" id="tab-prov-btn" style="display:none;">Proveedores</button>
-        <button class="tab" type="button" data-pane="informe" id="tab-informe-btn" style="display:none;">Informe a Dirección</button>
-        <button class="tab" type="button" data-pane="usuarios" id="tab-usuarios-btn" style="display:none;">Usuarios</button>
-      </div>
+      <div class="admin-layout">
+        <nav class="side-nav" id="tabs">
+          <button type="button" id="nav-toggle" class="nav-toggle">☰ Menú</button>
+          <div class="nav-list" id="nav-list">
+            <div class="nav-group">Trámites</div>
+            <button class="tab active" type="button" data-pane="solicitud">Solicitud de servicio</button>
+            <button class="tab" type="button" data-pane="autorizacion">Autorización</button>
+            <button class="tab" type="button" data-pane="ordenpago">Orden de pago</button>
+            <div class="nav-group">Padrón</div>
+            <button class="tab" type="button" data-pane="consulta">Consulta de beneficiarios</button>
+            <button class="tab" type="button" data-pane="altatitular">Alta titular</button>
+            <button class="tab" type="button" data-pane="dependientes">Dependientes</button>
+            <button class="tab" type="button" data-pane="altas">Altas recibidas</button>
+            <div class="nav-group">Documentos</div>
+            <button class="tab" type="button" data-pane="expediente">Expediente</button>
+            <button class="tab" type="button" data-pane="descargas">Descargas</button>
+            <div class="nav-group">Gestión</div>
+            <button class="tab" type="button" data-pane="proveedores" id="tab-prov-btn" style="display:none;">Proveedores</button>
+            <button class="tab" type="button" data-pane="informe" id="tab-informe-btn" style="display:none;">Informe a Dirección</button>
+            <button class="tab" type="button" data-pane="usuarios" id="tab-usuarios-btn" style="display:none;">Usuarios</button>
+          </div>
+        </nav>
+        <div class="admin-content">
 
       <!-- Registrar atención -->
       <!-- Solicitud de servicio -->
@@ -958,6 +983,8 @@
           </table>
         </div>
       </div>
+      </div><!-- /.admin-content -->
+      </div><!-- /.admin-layout -->
 
     </div>
   </div>
@@ -1056,6 +1083,15 @@
   document.getElementById('ben-q').addEventListener('keydown', function(e){ if(e.key==='Enter') searchBen(); });
   // pestañas
   document.querySelectorAll('.tab').forEach(function(b){ b.addEventListener('click', function(){ activate(b.getAttribute('data-pane')); }); });
+  (function(){
+    var nav=document.getElementById('tabs'), toggle=document.getElementById('nav-toggle');
+    if(!nav) return;
+    function label(){ var a=nav.querySelector('.tab.active'); return a?a.textContent.trim():'Menú'; }
+    function refresh(){ if(toggle) toggle.textContent='☰ '+label(); }
+    if(toggle) toggle.addEventListener('click', function(){ nav.classList.toggle('open'); });
+    nav.querySelectorAll('.tab').forEach(function(b){ b.addEventListener('click', function(){ nav.classList.remove('open'); setTimeout(refresh,0); }); });
+    window.__navRefresh=refresh; refresh();
+  })();
   function activate(name){
     document.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('active', t.getAttribute('data-pane')===name); });
     document.querySelectorAll('.tabpane').forEach(function(p){ p.classList.toggle('active', p.id==='pane-'+name); });
@@ -1813,7 +1849,13 @@
   }
 
   // ===================== ORDEN DE PAGO =====================
-  var OP_AUTS=[]; var OP_CACHE=[]; var opInit=false; var N_RCP=5;
+  var OP_AUTS=[]; var OP_CACHE=[]; var opInit=false; var N_RCP=5; var SOLIC_MAP={}; var OP_RESERVA_STR='';
+  function reservaDeAut(rec){
+    // 1) la de la autorización; 2) si no, la de su solicitud de origen (la reserva viaja por todo el proceso)
+    if(rec && parseMoney(rec.reserva)>0) return rec.reserva;
+    if(rec && rec.solicitudId && SOLIC_MAP[rec.solicitudId] && parseMoney(SOLIC_MAP[rec.solicitudId].reserva)>0) return SOLIC_MAP[rec.solicitudId].reserva;
+    return (rec&&rec.reserva)||'';
+  }
   function provFilterFor(tipo){
     if(tipo==='Gastos Hospitalarios') return function(pv){return pv.tipo==='Hospital';};
     if(tipo==='Laboratorios') return function(pv){return pv.tipo==='Laboratorio';};
@@ -1883,7 +1925,8 @@
     s('op-paciente',rec.paciente); s('op-curp',rec.curp); s('op-certificado',rec.numAfiliado||rec.certificado);
     s('op-tipoTramite',rec.tipoTramite); s('op-servicio',rec.tipoServicio||rec.diagnostico||rec.procedimientoTecnica||'');
     s('op-hospital',rec.hospital); s('op-fechaProc',rec.fechaProc);
-    s('op-reserva', rec.reserva?money(parseMoney(rec.reserva)):'');
+    OP_RESERVA_STR=reservaDeAut(rec);
+    s('op-reserva', parseMoney(OP_RESERVA_STR)>0?money(parseMoney(OP_RESERVA_STR)):'');
     recomputeOP();
   }
   async function initOrdenPago(){
@@ -1893,8 +1936,9 @@
       document.getElementById('op-cancel').addEventListener('click', opReset);
       document.getElementById('form-op').addEventListener('submit', saveOP);
     }
-    // cargar proveedores (lectura) y autorizaciones
+    // cargar proveedores (lectura), solicitudes (para reserva de origen) y autorizaciones
     try{ var rp=await api(PROV); if(rp.ok) PROV_CACHE=await rp.json(); }catch(e){}
+    try{ var rsol=await api(SOLIC); if(rsol.ok){ var sols=await rsol.json(); SOLIC_MAP={}; (Array.isArray(sols)?sols:[]).forEach(function(s){ if(s&&s.id) SOLIC_MAP[s.id]=s; }); } }catch(e){}
     try{ var ra=await api(RECORDS); var recs=await ra.json(); if(ra.ok){ OP_AUTS=Array.isArray(recs)?recs:[]; var sel=document.getElementById('op-aut'); sel.innerHTML='<option value="">Selecciona una autorización…</option>'+OP_AUTS.map(function(r){ return '<option value="'+esc(r.id)+'">'+esc(opAutLabel(r))+'</option>'; }).join(''); } }catch(e){}
     loadOrdenes();
   }
@@ -1911,15 +1955,15 @@
     var autId=document.getElementById('op-aut').value;
     if(!autId){ document.getElementById('op-msg').textContent='Selecciona una autorización.'; return; }
     var rec=OP_AUTS.filter(function(r){return r.id===autId;})[0]||{};
-    var reserva=parseMoney(rec.reserva);
-    if(!(reserva>0)){ document.getElementById('op-msg').textContent='La autorización no tiene Reserva; no se puede registrar.'; return; }
+    var reservaStr=reservaDeAut(rec); var reserva=parseMoney(reservaStr);
+    if(!(reserva>0)){ document.getElementById('op-msg').textContent='La autorización no tiene Reserva (ni en la solicitud de origen); no se puede registrar.'; return; }
     var receptores=readReceptores();
     var suma=receptores.reduce(function(a,r){return a+parseMoney(r.monto);},0);
     if(suma<=0){ document.getElementById('op-msg').textContent='Captura al menos un receptor con monto.'; return; }
     if(suma>reserva+0.001){ document.getElementById('op-msg').textContent='La suma ('+money(suma)+') supera la Reserva ('+money(reserva)+').'; return; }
     var o={ autId:autId, folioAutorizacion:rec.folio||'', paciente:rec.paciente||'', curp:rec.curp||'', certificado:rec.numAfiliado||rec.certificado||'',
       tipoTramite:rec.tipoTramite||'', servicio:document.getElementById('op-servicio').value, hospital:rec.hospital||'', fechaProc:rec.fechaProc||'',
-      programa:document.getElementById('op-programa').value, reserva:rec.reserva||'', receptores:receptores };
+      programa:document.getElementById('op-programa').value, reserva:reservaStr||'', receptores:receptores };
     var id=document.getElementById('op-id').value; if(id){ o.action='update'; o.id=id; }
     var btn=document.getElementById('op-save'); btn.disabled=true; var old=btn.textContent; btn.textContent='Guardando…';
     try{ var r=await api(ORDENES,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o)}); var d=await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
