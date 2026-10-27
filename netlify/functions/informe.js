@@ -22,21 +22,20 @@ function informeEmailHtml(d){
   const bar=(txt)=>'<tr><td colspan="6" style="background:#DD6B20;color:#fff;font-weight:700;font-size:13px;padding:8px 10px;">'+esc(txt)+'</td></tr>';
   function tbl(headers, rows){ return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:12px;margin:6px 0 14px;"><thead><tr>'+headers.map(h=>'<th style="border:1px solid #E2E8EA;background:#FFF3EA;padding:6px 8px;text-align:left;">'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+rows+'</tbody></table>'; }
   const kpi=(l,v)=>'<td style="border:1px solid #E2E8EA;border-radius:8px;padding:8px 10px;"><div style="font-size:10px;text-transform:uppercase;color:#767676;font-weight:700;">'+esc(l)+'</div><div style="font-size:20px;font-weight:900;color:#1f3442;">'+esc(v)+'</div></td>';
-  // Acumulado diario compacto: una celda por día (Fecha · A/T/D) en varias columnas para ahorrar espacio
-  const COLS=3, tdpad='padding:5px 8px;border:1px solid #E2E8EA;font-size:12px;vertical-align:top;';
+  // Acumulado diario como gráfica de barras agrupadas (imagen por URL para que se vea en el correo)
   const dias=(d.diario||[]);
-  let diaCompact='';
+  let diaChartImg='<div style="font-size:13px;color:#555;padding:4px 2px;">Sin datos.</div>';
   if(dias.length){
-    for(let i=0;i<dias.length;i+=COLS){
-      diaCompact+='<tr>';
-      for(let c=0;c<COLS;c++){ const r=dias[i+c];
-        diaCompact += r
-          ? '<td style="'+tdpad+'"><b>'+esc(r.fecha)+'</b><br><span style="color:#555;">Altas '+r.altas+' · Tit. '+r.titulares+' · Dep. '+r.dependientes+'</span></td>'
-          : '<td style="'+tdpad+'border:none;"></td>';
-      }
-      diaCompact+='</tr>';
-    }
-  } else { diaCompact='<tr><td style="'+tdpad+'">Sin datos.</td></tr>'; }
+    const cfg={ type:'bar',
+      data:{ labels:dias.map(r=>r.fecha), datasets:[
+        {label:'Altas', data:dias.map(r=>r.altas), backgroundColor:'#DD6B20'},
+        {label:'Titulares', data:dias.map(r=>r.titulares), backgroundColor:'#14B4B6'},
+        {label:'Dependientes', data:dias.map(r=>r.dependientes), backgroundColor:'#1F3442'}
+      ]},
+      options:{ plugins:{legend:{position:'top'}}, scales:{ x:{grid:{display:false}}, y:{beginAtZero:true} } } };
+    const url='https://quickchart.io/chart?bkg=white&w=640&h=270&c='+encodeURIComponent(JSON.stringify(cfg));
+    diaChartImg='<img src="'+url+'" alt="Acumulado diario (altas, titulares, dependientes)" width="640" style="width:100%;max-width:640px;height:auto;border:1px solid #E9EEF0;border-radius:8px;">';
+  }
   const nvRows=(d.nuevos||[]).map(r=>'<tr><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(r.curp)+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(r.nombre||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(r.contacto||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(r.telefono||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(fmtFecha(r.fecha))+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+(r.docs||0)+'</td></tr>').join('')||'<tr><td colspan="6" style="border:1px solid #E2E8EA;padding:6px 8px;">Todos los titulares que actualizaron ya están en el padrón.</td></tr>';
   const money=n=>'$'+Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
   const prList=(d.procedimientos||[]);
@@ -59,7 +58,7 @@ function informeEmailHtml(d){
         bar('2. Actualizaciones de datos recibidas')+
         '<tr><td colspan="6" style="padding:6px 0 12px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="6"><tr>'+kpi('Altas',Number(t.altas||0).toLocaleString('es-MX'))+kpi('Titulares únicos',Number(t.titularesUnicos||0).toLocaleString('es-MX'))+kpi('Dependientes',Number(t.dependientes||0).toLocaleString('es-MX'))+kpi('Ya en padrón',Number(t.titularesEnPadron||0).toLocaleString('es-MX'))+kpi('Nuevos',Number(t.titularesNuevos||0).toLocaleString('es-MX'))+'</tr></table></td></tr>'+
         bar('3. Acumulado diario')+
-        '<tr><td colspan="6"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:4px 0 14px;">'+diaCompact+'</table></td></tr>'+
+        '<tr><td colspan="6" style="padding:6px 2px 14px;">'+diaChartImg+'</td></tr>'+
         bar('4. Titulares nuevos para inclusión ('+(d.nuevos||[]).length+')')+
         '<tr><td colspan="6">'+tbl(['CURP','Nombre','Contacto','Teléfono','Fecha','Docs'], nvRows)+'</td></tr>'+
         bar('5. Procedimientos abiertos ('+(d.procedimientos||[]).length+')')+
