@@ -413,6 +413,8 @@
               <div class="field"><label>CURP</label><input name="curp" type="text" maxlength="18"></div>
               <div class="field"><label>RFC</label><input name="rfc" type="text" maxlength="13"></div>
               <div class="field"><label>No. de certificado</label><input name="certificado" type="text"></div>
+              <div class="field full"><label>¿Para quién es el servicio? <span style="font-weight:400;color:var(--ink)">(titular o dependiente)</span></label>
+                <select id="sol-benef"><option value="">Busca primero al titular con la lupa…</option></select></div>
               <div class="field"><label>Tipo de trámite</label>
                 <select name="tipoTramite" id="sol-tipo"><option value="">Selecciona…</option><option>CIRUGIA</option><option>APOYO PARTO O CESAREA</option><option>CONSULTA MEDICO GENERAL</option><option>CONSULTA ESPECIALISTA</option><option>ESTUDIO LABORATORIO</option></select></div>
               <div class="field"><label>Presupuesto de Reserva (tope máximo de apoyo)</label><input name="reserva" type="text" inputmode="decimal" placeholder="$ 0.00"></div>
@@ -939,6 +941,11 @@
             <div class="field"><label>Número de cuenta</label><input id="prov-cuenta" type="text" inputmode="numeric"></div>
             <div class="field"><label>CLABE (18 dígitos)</label><input id="prov-clabe" type="text" inputmode="numeric" maxlength="18"></div>
           </div>
+          <div style="font-family:var(--serif);color:var(--ochre);font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin:12px 0 6px;">Documentos del proveedor (para la orden de pago)</div>
+          <div class="fgrid">
+            <div class="field"><label>Constancia de Situación Fiscal (CSF)</label><input id="prov-csf" type="file" accept=".pdf,.jpg,.jpeg,.png"><div id="prov-csf-cur" style="font-size:12px;color:var(--ink);margin-top:4px;"></div></div>
+            <div class="field"><label>Estado de cuenta</label><input id="prov-edo" type="file" accept=".pdf,.jpg,.jpeg,.png"><div id="prov-edo-cur" style="font-size:12px;color:var(--ink);margin-top:4px;"></div></div>
+          </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;">
             <button class="btn btn-primary" type="submit" id="prov-save">Guardar proveedor</button>
             <button class="btn btn-ghost" type="button" id="prov-cancel" style="display:none;">Cancelar edición</button>
@@ -974,6 +981,11 @@
               <div class="field"><label>Programa</label><select id="op-programa"><option>PASEM</option><option>ABC</option></select></div>
               <div class="field"><label>Reserva autorizada</label><input id="op-reserva" type="text" readonly style="font-weight:800;color:var(--brown-deep);"></div>
             </div>
+          </div>
+          <div style="font-family:var(--serif);color:var(--ochre);font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px;">Pago</div>
+          <div class="fgrid">
+            <div class="field"><label>Fecha de pago programada</label><input id="op-fechapago" type="date"></div>
+            <div class="field"><label>Factura a pagar (PDF/XML)</label><input id="op-factura" type="file" accept=".pdf,.xml,.jpg,.jpeg,.png"><div id="op-factura-cur" style="font-size:12px;color:var(--ink);margin-top:4px;"></div></div>
           </div>
           <div style="font-family:var(--serif);color:var(--ochre);font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px;">Receptores del pago (hasta 5)</div>
           <div id="op-receptores"></div>
@@ -1052,7 +1064,7 @@
 </script>
 <script>
 (function(){
-  var AUTH='/.netlify/functions/auth', RECORDS='/.netlify/functions/records', USERS='/.netlify/functions/usuarios', BEN='/.netlify/functions/beneficiarios', EXPED='/.netlify/functions/expediente', ALTAS='/.netlify/functions/alta', INFORME='/.netlify/functions/informe', PROV='/.netlify/functions/proveedores', ORDENES='/.netlify/functions/ordenes';
+  var AUTH='/.netlify/functions/auth', RECORDS='/.netlify/functions/records', USERS='/.netlify/functions/usuarios', BEN='/.netlify/functions/beneficiarios', EXPED='/.netlify/functions/expediente', ALTAS='/.netlify/functions/alta', INFORME='/.netlify/functions/informe', PROV='/.netlify/functions/proveedores', ORDENES='/.netlify/functions/ordenes', DOCUP='/.netlify/functions/docs-upload';
   var SOLIC='/.netlify/functions/solicitudes', DEPS='/.netlify/functions/dependientes', TITU='/.netlify/functions/titulares';
   var STAGE_MAIL='telesecundariaseccion26@pasem.com';
   var MAIL='/.netlify/functions/enviar-correo', MAIL_TO='telesecundariaseccion26@pasem.com', MAIL_CC='bidaseguros@bidaseguros.org';
@@ -1482,6 +1494,23 @@
   if(document.getElementById('exp-q')) document.getElementById('exp-q').addEventListener('keydown', function(e){ if(e.key==='Enter') loadExp(); });
   function fileToB64(file){ return new Promise(function(res,rej){ var fr=new FileReader(); fr.onload=function(){ res(String(fr.result).split(',')[1]); }; fr.onerror=rej; fr.readAsDataURL(file); }); }
   var MAXDOC=15*1024*1024;
+  // Subir un documento a un almacén específico (proveedores / órdenes). Devuelve {docId, filename}.
+  async function uploadDocTo(store, file){
+    if(file.size>MAXDOC) throw new Error('El archivo supera 15 MB.');
+    var b64=await fileToB64(file);
+    var CH=3000000; var total=Math.max(1, Math.ceil(b64.length/CH));
+    var ri=await api(DOCUP,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'init',store:store,filename:file.name,type:file.type||'application/octet-stream',size:file.size,chunks:total})});
+    var di=await ri.json(); if(!ri.ok) throw new Error(di.error||'No se pudo iniciar la subida'); var docId=di.docId;
+    for(var i=0;i<total;i++){ var part=b64.slice(i*CH,(i+1)*CH); var r=await api(DOCUP,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'chunk',store:store,docId:docId,index:i,data:part})}); if(!r.ok) throw new Error('Error al subir la parte '+(i+1)); }
+    return { docId:docId, filename:file.name };
+  }
+  async function downloadDocFrom(store, docId, fallbackName){
+    try{ var r=await api(DOCUP+'?store='+encodeURIComponent(store)+'&doc='+encodeURIComponent(docId)); var d=await r.json(); if(!r.ok) throw new Error(d.error||'No se pudo descargar');
+      var bin=atob(d.data); var bytes=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+      var blob=new Blob([bytes],{type:d.type||'application/octet-stream'}); var url=URL.createObjectURL(blob);
+      var a=document.createElement('a'); a.href=url; a.download=d.filename||fallbackName||'documento'; a.click(); URL.revokeObjectURL(url);
+    }catch(e){ alert('No se pudo descargar: '+e.message); }
+  }
   async function uploadDoc(file, ref, desc){
     if(file.size>MAXDOC) throw new Error('El archivo supera 15 MB.');
     var b64=await fileToB64(file);
@@ -1541,7 +1570,9 @@
     if(!fd.get('nombre')){ alert('Escribe el nombre.'); return; }
     if(!fd.get('certificado')){ alert('Relaciona el certificado: busca al beneficiario en la base con la lupa 🔍 (el folio se genera a partir del certificado).'); return; }
     if(!fd.get('tipoTramite')){ alert('Selecciona el tipo de trámite.'); return; }
-    var payload={ action:'create', folioEleonor:fd.get('folioEleonor'), nombre:fd.get('nombre'), curp:fd.get('curp'), rfc:fd.get('rfc'), certificado:fd.get('certificado'), tipoTramite:fd.get('tipoTramite'), reserva:fd.get('reserva'), fechaTramite:fd.get('fechaTramite'), comentarios:fd.get('comentarios') };
+    var ben=beneficiarioSeleccionado();
+    var payload={ action:'create', folioEleonor:fd.get('folioEleonor'), nombre:fd.get('nombre'), curp:fd.get('curp'), rfc:fd.get('rfc'), certificado:fd.get('certificado'), tipoTramite:fd.get('tipoTramite'), reserva:fd.get('reserva'), fechaTramite:fd.get('fechaTramite'), comentarios:fd.get('comentarios'),
+      beneficiarioNombre: ben?ben.nombre:(fd.get('nombre')||''), beneficiarioCurp: ben?ben.curp:(fd.get('curp')||''), beneficiarioParentesco: ben?ben.parentesco:'Titular', beneficiarioCert: ben?ben.cert:(fd.get('certificado')||'') };
     var btn=formSol.querySelector('button[type=submit]'), old=btn.textContent; btn.disabled=true; btn.textContent='Guardando…';
     try{
       var r=await api(SOLIC,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
@@ -1636,15 +1667,18 @@
     f.querySelector('[name=certificado]').value=s.certificado||'';
     f.querySelector('[name=folio]').value=s.folio||'';
     f.querySelector('[name=folioEleonor]').value=s.folioEleonor||'';
-    f.querySelector('[name=paciente]').value=s.nombre||'';
-    f.querySelector('[name=curp]').value=s.curp||'';
+    var benNom=s.beneficiarioNombre||s.nombre||''; var benCurp=s.beneficiarioCurp||s.curp||''; var benPar=s.beneficiarioParentesco||'Titular';
+    f.querySelector('[name=paciente]').value=benNom;
+    f.querySelector('[name=curp]').value=benCurp;
     f.querySelector('[name=rfc]').value=s.rfc||'';
     var na=f.querySelector('[name=numAfiliado]'); if(na) na.value=s.certificado||'';
+    var tit=f.querySelector('[name=titular]'); if(tit) tit.value=s.nombre||'';
+    var par=f.querySelector('[name=parentesco]'); if(par) par.value=benPar;
     var ts=f.querySelector('[name=tipoTramite]'); if(ts) ts.value=s.tipoTramite||'';
     var rv=f.querySelector('[name=reserva]'); if(rv) rv.value=s.reserva||'';
     var ob=f.querySelector('[name=observaciones]'); if(ob && s.comentarios) ob.value=s.comentarios;
     syncProc();
-    var al=document.getElementById('auth-loaded'); if(al) al.textContent='Solicitud cargada: '+(s.nombre||'')+' · '+(s.tipoTramite||'');
+    var al=document.getElementById('auth-loaded'); if(al) al.textContent='Solicitud cargada · Paciente: '+benNom+(benPar&&benPar!=='Titular'?(' ('+benPar+' de '+(s.nombre||'')+')'):'')+' · '+(s.tipoTramite||'');
     try{ document.getElementById('administracion').scrollIntoView(); }catch(e){}
   }
   async function loadAuthPicker(){
@@ -1666,11 +1700,23 @@
       pick.innerHTML='';
       d.results.slice(0,15).forEach(function(x){ var it=document.createElement('div'); it.className='it';
         it.innerHTML='<strong>'+esc(x.cert)+' — '+esc(x.nombre)+'</strong><small>CURP: '+esc(x.curp||'—')+' · RFC: '+esc(x.rfc||'—')+'</small>';
-        it.addEventListener('click', function(){ if(map.nombre) formEl.querySelector('[name='+map.nombre+']').value=up(x.nombre||''); if(map.curp) formEl.querySelector('[name='+map.curp+']').value=up(x.curp||''); if(map.rfc) formEl.querySelector('[name='+map.rfc+']').value=up(x.rfc||''); if(map.cert) formEl.querySelector('[name='+map.cert+']').value=(x.cert||''); pick.classList.remove('open'); pick.innerHTML=''; });
+        it.addEventListener('click', function(){ if(map.nombre) formEl.querySelector('[name='+map.nombre+']').value=up(x.nombre||''); if(map.curp) formEl.querySelector('[name='+map.curp+']').value=up(x.curp||''); if(map.rfc) formEl.querySelector('[name='+map.rfc+']').value=up(x.rfc||''); if(map.cert) formEl.querySelector('[name='+map.cert+']').value=(x.cert||''); pick.classList.remove('open'); pick.innerHTML=''; if(typeof map.onPick==='function'){ try{ map.onPick(x); }catch(e){} } });
         pick.appendChild(it); });
     }catch(e){ pick.innerHTML='<div class="it">Error: '+esc(e.message)+'</div>'; }
   }
-  if(document.getElementById('btn-sol-pick')) document.getElementById('btn-sol-pick').addEventListener('click', function(){ benSearchInto('s-nombre','sol-pick', formSol, {nombre:'nombre',curp:'curp',rfc:'rfc',cert:'certificado'}); });
+  if(document.getElementById('btn-sol-pick')) document.getElementById('btn-sol-pick').addEventListener('click', function(){ benSearchInto('s-nombre','sol-pick', formSol, {nombre:'nombre',curp:'curp',rfc:'rfc',cert:'certificado', onPick:function(x){ loadBenefOptions(x.cert||'', x.nombre||'', x.curp||''); }}); });
+  // Lista "¿Para quién es el servicio?" = titular + sus dependientes de la base
+  var SOL_BENEF=[];
+  async function loadBenefOptions(cert, titNombre, titCurp){
+    var sel=document.getElementById('sol-benef'); if(!sel) return;
+    SOL_BENEF=[{ nombre:titNombre||'', curp:titCurp||'', parentesco:'Titular', cert:cert||'' }];
+    if(cert){
+      try{ var r=await api(DEPS+'?q='+encodeURIComponent(cert)); if(r.ok){ var deps=await r.json(); (Array.isArray(deps)?deps:[]).forEach(function(d){ if(String(d.titularCert||'').toUpperCase()===String(cert).toUpperCase()){ SOL_BENEF.push({ nombre:d.nombre||'', curp:d.curp||'', parentesco:d.parentesco||'Dependiente', cert:d.cert||'' }); } }); } }catch(e){}
+    }
+    sel.innerHTML=SOL_BENEF.map(function(x,i){ return '<option value="'+i+'">'+esc(x.parentesco+': '+x.nombre+(x.cert?(' ('+x.cert+')'):''))+'</option>'; }).join('');
+    sel.value='0';
+  }
+  function beneficiarioSeleccionado(){ var sel=document.getElementById('sol-benef'); if(!sel||!SOL_BENEF.length||sel.value==='') return null; return SOL_BENEF[parseInt(sel.value,10)]||null; }
 
   // ===== Dependientes =====
   var formDep=document.getElementById('form-dep'), depStatus=document.getElementById('dep-status'), depTbody=document.querySelector('#dep-table tbody');
@@ -1832,7 +1878,8 @@
   function verSolicitud(s){
     if(!s) return; var cancel=(s.cancelada||s.estado===9); var e=etapaActual(s);
     document.getElementById('ver-title').textContent='Solicitud · '+(s.folio||'');
-    var pairs=[['Folio',s.folio],['Folio ELEONOR',s.folioEleonor],['Nombre',s.nombre],['Certificado',s.certificado],['CURP',s.curp],['RFC',s.rfc],
+    var pairs=[['Folio',s.folio],['Folio ELEONOR',s.folioEleonor],['Titular',s.nombre],['Certificado',s.certificado],['CURP (titular)',s.curp],['RFC',s.rfc],
+      ['Beneficiario del servicio', s.beneficiarioNombre?(s.beneficiarioNombre+(s.beneficiarioParentesco&&s.beneficiarioParentesco!=='Titular'?(' — '+s.beneficiarioParentesco):' (Titular)')):''],['CURP (beneficiario)', s.beneficiarioCurp],
       ['Tipo de trámite',s.tipoTramite],['Fecha del trámite',s.fechaTramite],['Presupuesto de Reserva', s.reserva?money(parseMoney(s.reserva)):''],
       ['Etapa actual', cancel?'CANCELADA':(e?(e+'. '+etLabel(s.tipoTramite,e)):'—')],['Autorizada', s.autorizada?'Sí':'No'],
       ['Comentarios', s.comentarios],['Capturó', s.capturadoPor],['Fecha de registro', fmtDate(s.createdAt)]];
@@ -1921,7 +1968,18 @@
     s('prov-nombreDoctor',o.nombreDoctor); s('prov-rfcM',o.rfcM); s('prov-especialidad',o.especialidad); s('prov-direccionM',o.direccionM);
     s('prov-telContacto',o.telContacto); s('prov-correoM',o.correoM);
     fillBancos(document.getElementById('prov-banco'), o.banco||''); s('prov-cuenta',o.cuenta); s('prov-clabe',o.clabe);
+    PROV_EDIT_DOCS={ csfDoc:o.csfDoc||null, edoCuentaDoc:o.edoCuentaDoc||null };
+    docCur('prov-csf-cur', o.csfDoc, 'pasem-prov-docs');
+    docCur('prov-edo-cur', o.edoCuentaDoc, 'pasem-prov-docs');
+    var fc=document.getElementById('prov-csf'); if(fc) fc.value=''; var fe=document.getElementById('prov-edo'); if(fe) fe.value='';
     provTipoToggle();
+  }
+  var PROV_EDIT_DOCS={ csfDoc:null, edoCuentaDoc:null };
+  function docCur(elId, doc, store){
+    var el=document.getElementById(elId); if(!el) return;
+    if(doc && doc.docId){ el.innerHTML='Actual: '+esc(doc.filename||'documento')+' <button type="button" class="btn-mini" data-dl="'+esc(store)+'|'+esc(doc.docId)+'|'+esc(doc.filename||'documento')+'">Descargar</button>';
+      var b=el.querySelector('[data-dl]'); if(b) b.addEventListener('click', function(){ var p=b.getAttribute('data-dl').split('|'); downloadDocFrom(p[0],p[1],p[2]); }); }
+    else el.textContent='Sin documento.';
   }
   function provReset(){
     document.getElementById('form-prov').reset(); document.getElementById('prov-id').value='';
@@ -1929,6 +1987,8 @@
     document.getElementById('prov-save').textContent='Guardar proveedor';
     document.getElementById('prov-cancel').style.display='none';
     document.getElementById('prov-msg').textContent='';
+    PROV_EDIT_DOCS={ csfDoc:null, edoCuentaDoc:null };
+    var c1=document.getElementById('prov-csf-cur'); if(c1) c1.textContent=''; var c2=document.getElementById('prov-edo-cur'); if(c2) c2.textContent='';
   }
   async function loadProv(){
     if(!provInit){
@@ -1971,8 +2031,15 @@
     if(!o.banco){ document.getElementById('prov-msg').textContent='Selecciona el banco.'; return; }
     var id=document.getElementById('prov-id').value;
     var payload=Object.assign({}, o); if(id){ payload.action='update'; payload.id=id; }
+    // conservar documentos existentes y subir los nuevos si se eligieron
+    payload.csfDoc=PROV_EDIT_DOCS.csfDoc||null; payload.edoCuentaDoc=PROV_EDIT_DOCS.edoCuentaDoc||null;
     var btn=document.getElementById('prov-save'); btn.disabled=true; var old=btn.textContent; btn.textContent='Guardando…';
-    try{ var r=await api(PROV,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); var d=await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
+    try{
+      var fCsf=document.getElementById('prov-csf'); var fEdo=document.getElementById('prov-edo');
+      if(fCsf && fCsf.files[0]){ btn.textContent='Subiendo CSF…'; payload.csfDoc=await uploadDocTo('pasem-prov-docs', fCsf.files[0]); }
+      if(fEdo && fEdo.files[0]){ btn.textContent='Subiendo estado de cuenta…'; payload.edoCuentaDoc=await uploadDocTo('pasem-prov-docs', fEdo.files[0]); }
+      btn.textContent='Guardando…';
+      var r=await api(PROV,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); var d=await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
       document.getElementById('prov-msg').innerHTML='<span style="color:#1e9e52;font-weight:700;">✓ Proveedor guardado.</span>'; provReset(); loadProv();
     }catch(err){ document.getElementById('prov-msg').textContent='Error: '+err.message; }
     finally{ btn.disabled=false; btn.textContent=old; }
@@ -2077,6 +2144,7 @@
     try{ var ra=await api(RECORDS); var recs=await ra.json(); if(ra.ok){ OP_AUTS=Array.isArray(recs)?recs:[]; var sel=document.getElementById('op-aut'); sel.innerHTML='<option value="">Selecciona una autorización…</option>'+OP_AUTS.map(function(r){ return '<option value="'+esc(r.id)+'">'+esc(opAutLabel(r))+'</option>'; }).join(''); } }catch(e){}
     loadOrdenes();
   }
+  var OP_EDIT_FACTURA=null;
   function opReset(){
     document.getElementById('form-op').reset(); document.getElementById('op-id').value='';
     document.getElementById('op-datos').style.display='none';
@@ -2084,6 +2152,7 @@
     document.getElementById('op-save').textContent='Registrar orden de pago';
     document.getElementById('op-cancel').style.display='none';
     document.getElementById('op-msg').textContent='';
+    OP_EDIT_FACTURA=null; var fc=document.getElementById('op-factura-cur'); if(fc) fc.textContent=''; var ff=document.getElementById('op-factura'); if(ff) ff.value=''; var fp=document.getElementById('op-fechapago'); if(fp) fp.value='';
   }
   async function saveOP(e){
     e.preventDefault();
@@ -2098,10 +2167,15 @@
     if(suma>reserva+0.001){ document.getElementById('op-msg').textContent='La suma ('+money(suma)+') supera la Reserva ('+money(reserva)+').'; return; }
     var o={ autId:autId, folioAutorizacion:rec.folio||'', paciente:rec.paciente||'', curp:rec.curp||'', certificado:rec.numAfiliado||rec.certificado||'',
       tipoTramite:rec.tipoTramite||'', servicio:document.getElementById('op-servicio').value, hospital:rec.hospital||'', fechaProc:rec.fechaProc||'',
-      programa:document.getElementById('op-programa').value, reserva:reservaStr||'', receptores:receptores };
+      programa:document.getElementById('op-programa').value, reserva:reservaStr||'', fechaPago:document.getElementById('op-fechapago').value||'',
+      facturaDoc:OP_EDIT_FACTURA||null, receptores:receptores };
     var id=document.getElementById('op-id').value; if(id){ o.action='update'; o.id=id; }
     var btn=document.getElementById('op-save'); btn.disabled=true; var old=btn.textContent; btn.textContent='Guardando…';
-    try{ var r=await api(ORDENES,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o)}); var d=await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
+    try{
+      var fFac=document.getElementById('op-factura');
+      if(fFac && fFac.files[0]){ btn.textContent='Subiendo factura…'; o.facturaDoc=await uploadDocTo('pasem-orden-docs', fFac.files[0]); }
+      btn.textContent='Guardando…';
+      var r=await api(ORDENES,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o)}); var d=await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
       document.getElementById('op-msg').innerHTML='<span style="color:#1e9e52;font-weight:700;">✓ Orden registrada ('+esc(d.folio||'')+').</span>'; opReset(); loadOrdenes();
     }catch(err){ document.getElementById('op-msg').textContent='Error: '+err.message; }
     finally{ btn.disabled=false; btn.textContent=old; }
@@ -2149,6 +2223,8 @@
     if(!OP_AUTS.filter(function(r){return r.id===o.autId;})[0]){ var opt=document.createElement('option'); opt.value=o.autId; opt.textContent=o.folioAutorizacion+' · '+o.paciente; sel.appendChild(opt); OP_AUTS.push({id:o.autId,folio:o.folioAutorizacion,paciente:o.paciente,curp:o.curp,numAfiliado:o.certificado,tipoTramite:o.tipoTramite,tipoServicio:o.servicio,hospital:o.hospital,fechaProc:o.fechaProc,reserva:o.reserva}); }
     sel.value=o.autId; var rec=OP_AUTS.filter(function(r){return r.id===o.autId;})[0]; opFillFromAut(rec);
     document.getElementById('op-programa').value=o.programa||'PASEM';
+    document.getElementById('op-fechapago').value=o.fechaPago||'';
+    OP_EDIT_FACTURA=o.facturaDoc||null; docCur('op-factura-cur', o.facturaDoc, 'pasem-orden-docs'); var ff=document.getElementById('op-factura'); if(ff) ff.value='';
     buildReceptores(o.receptores||[]);
     document.getElementById('op-save').textContent='Guardar cambios'; document.getElementById('op-cancel').style.display='';
     recomputeOP(); window.scrollTo({top:0,behavior:'smooth'});
@@ -2180,7 +2256,7 @@
       '<div class="bar">Datos del servicio</div><table>'+
       row('Folio de autorización',esc(o.folioAutorizacion))+row('Paciente',esc(o.paciente))+row('CURP',esc(o.curp))+row('Certificado / afiliación',esc(o.certificado))+
       row('Tipo de trámite',esc(o.tipoTramite))+row('Cirugía / servicio',esc(o.servicio))+row('Hospital / lugar',esc(o.hospital))+row('Fecha del procedimiento',esc(o.fechaProc))+
-      row('Programa',esc(o.programa))+row('Reserva autorizada',money(parseMoney(o.reserva)))+'</table>'+
+      row('Fecha de pago programada',esc(o.fechaPago))+row('Programa',esc(o.programa))+row('Reserva autorizada',money(parseMoney(o.reserva)))+(o.facturaDoc&&o.facturaDoc.filename?row('Factura adjunta',esc(o.facturaDoc.filename)):'')+'</table>'+
       '<div class="bar">Instrucción de pago a proveedores</div><table><thead><tr><th>#</th><th>Concepto</th><th>Proveedor</th><th>RFC</th><th>Banco</th><th>Cuenta</th><th>CLABE</th><th class="r">Monto</th></tr></thead><tbody>';
     recs.forEach(function(r,i){ h+='<tr><td>'+(i+1)+'</td><td>'+esc(r.tipo||'')+'</td><td>'+esc(r.nombre||'')+'</td><td>'+esc(r.rfc||'')+'</td><td>'+esc(r.banco||'')+'</td><td>'+esc(r.cuenta||'')+'</td><td>'+esc(r.clabe||'')+'</td><td class="r">'+money(parseMoney(r.monto))+'</td></tr>'; });
     h+='<tr><td colspan="7" class="r" style="font-weight:bold;background:#FFF3EA;">TOTAL A PAGAR</td><td class="r" style="font-weight:bold;background:#FFF3EA;">'+money(total)+'</td></tr>';
@@ -2266,7 +2342,10 @@
   async function darDeAltaDesdeAlta(idx, btn){
     var a=ALTAS_CACHE[idx]; if(!a) return; var f=a.fields||{};
     var nombre=titularName(f)||f['Contacto - Nombre']||''; var curp=f['Titular - CURP']||f['Contacto - CURP']||'';
-    if(!confirm('¿Dar de alta en la base a "'+nombre+'" (CURP '+curp+')?\nSe le asignará un certificado PASEM nuevo.')) return;
+    var deps=dependientesDeAlta(f);
+    var msg='¿Dar de alta en la base a "'+nombre+'" (CURP '+curp+')?\nSe le asignará un certificado PASEM nuevo.';
+    if(deps.length) msg+='\n\nSe registrarán también '+deps.length+' dependiente(s): '+deps.map(function(x){return x.nombre+' ('+x.parentesco+')';}).join(', ')+'.';
+    if(!confirm(msg)) return;
     if(btn){ btn.disabled=true; btn.textContent='Dando de alta…'; }
     var payload={ action:'create',
       nombre:nombre, curp:curp, rfc:f['Titular - RFC']||'',
@@ -2278,9 +2357,28 @@
     try{
       var r=await api(TITU,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
       var d=await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
-      alert('Titular dado de alta con certificado '+(d.cert||'')+'.');
+      var cert=d.cert||'';
+      var okDeps=0, failDeps=[];
+      for(var k=0;k<deps.length;k++){
+        var dp=Object.assign({ action:'create', titularCert:cert, origen:'alta-en-linea', altaId:a.id }, deps[k]);
+        try{ var rd=await api(DEPS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dp)}); var dj=await rd.json(); if(!rd.ok) throw new Error(dj.error||('HTTP '+rd.status)); okDeps++; }
+        catch(ed){ failDeps.push(deps[k].nombre+': '+ed.message); }
+      }
+      var resumen='Titular dado de alta con certificado '+cert+'.';
+      if(deps.length) resumen+='\nDependientes registrados: '+okDeps+' de '+deps.length+'.';
+      if(failDeps.length) resumen+='\n\nNo se pudieron registrar:\n- '+failDeps.join('\n- ');
+      alert(resumen);
       if(btn){ btn.textContent='Dado de alta ✓'; }
     }catch(e){ alert('No se pudo dar de alta: '+e.message); if(btn){ btn.disabled=false; btn.textContent='Dar de alta'; } }
+  }
+  // Reúne los dependientes capturados en una alta en línea (cónyuge, hijos, padres)
+  function dependientesDeAlta(f){
+    f=f||{}; var deps=[]; var nom=function(a,b,c){ return [a,b,c].filter(Boolean).join(' ').trim(); };
+    var cony=nom(f['Cónyuge - Nombres'],f['Cónyuge - Primer apellido'],f['Cónyuge - Segundo apellido']);
+    if(cony || f['Cónyuge - CURP']) deps.push({ nombre:cony||'(Cónyuge)', parentesco:'Cónyuge', curp:f['Cónyuge - CURP']||'', fechaNacimiento:f['Cónyuge - Fecha nacimiento']||'', sexo:f['Cónyuge - Sexo']||'' });
+    for(var i=1;i<=4;i++){ var hn=f['Hijo '+i+' - Nombre']; if(hn && String(hn).trim()){ deps.push({ nombre:hn, parentesco:'Hijo(a)', curp:f['Hijo '+i+' - CURP']||'', fechaNacimiento:f['Hijo '+i+' - Fecha nacimiento']||'', estudia:f['Hijo '+i+' - Estudia']||'' }); } }
+    for(var j=1;j<=2;j++){ var pn=f['Padre '+j+' - Nombre']; if(pn && String(pn).trim()){ deps.push({ nombre:pn, parentesco:f['Padre '+j+' - Parentesco']||'Padre/Madre', curp:f['Padre '+j+' - CURP']||'', fechaNacimiento:f['Padre '+j+' - Fecha nacimiento']||'' }); } }
+    return deps;
   }
   function openAltaDetail(idx){
     var a=ALTAS_CACHE[idx]; if(!a) return; var f=a.fields||{}; var docs=a.docs||[];

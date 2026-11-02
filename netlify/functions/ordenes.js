@@ -7,6 +7,13 @@ function verify(token){ if(!token) return null; const parts=token.split('.'); if
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 const parseMoney=v=>{ const n=Number(String(v==null?'':v).replace(/[^0-9.]/g,'')); return isFinite(n)?n:0; };
 const money=n=>'$'+Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+async function readDoc(storeName, docId){
+  if(!docId) return null;
+  try{ const st=makeStore(storeName); const meta=await st.get('meta:'+docId,{type:'json'}); if(!meta) return null;
+    let b64=''; for(let i=0;i<(meta.chunks||1);i++){ const c=await st.get('chunk:'+docId+':'+i,{type:'text'}); if(c) b64+=c; }
+    if(!b64) return null; return { filename:meta.filename||'documento', content:b64, size:b64.length };
+  }catch(e){ return null; }
+}
 
 function validar(o){
   const reserva=parseMoney(o.reserva);
@@ -55,6 +62,7 @@ function correoHtml(o){
         row('Cirugía / servicio', o.servicio)+
         row('Hospital / lugar', o.hospital)+
         row('Fecha del procedimiento', o.fechaProc)+
+        row('Fecha de pago programada', o.fechaPago)+
         row('Programa', o.programa)+
         row('Reserva autorizada', money(parseMoney(o.reserva)))+
       '</table></td></tr>'+
@@ -98,7 +106,23 @@ export const handler = async (event) => {
         const to=(process.env.PAGO_TO||'gustavocabrera@bidaseguros.org,gcocampo@bidaseguros.org,gloriavergara@bidaseguros.org,rodrigoperez@bidaseguros.org').split(',').map(s=>s.trim()).filter(Boolean);
         o.solicitadoPor=p.email||'usuario';
         const total=(o.receptores||[]).filter(r=>parseMoney(r.monto)>0).reduce((a,r)=>a+parseMoney(r.monto),0);
-        const payload={ from, to, subject:'PASEM — Solicitud de Orden de Pago '+(o.folio||'')+' · '+(o.paciente||'')+' · '+money(total), html: correoHtml(o) };
+        // Adjuntos: factura de la orden + CSF y estado de cuenta de cada proveedor receptor
+        const attachments=[]; const faltantes=[]; let totalB64=0;
+        const push=(doc, etiqueta)=>{ if(!doc){ if(etiqueta) faltantes.push(etiqueta); return; } totalB64+=doc.content.length; if(totalB64<=26_000_000) attachments.push({ filename: doc.filename, content: doc.content }); else faltantes.push(etiqueta+' (excede el límite de tamaño del correo)'); };
+        // factura
+        push(await readDoc('pasem-orden-docs', o.facturaDoc && o.facturaDoc.docId), o.facturaDoc?'Factura':null);
+        // docs de proveedores (sin duplicar el mismo proveedor)
+        const provStore=makeStore('pasem-proveedores'); const vistos={};
+        for(const r of (o.receptores||[])){ if(!r.provId || vistos[r.provId]) continue; vistos[r.provId]=1;
+          const pv=await provStore.get('prov:'+r.provId,{type:'json'}); if(!pv) continue;
+          if(pv.csfDoc&&pv.csfDoc.docId) push(await readDoc('pasem-prov-docs', pv.csfDoc.docId), 'CSF de '+(pv.nombre||''));
+          else faltantes.push('CSF de '+(pv.nombre||''));
+          if(pv.edoCuentaDoc&&pv.edoCuentaDoc.docId) push(await readDoc('pasem-prov-docs', pv.edoCuentaDoc.docId), 'Estado de cuenta de '+(pv.nombre||''));
+          else faltantes.push('Estado de cuenta de '+(pv.nombre||''));
+        }
+        let htmlFull=correoHtml(o);
+        if(faltantes.length){ htmlFull=htmlFull.replace('</body>', '<div style="max-width:680px;margin:0 auto 18px;padding:10px 14px;background:#FFF7E6;border:1px solid #f0d08a;border-radius:8px;font-family:Arial;color:#7a5b00;font-size:12px;">Documentos no adjuntados (verificar en el expediente del proveedor): '+faltantes.map(esc).join('; ')+'.</div></body>'); }
+        const payload={ from, to, subject:'PASEM — Solicitud de Orden de Pago '+(o.folio||'')+' · '+(o.paciente||'')+' · '+money(total), html: htmlFull, attachments: attachments.length?attachments:undefined };
         const r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify(payload)});
         const rd=await r.json().catch(()=>({}));
         if(!r.ok) return {statusCode:502,headers,body:JSON.stringify({error:(rd&&(rd.message||rd.name))||('Resend '+r.status)})};
