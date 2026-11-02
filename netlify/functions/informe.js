@@ -10,7 +10,13 @@ function verify(token){ if(!token) return null; const parts=token.split('.'); if
 
 const norm=s=>String(s==null?'':s).trim().toUpperCase();
 const dayOf=iso=>{ try{ return new Date(iso).toISOString().slice(0,10); }catch(e){ return ''; } };
-const ETAPAS={'1':'Solicitud de atención','2':'Solicitud de documentación','3':'Autorización generada','4':'Servicio otorgado'};
+const ETAPAS_SETS={
+  _def:{'1':'Solicitud de atención','2':'Solicitud de documentación','3':'Autorización generada','4':'Servicio otorgado'},
+  esp:{'1':'Solicitud de servicio','2':'Autorización/coordinación con médico','3':'Cita programada (en espera de atención)','4':'Servicio otorgado'},
+  est:{'1':'Solicitud de servicio','2':'Autorización','3':'Cita programada','4':'Servicio otorgado'}
+};
+function setEtapas(t){ t=String(t||'').toUpperCase(); if(t.indexOf('CONSULTA')>=0) return ETAPAS_SETS.esp; if(t.indexOf('ESTUDIO')>=0||t.indexOf('LABORATORIO')>=0) return ETAPAS_SETS.est; return ETAPAS_SETS._def; }
+function etiquetaEtapa(t,et){ return setEtapas(t)[String(et)]||String(et); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function fmtFecha(iso){ try{ return new Date(iso).toLocaleString('es-MX',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); }catch(e){ return iso||''; } }
 function diasTxt(d){ if(d==null) return '—'; if(d===0) return 'Hoy'; return d+(d===1?' día':' días'); }
@@ -175,7 +181,7 @@ export const handler = async (event) => {
         tipoTramite:s.tipoTramite||'', comentarios:s.comentarios||'',
         reserva:s.reserva||'', reservaNum:reservaNum,
         pagoSolicitado: foliosPagoSolicitado.has(norm(s.folio)),
-        etapa:maxEt, etapaLabel:ETAPAS[maxEt]||maxEt, desde:desde||'', diasEnEtapa:dias,
+        etapa:maxEt, etapaLabel:etiquetaEtapa(s.tipoTramite,maxEt), desde:desde||'', diasEnEtapa:dias,
         createdAt:s.createdAt||''
       };
     });
@@ -183,12 +189,13 @@ export const handler = async (event) => {
     // También incluir AUTORIZACIONES (atenciones) que no tengan una solicitud abierta con el mismo folio,
     // para no perder casos ya autorizados (p. ej. registrados directo en Autorización o con solicitud cerrada).
     const foliosProc=new Set(procedimientos.map(x=>norm(x.folio)));
+    const foliosCancelados=new Set(sols.filter(s=>s.cancelada||Number(s.estado)===9).map(s=>norm(s.folio)));
     try{
       const as=makeStore('pasem-atenciones');
       const { blobs }=await as.list();
       const atns=(await Promise.all(blobs.map(b=>as.get(b.key,{type:'json'})))).filter(Boolean);
       atns.forEach(a=>{
-        const f=norm(a.folio); if(!f || foliosProc.has(f)) return;
+        const f=norm(a.folio); if(!f || foliosProc.has(f) || foliosCancelados.has(f)) return;
         foliosProc.add(f);
         // reserva: la de la atención o, si no, la de su solicitud de origen
         let reservaStr=a.reserva||''; if(!(parseMoney(reservaStr)>0) && a.solicitudId && solById[a.solicitudId]) reservaStr=solById[a.solicitudId].reserva||'';
@@ -200,7 +207,7 @@ export const handler = async (event) => {
           tipoTramite:a.tipoTramite||'', comentarios:a.observaciones||'',
           reserva:reservaStr||'', reservaNum:reservaNum,
           pagoSolicitado: foliosPagoSolicitado.has(f),
-          etapa:'3', etapaLabel:ETAPAS['3'], desde:desde||'', diasEnEtapa:dias,
+          etapa:'3', etapaLabel:etiquetaEtapa(a.tipoTramite,'3'), desde:desde||'', diasEnEtapa:dias,
           createdAt:a.createdAt||''
         });
       });
