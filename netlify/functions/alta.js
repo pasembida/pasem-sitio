@@ -78,7 +78,10 @@ export const handler = async (event) => {
       const { blobs }=await rs.list({ prefix:'alta:' });
       let items=await Promise.all(blobs.map(b=>rs.get(b.key,{type:'json'})));
       items=items.filter(Boolean).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
-      items.forEach(it=>{ const f=it.fields||{}; const c=String(f['Titular - CURP']||f['Contacto - CURP']||'').trim().toUpperCase(); it.titularCurp=c; it.enPadron = c ? PADRON_CURPS.has(c) : null; });
+      // CURPs ya dadas de alta como titulares (para no marcarlas como "NUEVO" otra vez)
+      const curpsAlta=new Set();
+      try{ const ts=makeStore('pasem-titulares'); const tb=await ts.list(); const tits=(await Promise.all(tb.blobs.map(b=>ts.get(b.key,{type:'json'})))).filter(Boolean); tits.forEach(t=>{ const c=String(t.curp||'').trim().toUpperCase(); if(c) curpsAlta.add(c); }); }catch(e){}
+      items.forEach(it=>{ const f=it.fields||{}; const c=String(f['Titular - CURP']||f['Contacto - CURP']||'').trim().toUpperCase(); it.titularCurp=c; it.enPadron = c ? (PADRON_CURPS.has(c)||curpsAlta.has(c)) : null; });
       return {statusCode:200,headers,body:JSON.stringify(items)};
     }catch(e){ return {statusCode:500,headers,body:JSON.stringify({error:String(e&&e.message?e.message:e)})}; }
   }

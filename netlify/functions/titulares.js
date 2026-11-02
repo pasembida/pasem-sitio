@@ -31,6 +31,9 @@ export const handler = async (event) => {
         if(!body.nombre) return {statusCode:400,headers,body:JSON.stringify({error:'Falta el nombre'})};
         const {blobs}=await store.list();
         const all=(await Promise.all(blobs.map(b=>store.get(b.key,{type:'json'})))).filter(Boolean);
+        // Evitar duplicados por CURP
+        const curpNew=String(body.curp||'').trim().toUpperCase();
+        if(curpNew){ const dup=all.find(t=>String(t.curp||'').trim().toUpperCase()===curpNew); if(dup) return {statusCode:409,headers,body:JSON.stringify({error:'Ya existe un titular con esa CURP (certificado '+dup.cert+'). No se creó un duplicado.', cert:dup.cert})}; }
         let maxN=STATIC_MAX;
         all.forEach(t=>{ const m=/PASEM-(\d+)/.exec(String(t.cert||'')); if(m){ const n=parseInt(m[1],10); if(!isNaN(n)) maxN=Math.max(maxN,n); } });
         const n=maxN+1; const cert='PASEM-'+String(n).padStart(5,'0');
