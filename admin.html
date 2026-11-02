@@ -868,7 +868,7 @@
           <button class="btn btn-primary" id="altas-export" type="button">Exportar a Excel (CSV)</button>
         </div>
         <div id="altas-count" style="color:var(--ink);font-size:14px;margin-bottom:8px;"></div>
-        <div class="table-wrap"><table class="dtable" id="altas-table"><thead><tr><th>Fecha</th><th>Contacto</th><th>Teléfono</th><th>Titular</th><th>CURP titular</th><th>Docs</th><th></th></tr></thead><tbody></tbody></table></div>
+        <div class="table-wrap"><table class="dtable" id="altas-table"><thead><tr><th>Fecha</th><th>Contacto</th><th>Teléfono</th><th>Titular</th><th>CURP titular</th><th>En padrón</th><th>Docs</th><th></th></tr></thead><tbody></tbody></table></div>
       </div>
 
       <!-- Ventana de detalle de un alta -->
@@ -1920,10 +1920,10 @@
       document.getElementById('prov-cancel').addEventListener('click', provReset);
       document.getElementById('form-prov').addEventListener('submit', saveProv);
     }
-    var tb=document.querySelector('#prov-table tbody'); tb.innerHTML='<tr><td colspan="7">Cargando…</td></tr>';
+    var tb=document.querySelector('#prov-table tbody'); tb.innerHTML='<tr><td colspan="8">Cargando…</td></tr>';
     try{ var r=await api(PROV); var items=await r.json(); if(!r.ok) throw new Error((items&&items.error)||('HTTP '+r.status));
       PROV_CACHE=Array.isArray(items)?items:[]; renderProv();
-    }catch(e){ tb.innerHTML='<tr><td colspan="7">Error: '+esc(e.message)+'</td></tr>'; }
+    }catch(e){ tb.innerHTML='<tr><td colspan="8">Error: '+esc(e.message)+'</td></tr>'; }
   }
   function renderProv(){
     var tb=document.querySelector('#prov-table tbody');
@@ -2082,10 +2082,10 @@
     finally{ btn.disabled=false; btn.textContent=old; }
   }
   async function loadOrdenes(){
-    var tb=document.querySelector('#op-table tbody'); if(!tb) return; tb.innerHTML='<tr><td colspan="7">Cargando…</td></tr>';
+    var tb=document.querySelector('#op-table tbody'); if(!tb) return; tb.innerHTML='<tr><td colspan="8">Cargando…</td></tr>';
     try{ var r=await api(ORDENES); var items=await r.json(); if(!r.ok) throw new Error((items&&items.error)||('HTTP '+r.status));
       OP_CACHE=Array.isArray(items)?items:[]; renderOrdenes();
-    }catch(e){ tb.innerHTML='<tr><td colspan="7">Error: '+esc(e.message)+'</td></tr>'; }
+    }catch(e){ tb.innerHTML='<tr><td colspan="8">Error: '+esc(e.message)+'</td></tr>'; }
   }
   function opTotal(o){ return (o.receptores||[]).reduce(function(a,r){return a+parseMoney(r.monto);},0); }
   function renderOrdenes(){
@@ -2163,36 +2163,61 @@
 
   async function loadAltas(){
     var tb=document.querySelector('#altas-table tbody'); if(!tb) return;
-    tb.innerHTML='<tr><td colspan="7">Cargando…</td></tr>';
+    tb.innerHTML='<tr><td colspan="8">Cargando…</td></tr>';
     document.getElementById('altas-count').textContent='';
     try{
       var r=await api(ALTAS+'?list=1'); var items=await r.json();
       if(!r.ok) throw new Error((items&&items.error)||('HTTP '+r.status));
       ALTAS_CACHE=Array.isArray(items)?items:[];
       renderAltas();
-    }catch(e){ tb.innerHTML='<tr><td colspan="7">Error: '+esc(e.message)+'</td></tr>'; }
+    }catch(e){ tb.innerHTML='<tr><td colspan="8">Error: '+esc(e.message)+'</td></tr>'; }
   }
   function renderAltas(){
     var tb=document.querySelector('#altas-table tbody');
     document.getElementById('altas-count').textContent=ALTAS_CACHE.length+' alta(s) recibida(s).';
-    if(!ALTAS_CACHE.length){ tb.innerHTML='<tr><td colspan="7">Aún no hay altas registradas.</td></tr>'; return; }
+    if(!ALTAS_CACHE.length){ tb.innerHTML='<tr><td colspan="8">Aún no hay altas registradas.</td></tr>'; return; }
     tb.innerHTML='';
     ALTAS_CACHE.forEach(function(a,idx){
       var f=a.fields||{}; var docs=a.docs||[];
       var tr=document.createElement('tr');
+      var padBadge = a.enPadron===true ? '<span style="background:#E8F8EE;color:#1e7e3e;border:1px solid #bfe6cc;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700;">En padrón</span>'
+        : a.enPadron===false ? '<span style="background:#FFF3EA;color:#9a4a12;border:1px solid #f0d2b4;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:800;">NUEVO</span>'
+        : '<span style="color:#9aa;">—</span>';
+      var darAlta = (a.enPadron===false && isAdmin()) ? ' <button class="btn btn-mini" data-alta="'+idx+'" type="button" style="color:#0E9A9C">Dar de alta</button>' : '';
       tr.innerHTML='<td>'+esc(fmtDate(a.createdAt))+'</td>'+
         '<td>'+esc(f['Contacto - Nombre']||'—')+'</td>'+
         '<td>'+esc(f['Contacto - Telefono']||'—')+'</td>'+
         '<td>'+esc(titularName(f)||'—')+'</td>'+
         '<td>'+esc(f['Titular - CURP']||f['Contacto - CURP']||'—')+'</td>'+
+        '<td>'+padBadge+'</td>'+
         '<td>'+docs.length+'</td>'+
-        '<td style="white-space:nowrap"><button class="btn btn-mini" data-ver="'+idx+'" type="button">Ver</button>'+
+        '<td style="white-space:nowrap"><button class="btn btn-mini" data-ver="'+idx+'" type="button">Ver</button>'+darAlta+
           (isAdmin()?' <button class="btn btn-mini btn-del" data-del="'+idx+'" type="button" style="color:#b23b3b">Eliminar</button>':'')+
         '</td>';
       tb.appendChild(tr);
     });
     tb.querySelectorAll('[data-ver]').forEach(function(b){ b.addEventListener('click', function(){ openAltaDetail(Number(b.getAttribute('data-ver'))); }); });
     tb.querySelectorAll('[data-del]').forEach(function(b){ b.addEventListener('click', function(){ delAlta(Number(b.getAttribute('data-del')), b); }); });
+    tb.querySelectorAll('[data-alta]').forEach(function(b){ b.addEventListener('click', function(){ darDeAltaDesdeAlta(Number(b.getAttribute('data-alta')), b); }); });
+  }
+  async function darDeAltaDesdeAlta(idx, btn){
+    var a=ALTAS_CACHE[idx]; if(!a) return; var f=a.fields||{};
+    var nombre=titularName(f)||f['Contacto - Nombre']||''; var curp=f['Titular - CURP']||f['Contacto - CURP']||'';
+    if(!confirm('¿Dar de alta en la base a "'+nombre+'" (CURP '+curp+')?\nSe le asignará un certificado PASEM nuevo.')) return;
+    if(btn){ btn.disabled=true; btn.textContent='Dando de alta…'; }
+    var payload={ action:'create',
+      nombre:nombre, curp:curp, rfc:f['Titular - RFC']||'',
+      fechaNacimiento:f['Titular - Fecha nacimiento']||'', sexo:f['Titular - Sexo']||'',
+      municipio:f['Afiliación - Municipio']||'', ct:f['Afiliación - Centro de trabajo']||'', cct:f['Afiliación - Clave CT']||'',
+      tipoPersonal:f['Afiliación - Tipo de personal']||'', telefono:f['Titular - Telefono']||f['Contacto - Telefono']||'',
+      correo:f['Titular - Correo']||f['Contacto - Correo']||'', domicilio:f['Titular - Domicilio']||'',
+      origen:'alta-en-linea', altaId:a.id };
+    try{
+      var r=await api(TITU,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      var d=await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
+      alert('Titular dado de alta con certificado '+(d.cert||'')+'.');
+      if(btn){ btn.textContent='Dado de alta ✓'; }
+    }catch(e){ alert('No se pudo dar de alta: '+e.message); if(btn){ btn.disabled=false; btn.textContent='Dar de alta'; } }
   }
   function openAltaDetail(idx){
     var a=ALTAS_CACHE[idx]; if(!a) return; var f=a.fields||{}; var docs=a.docs||[];

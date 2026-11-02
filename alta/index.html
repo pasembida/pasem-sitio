@@ -99,7 +99,7 @@
           </div>
           <div>
             <label>CURP <span class="req">*</span></label>
-            <input type="text" name="Contacto - CURP" required maxlength="18" placeholder="18 caracteres">
+            <input type="text" name="Contacto - CURP" required minlength="18" maxlength="18" pattern="[A-Za-z]{4}[0-9]{6}[HMhm][A-Za-z]{5}[0-9A-Za-z]{2}" title="La CURP debe tener 18 caracteres" placeholder="18 caracteres" autocapitalize="characters">
           </div>
           <div>
             <label>RFC</label>
@@ -149,7 +149,7 @@
             <div><label>Nombre(s) <span class="req">*</span></label><input type="text" name="Titular - Nombres" required></div>
           </div>
           <div class="grid three" style="margin-top:12px">
-            <div><label>CURP <span class="req">*</span></label><input type="text" name="Titular - CURP" required maxlength="18"></div>
+            <div><label>CURP <span class="req">*</span></label><input type="text" name="Titular - CURP" required minlength="18" maxlength="18" pattern="[A-Za-z]{4}[0-9]{6}[HMhm][A-Za-z]{5}[0-9A-Za-z]{2}" title="La CURP debe tener 18 caracteres" autocapitalize="characters"></div>
             <div><label>Fecha de nacimiento</label><input type="date" name="Titular - Fecha nacimiento"></div>
             <div><label>Sexo</label>
               <div class="opts">

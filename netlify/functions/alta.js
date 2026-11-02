@@ -1,5 +1,7 @@
 import { getStore } from '@netlify/blobs';
 import crypto from 'node:crypto';
+import BASE_RAW from './lib/beneficiarios.json';
+const PADRON_CURPS=(function(){ const s=new Set(); (Array.isArray(BASE_RAW)?BASE_RAW:[]).forEach(x=>{ const c=String((x&&(x.c||x.curp))||'').trim().toUpperCase(); if(c) s.add(c); }); return s; })();
 function makeStore(name){ const siteID=process.env.NETLIFY_SITE_ID||process.env.SITE_ID; const token=process.env.NETLIFY_API_TOKEN||process.env.NETLIFY_AUTH_TOKEN; if(siteID&&token) return getStore({name,siteID,token}); return getStore(name); }
 const SECRET = process.env.SESSION_SECRET || 'pasem-secret-cambiar';
 function b64url(buf){ return Buffer.from(buf).toString('base64').replace(/=+$/,'').replace(/\+/g,'-').replace(/\//g,'_'); }
@@ -76,6 +78,7 @@ export const handler = async (event) => {
       const { blobs }=await rs.list({ prefix:'alta:' });
       let items=await Promise.all(blobs.map(b=>rs.get(b.key,{type:'json'})));
       items=items.filter(Boolean).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+      items.forEach(it=>{ const f=it.fields||{}; const c=String(f['Titular - CURP']||f['Contacto - CURP']||'').trim().toUpperCase(); it.titularCurp=c; it.enPadron = c ? PADRON_CURPS.has(c) : null; });
       return {statusCode:200,headers,body:JSON.stringify(items)};
     }catch(e){ return {statusCode:500,headers,body:JSON.stringify({error:String(e&&e.message?e.message:e)})}; }
   }
