@@ -80,6 +80,14 @@ export const handler = async (event) => {
         await store.setJSON(s.id,s);
         return {statusCode:200,headers,body:JSON.stringify(s)};
       }
+      if(body.action==='unauthorize'){
+        const s=await store.get(body.id,{type:'json'}); if(!s) return {statusCode:404,headers,body:JSON.stringify({error:'No encontrada'})};
+        s.autorizada=false; s.atencionId=''; s.estado=Math.min(s.estado||2,2);
+        if(s.etapas){ delete s.etapas['3']; delete s.etapas['4']; }
+        s.regresadaAt=new Date().toISOString(); s.regresadaPor=p.email||'usuario';
+        await store.setJSON(s.id,s);
+        return {statusCode:200,headers,body:JSON.stringify(s)};
+      }
       if(body.action==='authorize'){
         const s=await store.get(body.id,{type:'json'}); if(!s) return {statusCode:404,headers,body:JSON.stringify({error:'No encontrada'})};
         s.autorizada=true; s.atencionId=body.atencionId||''; s.etapas=s.etapas||{}; if(!s.etapas['3']) s.etapas['3']=new Date().toISOString(); s.estado=Math.max(s.estado||1,3);

@@ -1258,11 +1258,12 @@
     records.forEach(function(rec){
       var tr=document.createElement('tr'); var serv=(rec.servicios||[]).join(', ');
       var fin=rec.cerrado?' <button class="btn-mini" data-act="reabrir" data-id="'+esc(rec.id)+'" style="color:#0E9A9C">Reabrir</button>':' <button class="btn-mini" data-act="finalizar" data-id="'+esc(rec.id)+'" style="color:#b9770e">Finalizar</button>';
+      var regresar=(rec.solicitudId && isAdmin())?' <button class="btn-mini" data-act="regresar" data-id="'+esc(rec.id)+'" style="color:#b23b3b">← Regresar a Solicitud</button>':'';
       var acts='<button class="btn-mini" data-act="verrec" data-id="'+esc(rec.id)+'">Ver</button> '+
                '<button class="btn-mini" data-act="print" data-id="'+esc(rec.id)+'">Imprimir</button> '+
                '<button class="btn-mini" data-act="editrec" data-id="'+esc(rec.id)+'">Editar</button> '+
                '<button class="btn-mini" data-act="notify" data-id="'+esc(rec.id)+'">Notificar SNTE</button>'+
-               (isAdmin()?fin:'')+
+               (isAdmin()?fin:'')+regresar+
                (isAdmin()?' <button class="btn-del" data-act="del" data-id="'+esc(rec.id)+'">Eliminar</button>':'');
       var esp=(rec.autEspecial==='Sí')?' <span style="background:#FDECEC;color:#b23b3b;border:1px solid #f1c7c7;border-radius:999px;padding:1px 7px;font-size:10px;font-weight:800;">ESPECIAL</span>':'';
       if(rec.cerrado) esp+=' <span style="background:#EEF2F4;color:#5a6b74;border:1px solid #dfe6ea;border-radius:999px;padding:1px 7px;font-size:10px;font-weight:800;">FINALIZADO</span>';
@@ -1276,6 +1277,19 @@
     tbody.querySelectorAll('[data-act=verrec]').forEach(function(b){ b.addEventListener('click', function(){ verAtencion(recById(b.getAttribute('data-id'))); }); });
     tbody.querySelectorAll('[data-act=finalizar]').forEach(function(b){ b.addEventListener('click', function(){ closeRecord(b.getAttribute('data-id'), true); }); });
     tbody.querySelectorAll('[data-act=reabrir]').forEach(function(b){ b.addEventListener('click', function(){ closeRecord(b.getAttribute('data-id'), false); }); });
+    tbody.querySelectorAll('[data-act=regresar]').forEach(function(b){ b.addEventListener('click', function(){ regresarASolicitud(b.getAttribute('data-id')); }); });
+  }
+  async function regresarASolicitud(id){
+    var rec=recById(id); if(!rec) return;
+    if(!confirm('¿Regresar el caso '+(rec.folio||'')+' de '+(rec.paciente||'')+' a «Solicitud de servicio»?\n\nSe eliminará esta autorización y el caso volverá a aparecer en Solicitud para autorizarse de nuevo.')) return;
+    try{
+      // 1) borrar la atención
+      var r=await api(RECORDS,{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})}); var d=await r.json().catch(function(){return {};}); if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
+      // 2) des-autorizar la solicitud ligada
+      if(rec.solicitudId){ try{ await api(SOLIC,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'unauthorize', id:rec.solicitudId})}); }catch(e){} }
+      alert('El caso regresó a «Solicitud de servicio».');
+      loadRecords(); if(typeof loadSolic==='function') loadSolic();
+    }catch(e){ alert('No se pudo regresar: '+e.message); }
   }
   async function closeRecord(id, cerrar){
     var rec=recById(id); if(!rec) return;
@@ -1455,7 +1469,7 @@
       var afEl=document.getElementById('auth-file'); var af=afEl&&afEl.files[0]; var cref=(data.curp||data.certificado||data.numAfiliado||'');
       if(af && cref){ try{ await uploadDoc(af, cref, editing?'Adjunto al editar autorización':'Adjunto al registrar autorización'); }catch(e){ alert('Se guardó, pero el documento no se pudo adjuntar: '+e.message); } }
       editAtencionId=null;
-      form.reset(); document.getElementById('f-solicitudId').value=''; document.getElementById('f-certificado').value=''; var al=document.getElementById('auth-loaded'); if(al) al.textContent=''; var bn=document.getElementById('aut-edit-banner'); if(bn) bn.style.display='none'; btn.textContent='Registrar autorización'; syncProc(); loadRecords();
+      form.reset(); document.getElementById('f-solicitudId').value=''; document.getElementById('f-certificado').value=''; var al=document.getElementById('auth-loaded'); if(al) al.textContent=''; var bn=document.getElementById('aut-edit-banner'); if(bn) bn.style.display='none'; btn.textContent='Registrar autorización'; syncProc(); loadRecords(); if(typeof loadSolic==='function') loadSolic();
       alert(editing?'Autorización actualizada.':('Autorización registrada. La atención quedó en el registro'+(data.solicitudId?' y la solicitud pasó a «Autorización generada».':'.')));
     }
     catch(err){ alert('Error al guardar: '+err.message); } finally{ btn.disabled=false; if(!editAtencionId && btn.textContent==='Guardando…') btn.textContent=old; }
@@ -1620,12 +1634,16 @@
       if(confirm('Solicitud registrada.\nFolio generado: '+s.folio+'\n(Etapa 1: '+etLabel(s.tipoTramite,1)+')\n\n¿Enviar la notificación de Etapa 1 por correo?')) notifyStage(s,1);
     }catch(err){ alert('Error: '+err.message); } finally{ btn.disabled=false; btn.textContent=old; }
   });
-  async function loadSolic(){ if(!solStatus) return; solStatus.textContent='Cargando…'; try{ var r=await api(SOLIC); if(!r.ok) throw new Error('HTTP '+r.status); solicitudes=await r.json(); renderSolic(); solStatus.textContent=solicitudes.length+' solicitud(es).'; }catch(e){ solStatus.textContent='Error: '+e.message; } }
+  async function loadSolic(){ if(!solStatus) return; solStatus.textContent='Cargando…'; try{ var r=await api(SOLIC); if(!r.ok) throw new Error('HTTP '+r.status); solicitudes=await r.json(); renderSolic(); }catch(e){ solStatus.textContent='Error: '+e.message; } }
   function solById(id){ return solicitudes.filter(function(s){ return s.id===id; })[0]; }
   function etapaActual(s){ var m=0; if(s&&s.etapas){ ['1','2','3','4'].forEach(function(k){ if(s.etapas[k]) m=Math.max(m,parseInt(k,10)); }); } return m; }
   function renderSolic(){
     solTbody.innerHTML='';
-    solicitudes.forEach(function(s){
+    // Flujo por etapas: en "Solicitud de servicio" solo se muestran las PENDIENTES (no autorizadas, no canceladas)
+    var pendientes=solicitudes.filter(function(s){ return !s.autorizada && !(s.cancelada||s.estado===9); });
+    if(solStatus) solStatus.textContent=pendientes.length+' solicitud(es) pendiente(s) de autorizar.';
+    if(!pendientes.length){ solTbody.innerHTML='<tr><td colspan="9" style="padding:10px;color:var(--ink)">No hay solicitudes pendientes. Las autorizadas están en la pestaña «Autorización».</td></tr>'; return; }
+    pendientes.forEach(function(s){
       var tr=document.createElement('tr');
       var cancel=(s.cancelada||s.estado===9);
       var e=etapaActual(s); var etLbl=cancel?('Cancelada'):(e?(e+'. '+etLabel(s.tipoTramite,e)):'—');
@@ -2649,7 +2667,7 @@
     // 5-6. Procedimientos: abiertos vs cerrados (pago solicitado)
     var prAll=data.procedimientos||[];
     var money=function(n){ return '$'+Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}); };
-    var abiertos=prAll.filter(function(s){return !s.pagoSolicitado;}), cerrados=prAll.filter(function(s){return s.pagoSolicitado;});
+    var abiertos=prAll.filter(function(s){return !s.pagado;}), cerrados=prAll.filter(function(s){return s.pagado;});
     function tablaProc(arr,vacio){
       if(!arr.length) return '<div style="font-size:14px;color:var(--ink);">'+vacio+'</div>';
       var t='<div class="table-wrap"><table class="dtable"><thead><tr><th>Folio</th><th>Paciente (titular)</th><th>Trámite solicitado</th><th>Etapa actual</th><th>Tiempo en etapa</th><th>Presupuesto de Reserva</th><th>Detalle</th></tr></thead><tbody>';
@@ -2662,8 +2680,8 @@
     h+='<div class="card" style="padding:16px;margin:0 0 14px;"><div style="font-family:var(--serif);color:var(--ochre);font-size:13px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">5. Procedimientos ABIERTOS ('+abiertos.length+')</div>';
     h+=tablaProc(abiertos,'No hay procedimientos abiertos.');
     h+='<div style="font-size:12px;color:var(--ink);margin-top:6px;">Los tiempos en amarillo llevan 7 días o más; en rojo, 15 días o más.</div></div>';
-    h+='<div class="card" style="padding:16px;margin:0 0 14px;"><div style="font-family:var(--serif);color:var(--ochre);font-size:13px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">6. Procedimientos CERRADOS — con pago solicitado ('+cerrados.length+')</div>';
-    h+=tablaProc(cerrados,'No hay procedimientos con pago solicitado.');
+    h+='<div class="card" style="padding:16px;margin:0 0 14px;"><div style="font-family:var(--serif);color:var(--ochre);font-size:13px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">6. Procedimientos CERRADOS — pagados ('+cerrados.length+')</div>';
+    h+=tablaProc(cerrados,'No hay procedimientos pagados.');
     h+='</div>';
     return h;
   }
@@ -2813,7 +2831,7 @@
 
       var pr=d.procedimientos||[];
       var money=function(n){ return '$'+Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}); };
-      var abiertosP=pr.filter(function(s){return !s.pagoSolicitado;}), cerradosP=pr.filter(function(s){return s.pagoSolicitado;});
+      var abiertosP=pr.filter(function(s){return !s.pagado;}), cerradosP=pr.filter(function(s){return s.pagado;});
       function tablaProcPDF(titulo, arr, vacio){
         bar(titulo);
         var rows=arr.map(function(s){ return [s.folio||'—', s.nombre||'—', s.tipoTramite||'—', s.etapa+'. '+s.etapaLabel, diasTxt(s.diasEnEtapa), s.reservaNum?money(s.reservaNum):'—', s.comentarios||'—']; });
@@ -2821,7 +2839,7 @@
         table(['Folio','Paciente (titular)','Trámite solicitado','Etapa actual','Tiempo en etapa','Reserva','Detalle'], rows.length?rows:[[vacio,'','','','','','']]);
       }
       tablaProcPDF('5. Procedimientos ABIERTOS ('+abiertosP.length+')', abiertosP, 'No hay procedimientos abiertos.');
-      tablaProcPDF('6. Procedimientos CERRADOS — con pago solicitado ('+cerradosP.length+')', cerradosP, 'No hay procedimientos con pago solicitado.');
+      tablaProcPDF('6. Procedimientos CERRADOS — pagados ('+cerradosP.length+')', cerradosP, 'No hay procedimientos pagados.');
 
       doc.setFont('helvetica','normal'); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]); doc.setFontSize(7.5);
       doc.text('PASEM · Sección 26 del SNTE · Administrado por MULTICATERIN, S.A. de C.V. con respaldo de BIDA Seguros.', M, Math.min(y+4, doc.internal.pageSize.getHeight()-8));

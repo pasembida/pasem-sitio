@@ -28,7 +28,7 @@ function informeEmailHtml(d){
   const nvRows=(d.nuevos||[]).map(r=>'<tr><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(r.curp)+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(r.nombre||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(r.contacto||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(r.telefono||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(fmtFecha(r.fecha))+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+(r.docs||0)+'</td></tr>').join('')||'<tr><td colspan="6" style="border:1px solid #E2E8EA;padding:6px 8px;">Todos los titulares que actualizaron ya están en el padrón.</td></tr>';
   const money=n=>'$'+Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
   const prList=(d.procedimientos||[]);
-  const abiertos=prList.filter(s=>!s.pagoSolicitado), cerrados=prList.filter(s=>s.pagoSolicitado);
+  const abiertos=prList.filter(s=>!s.pagado), cerrados=prList.filter(s=>s.pagado);
   const sumReserva=arr=>arr.reduce((a,s)=>a+(s.reservaNum||0),0);
   const fila=s=>{ const col=(s.diasEnEtapa>=15?'color:#b23b3b;font-weight:800;':(s.diasEnEtapa>=7?'color:#b9770e;font-weight:700;':'')); return '<tr><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(s.folio||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(s.nombre||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;"><strong>'+esc(s.tipoTramite||'—')+'</strong></td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(s.etapa+'. '+s.etapaLabel)+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;'+col+'">'+esc(diasTxt(s.diasEnEtapa))+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;text-align:right;">'+(s.reservaNum?money(s.reservaNum):'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(s.comentarios||'—')+'</td></tr>'; };
   const tabla=(arr,vacio)=>{ const rows=arr.map(fila).join('')||('<tr><td colspan="7" style="border:1px solid #E2E8EA;padding:6px 8px;">'+vacio+'</td></tr>'); const tot=arr.length?('<tr><td colspan="5" style="border:1px solid #E2E8EA;padding:6px 8px;text-align:right;font-weight:700;background:#FFF3EA;">Total de Reserva</td><td style="border:1px solid #E2E8EA;padding:6px 8px;text-align:right;font-weight:800;background:#FFF3EA;">'+money(sumReserva(arr))+'</td><td style="border:1px solid #E2E8EA;background:#FFF3EA;"></td></tr>'):''; return tbl(['Folio','Paciente (titular)','Trámite solicitado','Etapa actual','Tiempo en etapa','Reserva','Detalle'], rows+tot); };
@@ -52,8 +52,8 @@ function informeEmailHtml(d){
         '<tr><td colspan="6">'+tbl(['CURP','Nombre','Contacto','Teléfono','Fecha','Docs'], nvRows)+'</td></tr>'+
         bar('5. Procedimientos ABIERTOS ('+abiertos.length+')')+
         '<tr><td colspan="6">'+tabla(abiertos,'No hay procedimientos abiertos.')+'</td></tr>'+
-        bar('6. Procedimientos CERRADOS — con pago solicitado ('+cerrados.length+')')+
-        '<tr><td colspan="6">'+tabla(cerrados,'No hay procedimientos con pago solicitado.')+'</td></tr>'+
+        bar('6. Procedimientos CERRADOS — pagados ('+cerrados.length+')')+
+        '<tr><td colspan="6">'+tabla(cerrados,'No hay procedimientos pagados.')+'</td></tr>'+
         '</table>'+
       '</td></tr>'+
       '<tr><td style="padding:10px 18px 18px;color:#767676;font-size:11px;">PASEM · Sección 26 del SNTE · Administrado por MULTICATERIN, S.A. de C.V. con respaldo de BIDA Seguros.</td></tr>'+
@@ -132,11 +132,12 @@ async function computeInforme(){
 
     // Órdenes de pago YA solicitadas (correo enviado), ligadas por folio de autorización / solicitud
     const foliosPagoSolicitado=new Set();
+    const foliosPagados=new Set();
     try{
       const os=makeStore('pasem-ordenes');
       const { blobs }=await os.list({prefix:'orden:'});
       const ordenes=(await Promise.all(blobs.map(b=>os.get(b.key,{type:'json'})))).filter(Boolean);
-      ordenes.forEach(o=>{ if(o.estado==='solicitada'){ const f=norm(o.folioAutorizacion); if(f) foliosPagoSolicitado.add(f); } });
+      ordenes.forEach(o=>{ const f=norm(o.folioAutorizacion); if(!f) return; if(o.estado==='solicitada'||o.estado==='pagada') foliosPagoSolicitado.add(f); if(o.estado==='pagada') foliosPagados.add(f); });
     }catch(e){}
 
     let reservaTotal=0;
@@ -150,7 +151,7 @@ async function computeInforme(){
         folio:s.folio||'', folioEleonor:s.folioEleonor||'', nombre:(s.beneficiarioNombre && norm(s.beneficiarioNombre)!==norm(s.nombre) ? (s.beneficiarioNombre+' ('+(s.beneficiarioParentesco||'benef.')+' de '+(s.nombre||'')+')') : (s.nombre||'')), beneficiario:s.beneficiarioNombre||s.nombre||'', titular:s.nombre||'', certificado:s.certificado||'',
         tipoTramite:s.tipoTramite||'', comentarios:s.comentarios||'',
         reserva:s.reserva||'', reservaNum:reservaNum,
-        pagoSolicitado: foliosPagoSolicitado.has(norm(s.folio)),
+        pagoSolicitado: foliosPagoSolicitado.has(norm(s.folio)), pagado: foliosPagados.has(norm(s.folio)),
         etapa:maxEt, etapaLabel:etiquetaEtapa(s.tipoTramite,maxEt), desde:desde||'', diasEnEtapa:dias,
         createdAt:s.createdAt||''
       };
@@ -164,6 +165,7 @@ async function computeInforme(){
     const foliosFinalizados=new Set();
     try{ const asC=makeStore('pasem-atenciones'); const {blobs:cb}=await asC.list(); const allAtn=(await Promise.all(cb.map(b=>asC.get(b.key,{type:'json'})))).filter(Boolean); allAtn.forEach(a=>{ if(a.cerrado){ const f=norm(a.folio); if(f) foliosFinalizados.add(f); } }); }catch(e){}
     // quitar de procedimientos (lado solicitudes) los finalizados
+    // Los finalizados (botón Finalizar) se excluyen por completo del informe
     for(let i=procedimientos.length-1;i>=0;i--){ if(foliosFinalizados.has(norm(procedimientos[i].folio))){ reservaTotal-=parseMoney(procedimientos[i].reserva); procedimientos.splice(i,1); } }
     try{
       const as=makeStore('pasem-atenciones');
@@ -181,7 +183,7 @@ async function computeInforme(){
           folio:a.folio||'', folioEleonor:a.folioEleonor||'', nombre:(a.titular && norm(a.titular)!==norm(a.paciente) ? (a.paciente+' ('+(a.parentesco||'benef.')+' de '+a.titular+')') : (a.paciente||'')), beneficiario:a.paciente||'', titular:a.titular||a.paciente||'', certificado:a.numAfiliado||a.certificado||'',
           tipoTramite:a.tipoTramite||'', comentarios:a.observaciones||'',
           reserva:reservaStr||'', reservaNum:reservaNum,
-          pagoSolicitado: foliosPagoSolicitado.has(f),
+          pagoSolicitado: foliosPagoSolicitado.has(f), pagado: foliosPagados.has(f),
           etapa:'3', etapaLabel:etiquetaEtapa(a.tipoTramite,'3'), desde:desde||'', diasEnEtapa:dias,
           createdAt:a.createdAt||''
         });
