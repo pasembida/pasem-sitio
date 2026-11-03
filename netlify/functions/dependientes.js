@@ -43,6 +43,17 @@ export const handler = async (event) => {
         await store.setJSON(id,dep);
         return {statusCode:200,headers,body:JSON.stringify(dep)};
       }
+      if(body.action==='update'){
+        if(!body.id) return {statusCode:400,headers,body:JSON.stringify({error:'Falta id'})};
+        const rec=await store.get(body.id,{type:'json'}); if(!rec) return {statusCode:404,headers,body:JSON.stringify({error:'Dependiente no encontrado'})};
+        // La CURP editada no debe chocar con otro dependiente del mismo titular
+        const curpNew=String(body.curp||'').trim().toUpperCase();
+        if(curpNew){ const {blobs}=await store.list(); const all=(await Promise.all(blobs.map(b=>store.get(b.key,{type:'json'})))).filter(Boolean); const dup=all.find(d=>d.id!==rec.id && String(d.titularCert||'').toUpperCase()===String(rec.titularCert||'').toUpperCase() && String(d.curp||'').trim().toUpperCase()===curpNew); if(dup) return {statusCode:409,headers,body:JSON.stringify({error:'Otro dependiente de este titular ya usa esa CURP (cert '+dup.cert+').'})}; }
+        ['nombre','curp','rfc','parentesco','fechaNacimiento','sexo','estudia'].forEach(k=>{ if(body[k]!=null) rec[k]=body[k]; });
+        rec.editadoPor=p.email||'usuario'; rec.editadoAt=new Date().toISOString();
+        await store.setJSON(rec.id, rec);
+        return {statusCode:200,headers,body:JSON.stringify(rec)};
+      }
       if(body.action==='delete'){
         if(!isAdmin) return {statusCode:403,headers,body:JSON.stringify({error:'Solo administración'})};
         await store.delete(body.id);

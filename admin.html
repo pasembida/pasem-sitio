@@ -338,6 +338,13 @@
         <div id="ver-body"></div>
       </div></div>
 
+      <div id="edit-modal" class="exp-modal"><div class="exp-box" style="max-width:720px;">
+        <div class="exp-head"><strong id="edit-title">Editar</strong><button type="button" class="btn btn-ghost" id="edit-close">Cerrar</button></div>
+        <div id="edit-body"></div>
+        <div style="display:flex;gap:8px;margin-top:12px;"><button class="btn btn-primary" type="button" id="edit-save">Guardar cambios</button><button class="btn btn-ghost" type="button" id="edit-cancel">Cancelar</button></div>
+        <p id="edit-msg" style="font-size:13px;margin-top:8px;"></p>
+      </div></div>
+
       <div id="sol-edit-modal" class="exp-modal"><div class="exp-box">
         <div class="exp-head"><strong>Editar solicitud</strong><button type="button" class="btn btn-ghost" id="sedit-close">Cerrar</button></div>
         <p style="font-size:13px;color:var(--ink);margin:0 0 10px;">Folio: <strong id="sedit-folio"></strong> <span style="color:var(--ink)">(no cambia al editar)</span></p>
@@ -1830,10 +1837,11 @@
   if(document.getElementById('dep-docs')) document.getElementById('dep-docs').addEventListener('click', function(){ openExpediente((document.querySelector('#form-dep [name=curp]').value||'').trim(), (document.getElementById('dep-cert').value||'').trim(), document.getElementById('dep-nom').value); });
   async function loadDeps(){ if(!depStatus) return; depStatus.textContent='Cargando…'; try{ var q=(document.getElementById('dep-q').value||'').trim(); var r=await api(DEPS+(q?('?q='+encodeURIComponent(q)):'')); if(!r.ok) throw new Error('HTTP '+r.status); var items=await r.json(); renderDeps(items); depStatus.textContent=items.length+' dependiente(s).'; }catch(e){ depStatus.textContent='Error: '+e.message; } }
   function renderDeps(items){
-    depTbody.innerHTML='';
-    items.forEach(function(d){ var tr=document.createElement('tr'); var del=isAdmin()?' <button class="btn-del" data-act="depdel" data-id="'+esc(d.id)+'">Eliminar</button>':''; tr.innerHTML='<td><strong>'+esc(d.cert)+'</strong></td><td>'+esc(d.nombre)+'</td><td>'+esc(d.parentesco)+'</td><td>'+esc(d.curp)+'</td><td>'+esc(d.titularNombre||d.titularCert)+'</td><td style="white-space:nowrap"><button class="btn-mini" data-act="depexp" data-curp="'+esc(d.curp)+'" data-cert="'+esc(d.cert)+'" data-nom="'+esc(d.nombre)+'">📎 Expediente</button>'+del+'</td>'; depTbody.appendChild(tr); });
+    window.__DEPS=items; depTbody.innerHTML='';
+    items.forEach(function(d){ var tr=document.createElement('tr'); var del=isAdmin()?' <button class="btn-del" data-act="depdel" data-id="'+esc(d.id)+'">Eliminar</button>':''; tr.innerHTML='<td><strong>'+esc(d.cert)+'</strong></td><td>'+esc(d.nombre)+'</td><td>'+esc(d.parentesco)+'</td><td>'+esc(d.curp)+'</td><td>'+esc(d.titularNombre||d.titularCert)+'</td><td style="white-space:nowrap"><button class="btn-mini" data-act="depedit" data-id="'+esc(d.id)+'">Editar</button> <button class="btn-mini" data-act="depexp" data-curp="'+esc(d.curp)+'" data-cert="'+esc(d.cert)+'" data-nom="'+esc(d.nombre)+'">📎 Expediente</button>'+del+'</td>'; depTbody.appendChild(tr); });
     depTbody.querySelectorAll('[data-act=depexp]').forEach(function(b){ b.addEventListener('click', function(){ openExpediente(b.getAttribute('data-curp'), b.getAttribute('data-cert'), b.getAttribute('data-nom')); }); });
     depTbody.querySelectorAll('[data-act=depdel]').forEach(function(b){ b.addEventListener('click', function(){ delDep(b.getAttribute('data-id')); }); });
+    depTbody.querySelectorAll('[data-act=depedit]').forEach(function(b){ b.addEventListener('click', function(){ editEntity('dependiente', (window.__DEPS||[]).filter(function(x){return x.id===b.getAttribute('data-id');})[0]); }); });
   }
   async function delDep(id){ if(!confirm('¿Eliminar este dependiente?')) return; try{ var r=await api(DEPS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id:id})}); if(!r.ok) throw new Error('HTTP '+r.status); loadDeps(); }catch(e){ alert('Error: '+e.message); } }
 
@@ -1858,10 +1866,11 @@
   });
   async function loadTit(){ if(!titStatus) return; titStatus.textContent='Cargando…'; try{ var q=(document.getElementById('tit-q').value||'').trim(); var r=await api(TITU+(q?('?q='+encodeURIComponent(q)):'')); if(!r.ok) throw new Error('HTTP '+r.status); var items=await r.json(); renderTit(items); titStatus.textContent=items.length+' titular(es) dado(s) de alta.'; }catch(e){ titStatus.textContent='Error: '+e.message; } }
   function renderTit(items){
-    titTbody.innerHTML='';
-    items.forEach(function(t){ var tr=document.createElement('tr'); var del=isAdmin()?'<button class="btn-del" data-act="titdel" data-id="'+esc(t.id)+'">Eliminar</button>':''; tr.innerHTML='<td><strong>'+esc(t.cert)+'</strong></td><td>'+esc(t.nombre)+'</td><td>'+esc(t.curp)+'</td><td>'+esc(t.rfc)+'</td><td>'+esc(t.ct)+'</td><td style="white-space:nowrap"><button class="btn-mini" data-act="titexp" data-curp="'+esc(t.curp)+'" data-cert="'+esc(t.cert)+'" data-nom="'+esc(t.nombre)+'">📎 Expediente</button> '+del+'</td>'; titTbody.appendChild(tr); });
+    window.__TITS=items; titTbody.innerHTML='';
+    items.forEach(function(t){ var tr=document.createElement('tr'); var del=isAdmin()?'<button class="btn-del" data-act="titdel" data-id="'+esc(t.id)+'">Eliminar</button>':''; tr.innerHTML='<td><strong>'+esc(t.cert)+'</strong></td><td>'+esc(t.nombre)+'</td><td>'+esc(t.curp)+'</td><td>'+esc(t.rfc)+'</td><td>'+esc(t.ct)+'</td><td style="white-space:nowrap"><button class="btn-mini" data-act="titedit" data-id="'+esc(t.id)+'">Editar</button> <button class="btn-mini" data-act="titexp" data-curp="'+esc(t.curp)+'" data-cert="'+esc(t.cert)+'" data-nom="'+esc(t.nombre)+'">📎 Expediente</button> '+del+'</td>'; titTbody.appendChild(tr); });
     titTbody.querySelectorAll('[data-act=titexp]').forEach(function(b){ b.addEventListener('click', function(){ openExpediente(b.getAttribute('data-curp'), b.getAttribute('data-cert'), b.getAttribute('data-nom')); }); });
     titTbody.querySelectorAll('[data-act=titdel]').forEach(function(b){ b.addEventListener('click', function(){ delTit(b.getAttribute('data-id')); }); });
+    titTbody.querySelectorAll('[data-act=titedit]').forEach(function(b){ b.addEventListener('click', function(){ editEntity('titular', (window.__TITS||[]).filter(function(x){return x.id===b.getAttribute('data-id');})[0]); }); });
   }
   async function delTit(id){ if(!confirm('¿Eliminar este titular?\nSi tiene dependientes registrados, también se eliminarán.')) return; try{ var r=await api(TITU,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id:id})}); var d=await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status)); if(d.depsBorrados) alert('Titular eliminado junto con '+d.depsBorrados+' dependiente(s).'); loadTit(); }catch(e){ alert('Error: '+e.message); } }
 
@@ -1904,6 +1913,48 @@
         : 'Fecha del servicio'; }
     sel.addEventListener('change', upd); upd();
   })();
+
+  // ===== Editar titular / dependiente =====
+  var EDIT_CTX={kind:null, id:null};
+  (function(){ ['edit-close','edit-cancel'].forEach(function(id){ var b=document.getElementById(id); if(b) b.addEventListener('click', function(){ document.getElementById('edit-modal').classList.remove('open'); }); }); var m=document.getElementById('edit-modal'); if(m) m.addEventListener('click', function(e){ if(e.target===m) m.classList.remove('open'); }); var sv=document.getElementById('edit-save'); if(sv) sv.addEventListener('click', saveEntity); })();
+  var CURP_PAT='[A-Za-z]{4}[0-9]{6}[HMhm][A-Za-z]{5}[0-9A-Za-z]{2}';
+  function editEntity(kind, rec){
+    if(!rec){ alert('No se encontró el registro.'); return; }
+    EDIT_CTX={kind:kind, id:rec.id};
+    document.getElementById('edit-title').textContent=(kind==='titular'?'Editar titular · ':'Editar dependiente · ')+(rec.cert||'');
+    document.getElementById('edit-msg').textContent='';
+    var campos;
+    if(kind==='titular'){
+      campos=[['nombre','Nombre completo','text'],['curp','CURP','curp'],['rfc','RFC','text'],['telefono','Teléfono','text'],['correo','Correo','text'],['funcion','Función','text'],['cct','CCT','text'],['ct','Centro de trabajo','text'],['municipio','Municipio','text']];
+    } else {
+      campos=[['nombre','Nombre completo','text'],['parentesco','Parentesco','parentesco'],['curp','CURP','curp'],['rfc','RFC','text'],['fechaNacimiento','Fecha de nacimiento','date'],['sexo','Sexo','text'],['estudia','¿Estudia? (hijos)','text']];
+    }
+    var html='<div class="fgrid">'+campos.map(function(c){
+      var val=(rec[c[0]]!=null?String(rec[c[0]]):'');
+      if(c[2]==='parentesco'){
+        var ops=['Cónyuge','Hijo(a)','Padre','Madre','Padre/Madre'];
+        return '<div class="field"><label>'+esc(c[1])+'</label><select data-k="'+c[0]+'">'+ops.map(function(o){return '<option'+(o===val?' selected':'')+'>'+o+'</option>';}).join('')+(ops.indexOf(val)<0&&val?('<option selected>'+esc(val)+'</option>'):'')+'</select></div>';
+      }
+      var attr=c[2]==='curp'?(' minlength="18" maxlength="18" pattern="'+CURP_PAT+'" title="18 caracteres" autocapitalize="characters"'):'';
+      var type=c[2]==='date'?'date':'text';
+      return '<div class="field"><label>'+esc(c[1])+'</label><input data-k="'+c[0]+'" type="'+type+'" value="'+esc(val)+'"'+attr+'></div>';
+    }).join('')+'</div>';
+    document.getElementById('edit-body').innerHTML=html;
+    document.getElementById('edit-modal').classList.add('open');
+  }
+  async function saveEntity(){
+    var body={action:'update', id:EDIT_CTX.id};
+    var inputs=document.querySelectorAll('#edit-body [data-k]'); var curpBad=false;
+    inputs.forEach(function(el){ var k=el.getAttribute('data-k'); var v=(el.value||'').trim(); if(k==='curp' && v && !(new RegExp('^'+CURP_PAT+'$')).test(v)) curpBad=true; body[k]=v; });
+    if(curpBad){ document.getElementById('edit-msg').textContent='La CURP debe tener 18 caracteres con el formato correcto.'; return; }
+    var ep=(EDIT_CTX.kind==='titular')?TITU:DEPS;
+    var btn=document.getElementById('edit-save'); btn.disabled=true; var old=btn.textContent; btn.textContent='Guardando…';
+    try{ var r=await api(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); var d=await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
+      document.getElementById('edit-modal').classList.remove('open');
+      if(EDIT_CTX.kind==='titular') loadTit(); else loadDeps();
+    }catch(e){ document.getElementById('edit-msg').textContent='Error: '+e.message; }
+    finally{ btn.disabled=false; btn.textContent=old; }
+  }
 
   // ===== Ventana de detalle (ver sin editar) =====
   function openVer(){ document.getElementById('ver-modal').classList.add('open'); }
