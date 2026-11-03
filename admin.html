@@ -1257,16 +1257,15 @@
     tbody.innerHTML='';
     records.forEach(function(rec){
       var tr=document.createElement('tr'); var serv=(rec.servicios||[]).join(', ');
-      var fin=rec.cerrado?' <button class="btn-mini" data-act="reabrir" data-id="'+esc(rec.id)+'" style="color:#0E9A9C">Reabrir</button>':' <button class="btn-mini" data-act="finalizar" data-id="'+esc(rec.id)+'" style="color:#b9770e">Finalizar</button>';
       var regresar=(rec.solicitudId && isAdmin())?' <button class="btn-mini" data-act="regresar" data-id="'+esc(rec.id)+'" style="color:#b23b3b">← Regresar a Solicitud</button>':'';
       var acts='<button class="btn-mini" data-act="verrec" data-id="'+esc(rec.id)+'">Ver</button> '+
                '<button class="btn-mini" data-act="print" data-id="'+esc(rec.id)+'">Imprimir</button> '+
                '<button class="btn-mini" data-act="editrec" data-id="'+esc(rec.id)+'">Editar</button> '+
                '<button class="btn-mini" data-act="notify" data-id="'+esc(rec.id)+'">Notificar SNTE</button>'+
-               (isAdmin()?fin:'')+regresar+
+               regresar+
                (isAdmin()?' <button class="btn-del" data-act="del" data-id="'+esc(rec.id)+'">Eliminar</button>':'');
       var esp=(rec.autEspecial==='Sí')?' <span style="background:#FDECEC;color:#b23b3b;border:1px solid #f1c7c7;border-radius:999px;padding:1px 7px;font-size:10px;font-weight:800;">ESPECIAL</span>':'';
-      if(rec.cerrado) esp+=' <span style="background:#EEF2F4;color:#5a6b74;border:1px solid #dfe6ea;border-radius:999px;padding:1px 7px;font-size:10px;font-weight:800;">FINALIZADO</span>';
+
       tr.innerHTML='<td>'+esc(rec.folio)+'</td><td>'+esc(rec.fechaEmision)+'</td><td>'+esc(rec.paciente)+esp+'</td><td>'+esc(rec.curp)+'</td><td>'+esc(rec.rfc)+'</td><td>'+esc(rec.numAfiliado)+'</td><td>'+esc(rec.tipoTramite)+'</td><td>'+esc(rec.tipoServicio)+'</td><td>'+esc(serv)+'</td><td>'+esc(rec.hospital)+'</td><td>'+esc(rec.fechaProc)+'</td><td>'+esc(rec.capturadoPor)+'</td><td>'+(rec.notifiedAt?esc(fmtDate(rec.notifiedAt)):'—')+'</td><td style="white-space:nowrap;">'+acts+'</td>';
       tbody.appendChild(tr);
     });

@@ -161,18 +161,13 @@ async function computeInforme(){
     // para no perder casos ya autorizados (p. ej. registrados directo en Autorización o con solicitud cerrada).
     const foliosProc=new Set(procedimientos.map(x=>norm(x.folio)));
     const foliosCancelados=new Set(sols.filter(s=>s.cancelada||Number(s.estado)===9).map(s=>norm(s.folio)));
-    // A2: casos finalizados (atención cerrada) se excluyen de "abiertos"
-    const foliosFinalizados=new Set();
-    try{ const asC=makeStore('pasem-atenciones'); const {blobs:cb}=await asC.list(); const allAtn=(await Promise.all(cb.map(b=>asC.get(b.key,{type:'json'})))).filter(Boolean); allAtn.forEach(a=>{ if(a.cerrado){ const f=norm(a.folio); if(f) foliosFinalizados.add(f); } }); }catch(e){}
-    // quitar de procedimientos (lado solicitudes) los finalizados
-    // Los finalizados (botón Finalizar) se excluyen por completo del informe
-    for(let i=procedimientos.length-1;i>=0;i--){ if(foliosFinalizados.has(norm(procedimientos[i].folio))){ reservaTotal-=parseMoney(procedimientos[i].reserva); procedimientos.splice(i,1); } }
+    // El cierre del caso en el informe depende ÚNICAMENTE de si su orden está PAGADA (no del botón Finalizar).
     try{
       const as=makeStore('pasem-atenciones');
       const { blobs }=await as.list();
       const atns=(await Promise.all(blobs.map(b=>as.get(b.key,{type:'json'})))).filter(Boolean);
       atns.forEach(a=>{
-        const f=norm(a.folio); if(!f || foliosProc.has(f) || foliosCancelados.has(f) || foliosFinalizados.has(f) || a.cerrado) return;
+        const f=norm(a.folio); if(!f || foliosProc.has(f) || foliosCancelados.has(f)) return;
         foliosProc.add(f);
         // reserva: la de la atención o, si no, la de su solicitud de origen
         let reservaStr=a.reserva||''; if(!(parseMoney(reservaStr)>0) && a.solicitudId && solById[a.solicitudId]) reservaStr=solById[a.solicitudId].reserva||'';
