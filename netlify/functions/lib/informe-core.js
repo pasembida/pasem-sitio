@@ -28,10 +28,10 @@ function informeEmailHtml(d){
   const nvRows=(d.nuevos||[]).map(r=>'<tr><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(r.curp)+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(r.nombre||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(r.contacto||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(r.telefono||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(fmtFecha(r.fecha))+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+(r.docs||0)+'</td></tr>').join('')||'<tr><td colspan="6" style="border:1px solid #E2E8EA;padding:6px 8px;">Todos los titulares que actualizaron ya están en el padrón.</td></tr>';
   const money=n=>'$'+Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
   const prList=(d.procedimientos||[]);
-  const pagoBadge=s=> s.pagoSolicitado ? '<span style="background:#E8F8EE;color:#1e7e3e;border:1px solid #bfe6cc;border-radius:999px;padding:1px 7px;font-size:11px;font-weight:700;">Pago solicitado</span>' : '<span style="color:#9aa;">—</span>';
-  const prRows=prList.map(s=>{ const col=(s.diasEnEtapa>=15?'color:#b23b3b;font-weight:800;':(s.diasEnEtapa>=7?'color:#b9770e;font-weight:700;':'')); const hl=s.pagoSolicitado?'background:#F3FBF5;':''; return '<tr><td style="border:1px solid #E2E8EA;padding:6px 8px;'+hl+'">'+esc(s.folio||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;'+hl+'">'+esc(s.nombre||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;'+hl+'"><strong>'+esc(s.tipoTramite||'—')+'</strong></td><td style="border:1px solid #E2E8EA;padding:6px 8px;'+hl+'">'+esc(s.etapa+'. '+s.etapaLabel)+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;'+col+hl+'">'+esc(diasTxt(s.diasEnEtapa))+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;text-align:right;'+hl+'">'+(s.reservaNum?money(s.reservaNum):'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;text-align:center;'+hl+'">'+pagoBadge(s)+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;'+hl+'">'+esc(s.comentarios||'—')+'</td></tr>'; }).join('');
-  const prTotal = prList.length ? ('<tr><td colspan="5" style="border:1px solid #E2E8EA;padding:6px 8px;text-align:right;font-weight:700;background:#FFF3EA;">Total de Presupuesto de Reserva</td><td style="border:1px solid #E2E8EA;padding:6px 8px;text-align:right;font-weight:800;background:#FFF3EA;">'+money(d.reservaTotal||0)+'</td><td colspan="2" style="border:1px solid #E2E8EA;background:#FFF3EA;"></td></tr>') : '';
-  const prBody = (prRows||'<tr><td colspan="8" style="border:1px solid #E2E8EA;padding:6px 8px;">No hay procedimientos abiertos.</td></tr>') + prTotal;
+  const abiertos=prList.filter(s=>!s.pagoSolicitado), cerrados=prList.filter(s=>s.pagoSolicitado);
+  const sumReserva=arr=>arr.reduce((a,s)=>a+(s.reservaNum||0),0);
+  const fila=s=>{ const col=(s.diasEnEtapa>=15?'color:#b23b3b;font-weight:800;':(s.diasEnEtapa>=7?'color:#b9770e;font-weight:700;':'')); return '<tr><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(s.folio||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(s.nombre||'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;"><strong>'+esc(s.tipoTramite||'—')+'</strong></td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(s.etapa+'. '+s.etapaLabel)+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;'+col+'">'+esc(diasTxt(s.diasEnEtapa))+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;text-align:right;">'+(s.reservaNum?money(s.reservaNum):'—')+'</td><td style="border:1px solid #E2E8EA;padding:6px 8px;">'+esc(s.comentarios||'—')+'</td></tr>'; };
+  const tabla=(arr,vacio)=>{ const rows=arr.map(fila).join('')||('<tr><td colspan="7" style="border:1px solid #E2E8EA;padding:6px 8px;">'+vacio+'</td></tr>'); const tot=arr.length?('<tr><td colspan="5" style="border:1px solid #E2E8EA;padding:6px 8px;text-align:right;font-weight:700;background:#FFF3EA;">Total de Reserva</td><td style="border:1px solid #E2E8EA;padding:6px 8px;text-align:right;font-weight:800;background:#FFF3EA;">'+money(sumReserva(arr))+'</td><td style="border:1px solid #E2E8EA;background:#FFF3EA;"></td></tr>'):''; return tbl(['Folio','Paciente (titular)','Trámite solicitado','Etapa actual','Tiempo en etapa','Reserva','Detalle'], rows+tot); };
   return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;background:#EAF6F6;font-family:Arial,Helvetica,sans-serif;color:#1f3442;">'+
     '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EAF6F6;padding:16px 10px;"><tr><td align="center">'+
     '<table role="presentation" width="720" cellpadding="0" cellspacing="0" style="max-width:720px;width:100%;background:#fff;border:1px solid #D9E9E9;border-radius:12px;overflow:hidden;">'+
@@ -50,8 +50,10 @@ function informeEmailHtml(d){
         '<tr><td colspan="6">'+tbl(['Fecha','Altas','Titulares','Dependientes'], diaRows)+'</td></tr>'+
         bar('4. Titulares nuevos para inclusión ('+(d.nuevos||[]).length+')')+
         '<tr><td colspan="6">'+tbl(['CURP','Nombre','Contacto','Teléfono','Fecha','Docs'], nvRows)+'</td></tr>'+
-        bar('5. Procedimientos abiertos ('+(d.procedimientos||[]).length+')')+
-        '<tr><td colspan="6">'+tbl(['Folio','Nombre','Trámite solicitado','Etapa actual','Tiempo en etapa','Reserva','Pago','Detalle'], prBody)+'</td></tr>'+
+        bar('5. Procedimientos ABIERTOS ('+abiertos.length+')')+
+        '<tr><td colspan="6">'+tabla(abiertos,'No hay procedimientos abiertos.')+'</td></tr>'+
+        bar('6. Procedimientos CERRADOS — con pago solicitado ('+cerrados.length+')')+
+        '<tr><td colspan="6">'+tabla(cerrados,'No hay procedimientos con pago solicitado.')+'</td></tr>'+
         '</table>'+
       '</td></tr>'+
       '<tr><td style="padding:10px 18px 18px;color:#767676;font-size:11px;">PASEM · Sección 26 del SNTE · Administrado por MULTICATERIN, S.A. de C.V. con respaldo de BIDA Seguros.</td></tr>'+
@@ -176,7 +178,7 @@ async function computeInforme(){
         const desde=a.fechaAutorizacion||a.editadoAt||a.createdAt;
         const dias=desde?Math.floor((now-new Date(desde).getTime())/86400000):null;
         procedimientos.push({
-          folio:a.folio||'', folioEleonor:a.folioEleonor||'', nombre:a.paciente||'', certificado:a.numAfiliado||a.certificado||'',
+          folio:a.folio||'', folioEleonor:a.folioEleonor||'', nombre:(a.titular && norm(a.titular)!==norm(a.paciente) ? (a.paciente+' ('+(a.parentesco||'benef.')+' de '+a.titular+')') : (a.paciente||'')), beneficiario:a.paciente||'', titular:a.titular||a.paciente||'', certificado:a.numAfiliado||a.certificado||'',
           tipoTramite:a.tipoTramite||'', comentarios:a.observaciones||'',
           reserva:reservaStr||'', reservaNum:reservaNum,
           pagoSolicitado: foliosPagoSolicitado.has(f),

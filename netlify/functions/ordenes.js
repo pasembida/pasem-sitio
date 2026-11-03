@@ -56,7 +56,9 @@ function correoHtml(o){
       '<tr><td style="padding:0 18px;"><table role="presentation" width="100%" style="border:1px solid #E9EEF0;border-radius:8px;overflow:hidden;">'+
         row('Folio de orden', o.folio)+
         row('Folio de autorización', o.folioAutorizacion)+
-        row('Paciente', o.paciente)+
+        row('Titular', o.titular)+
+        row('Paciente / beneficiario', o.paciente)+
+        row('Parentesco con el titular', o.parentesco||'Titular')+
         row('CURP', o.curp)+
         row('Certificado / N.° afiliación', o.certificado)+
         row('Tipo de trámite', o.tipoTramite)+

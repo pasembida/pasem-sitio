@@ -113,6 +113,35 @@ export const handler = async (event) => {
     }catch(e){ return {statusCode:500,headers,body:JSON.stringify({error:String(e&&e.message?e.message:e)})}; }
   }
 
+  // Copiar documentos de un alta al EXPEDIENTE (por CURP). Autenticado (admin/operación). Idempotente por CURP.
+  if(event.httpMethod==='POST' && (()=>{try{return JSON.parse(event.body||'{}').action==='to-expediente';}catch(e){return false;}})()){
+    const p=verify((event.headers.authorization||event.headers.Authorization||'').replace('Bearer ',''));
+    if(!p || !(p.role==='administracion'||p.role==='operacion')) return {statusCode:401,headers,body:JSON.stringify({error:'No autorizado'})};
+    try{
+      const body=JSON.parse(event.body||'{}');
+      const curp=String(body.curp||'').trim().toUpperCase();
+      if(!body.id || !curp) return {statusCode:400,headers,body:JSON.stringify({error:'Falta id o CURP'})};
+      const rs=makeStore('pasem-altas'); const rec=await rs.get('alta:'+body.id,{type:'json'});
+      if(!rec) return {statusCode:404,headers,body:JSON.stringify({error:'Alta no encontrada'})};
+      rec.copiados=rec.copiados||{};
+      if(rec.copiados[curp]) return {statusCode:200,headers,body:JSON.stringify({ok:true, copiados:0, yaCopiado:true})};
+      const ds=makeStore('pasem-altas-docs'); const ex=makeStore('pasem-expedientes');
+      let copiados=0;
+      for(const d of (Array.isArray(rec.docs)?rec.docs:[])){
+        try{
+          const meta=await ds.get('meta:'+d.docId,{type:'json'}); if(!meta) continue;
+          const n=meta.chunks||1; const nid=crypto.randomUUID();
+          for(let i=0;i<n;i++){ const c=await ds.get('chunk:'+d.docId+':'+i,{type:'text'}); if(c!=null) await ex.set('chunk:'+nid+':'+i, String(c)); }
+          await ex.setJSON('meta:'+nid, { id:nid, filename:meta.filename||'documento', mime:meta.type||'application/octet-stream', ref:curp, desc:'Documento del alta en línea', chunks:n, uploadedBy:(p.email||'sistema'), createdAt:new Date().toISOString() });
+          copiados++;
+        }catch(e){}
+      }
+      rec.copiados[curp]=new Date().toISOString();
+      await rs.setJSON('alta:'+rec.id, rec);
+      return {statusCode:200,headers,body:JSON.stringify({ok:true, copiados})};
+    }catch(e){ return {statusCode:500,headers,body:JSON.stringify({error:String(e&&e.message?e.message:e)})}; }
+  }
+
   if(event.httpMethod!=='POST') return {statusCode:405,headers,body:JSON.stringify({error:'Método no permitido'})};
   const key=process.env.RESEND_API_KEY;
   try{
