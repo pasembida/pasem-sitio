@@ -33,6 +33,8 @@ export const handler = async (event) => {
         // letras ya usadas para ese titular
         const {blobs}=await store.list();
         const all=(await Promise.all(blobs.map(b=>store.get(b.key,{type:'json'})))).filter(Boolean);
+        const curpNew=String(body.curp||'').trim().toUpperCase();
+        if(curpNew){ const dup=all.find(d=>String(d.titularCert||'').toUpperCase()===titularCert && String(d.curp||'').trim().toUpperCase()===curpNew); if(dup) return {statusCode:409,headers,body:JSON.stringify({error:'Ese dependiente (CURP '+curpNew+') ya está registrado para este titular (cert '+dup.cert+').', cert:dup.cert})}; }
         const used=all.filter(d=>String(d.titularCert).toUpperCase()===titularCert).map(d=>String(d.cert).slice(titularCert.length));
         let letter=''; for(const L of LETTERS){ if(used.indexOf(L)<0){ letter=L; break; } }
         if(!letter) return {statusCode:400,headers,body:JSON.stringify({error:'Se alcanzó el máximo de dependientes para este titular'})};

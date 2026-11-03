@@ -7,6 +7,7 @@ function verify(token){ if(!token) return null; const parts=token.split('.'); if
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 const parseMoney=v=>{ const n=Number(String(v==null?'':v).replace(/[^0-9.]/g,'')); return isFinite(n)?n:0; };
 const money=n=>'$'+Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+const norm=s=>String(s==null?'':s).trim().toUpperCase();
 async function readDoc(storeName, docId){
   if(!docId) return null;
   try{ const st=makeStore(storeName); const meta=await st.get('meta:'+docId,{type:'json'}); if(!meta) return null;
@@ -131,9 +132,36 @@ export const handler = async (event) => {
         return {statusCode:200,headers,body:JSON.stringify({ok:true, to, emailId:rd.id})};
       }
 
+      // marcar como PAGADA
+      if(data.action==='pagar'){
+        if(!data.id) return {statusCode:400,headers,body:JSON.stringify({error:'Falta id'})};
+        const o=await store.get('orden:'+data.id,{type:'json'}); if(!o) return {statusCode:404,headers,body:JSON.stringify({error:'Orden no encontrada'})};
+        o.estado='pagada'; o.pagadaAt=new Date().toISOString(); o.pagadaPor=p.email||'usuario'; if(data.fechaPago) o.fechaPago=data.fechaPago;
+        await store.setJSON('orden:'+o.id,o);
+        return {statusCode:200,headers,body:JSON.stringify(o)};
+      }
+
       // crear o actualizar: validar reserva (bloqueante)
       const err=validar(data);
       if(err) return {statusCode:400,headers,body:JSON.stringify({error:err})};
+
+      // A1: la suma de ESTA orden + lo ya comprometido en OTRAS órdenes del mismo caso no debe superar la reserva
+      {
+        const reserva=parseMoney(data.reserva);
+        const autId=data.autId||''; const folioAut=norm(data.folioAutorizacion||'');
+        const sumaEsta=(data.receptores||[]).reduce((a,r)=>a+parseMoney(r.monto),0);
+        const { blobs }=await store.list({prefix:'orden:'});
+        const todas=(await Promise.all(blobs.map(b=>store.get(b.key,{type:'json'})))).filter(Boolean);
+        let comprometido=0;
+        todas.forEach(o=>{ if(data.id && o.id===data.id) return; // excluir la que se edita
+          const mismo = (autId && o.autId===autId) || (folioAut && norm(o.folioAutorizacion)===folioAut);
+          if(mismo) comprometido += (o.receptores||[]).reduce((a,r)=>a+parseMoney(r.monto),0);
+        });
+        if(comprometido + sumaEsta > reserva + 0.001){
+          const disp=reserva-comprometido;
+          return {statusCode:400,headers,body:JSON.stringify({error:'El caso ya tiene '+money(comprometido)+' comprometido en otras órdenes. Disponible de la reserva: '+money(disp>0?disp:0)+' (reserva '+money(reserva)+'). Esta orden suma '+money(sumaEsta)+'.'})};
+        }
+      }
 
       if(data.action==='update'){
         if(!data.id) return {statusCode:400,headers,body:JSON.stringify({error:'Falta id'})};

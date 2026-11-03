@@ -410,7 +410,7 @@
                   <div class="ben-pick" id="sol-pick"></div>
                 </div>
               </div>
-              <div class="field"><label>CURP</label><input name="curp" type="text" maxlength="18"></div>
+              <div class="field"><label>CURP</label><input name="curp" type="text" minlength="18" maxlength="18" pattern="[A-Za-z]{4}[0-9]{6}[HMhm][A-Za-z]{5}[0-9A-Za-z]{2}" title="La CURP debe tener 18 caracteres" autocapitalize="characters"></div>
               <div class="field"><label>RFC</label><input name="rfc" type="text" maxlength="13"></div>
               <div class="field"><label>No. de certificado</label><input name="certificado" type="text"></div>
               <div class="field full"><label>¿Para quién es el servicio? <span style="font-weight:400;color:var(--ink)">(titular o dependiente)</span></label>
@@ -474,7 +474,7 @@
                   <div class="ben-pick" id="ben-pick"></div>
                 </div>
               </div>
-              <div class="field"><label>CURP</label><input name="curp" type="text" maxlength="18"></div>
+              <div class="field"><label>CURP</label><input name="curp" type="text" minlength="18" maxlength="18" pattern="[A-Za-z]{4}[0-9]{6}[HMhm][A-Za-z]{5}[0-9A-Za-z]{2}" title="La CURP debe tener 18 caracteres" autocapitalize="characters"></div>
               <div class="field"><label>RFC</label><input name="rfc" type="text" maxlength="13"></div>
               <div class="field"><label>Número de afiliado</label><input name="numAfiliado" type="text"></div>
               <div class="field"><label>Parentesco con el titular</label>
@@ -666,7 +666,7 @@
         <div id="ben-status"></div>
         <div class="table-wrap">
           <table id="ben-table" class="dtable">
-            <thead><tr><th>Certificado</th><th>Tipo</th><th>Nombre</th><th>RFC</th><th>CURP</th><th>Función</th><th>CCT</th><th>Centro de trabajo</th><th>Expediente</th></tr></thead>
+            <thead><tr><th>Certificado</th><th>Tipo</th><th>Nombre</th><th>RFC</th><th>CURP</th><th>Función</th><th>CCT</th><th>Centro de trabajo</th><th>Origen</th><th>Expediente</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
@@ -682,6 +682,12 @@
           <span class="meta"><b>Formato de Autorización y/o Confirmación de Servicios Médicos</b><span>PDF · uso interno PASEM</span></span>
           <span class="go">Descargar</span>
         </a>
+        <div id="backup-box" style="display:none;margin-top:16px;padding:14px;border:1px solid var(--border);border-radius:12px;background:#fff;">
+          <div style="font-weight:800;color:var(--brown-deep);margin-bottom:4px;">Respaldo general de datos</div>
+          <p style="font-size:13px;color:var(--ink);margin:0 0 10px;">Descarga un archivo con titulares, dependientes, solicitudes, autorizaciones y órdenes dados de alta en el sistema (para respaldo y continuidad). No incluye el padrón base.</p>
+          <button class="btn btn-primary" type="button" id="btn-backup">Descargar respaldo (JSON)</button>
+          <span id="backup-msg" style="font-size:13px;margin-left:10px;color:var(--ink);"></span>
+        </div>
       </div>
 
       <!-- Alta de titular -->
@@ -702,7 +708,7 @@
           <fieldset><legend>Datos del trabajador titular</legend>
             <div class="fgrid">
               <div class="field full"><label>Nombre completo</label><input name="nombre" type="text"></div>
-              <div class="field"><label>CURP</label><input name="curp" type="text" maxlength="18"></div>
+              <div class="field"><label>CURP</label><input name="curp" type="text" minlength="18" maxlength="18" pattern="[A-Za-z]{4}[0-9]{6}[HMhm][A-Za-z]{5}[0-9A-Za-z]{2}" title="La CURP debe tener 18 caracteres" autocapitalize="characters"></div>
               <div class="field"><label>RFC</label><input name="rfc" type="text" maxlength="13"></div>
               <div class="field"><label>Fecha de nacimiento</label><input name="fechaNacimiento" type="date"></div>
               <div class="field"><label>Sexo</label><select name="sexo"><option value="">Selecciona…</option><option>F</option><option>M</option></select></div>
@@ -782,7 +788,7 @@
             <div class="fgrid">
               <div class="field full"><label>Nombre completo del dependiente</label><input name="nombre" type="text"></div>
               <div class="field"><label>Parentesco</label><select name="parentesco"><option value="">Selecciona…</option><option>CONYUGE</option><option>CONCUBINA</option><option>HIJO(A)</option><option>PADRE</option><option>MADRE</option></select></div>
-              <div class="field"><label>CURP</label><input name="curp" type="text" maxlength="18"></div>
+              <div class="field"><label>CURP</label><input name="curp" type="text" minlength="18" maxlength="18" pattern="[A-Za-z]{4}[0-9]{6}[HMhm][A-Za-z]{5}[0-9A-Za-z]{2}" title="La CURP debe tener 18 caracteres" autocapitalize="characters"></div>
               <div class="field"><label>RFC</label><input name="rfc" type="text" maxlength="13"></div>
               <div class="field"><label>Fecha de nacimiento</label><input name="fechaNacimiento" type="date"></div>
               <div class="field"><label>Sexo</label><select name="sexo"><option value="">Selecciona…</option><option>F</option><option>M</option></select></div>
@@ -1199,6 +1205,7 @@
     var av=document.getElementById('admin-av'); if(av) av.textContent=(email()||'?').charAt(0).toUpperCase();
     document.getElementById('tab-usuarios-btn').style.display = isAdmin()?'':'none';
     var tp=document.getElementById('tab-prov-btn'); if(tp) tp.style.display = isAdmin()?'':'none';
+    var bb=document.getElementById('backup-box'); if(bb) bb.style.display = isAdmin()?'':'none';
     var ti=document.getElementById('tab-informe-btn'); if(ti) ti.style.display = isAdmin()?'':'none';
     activate('solicitud');
   }
@@ -1238,12 +1245,15 @@
     tbody.innerHTML='';
     records.forEach(function(rec){
       var tr=document.createElement('tr'); var serv=(rec.servicios||[]).join(', ');
+      var fin=rec.cerrado?' <button class="btn-mini" data-act="reabrir" data-id="'+esc(rec.id)+'" style="color:#0E9A9C">Reabrir</button>':' <button class="btn-mini" data-act="finalizar" data-id="'+esc(rec.id)+'" style="color:#b9770e">Finalizar</button>';
       var acts='<button class="btn-mini" data-act="verrec" data-id="'+esc(rec.id)+'">Ver</button> '+
                '<button class="btn-mini" data-act="print" data-id="'+esc(rec.id)+'">Imprimir</button> '+
                '<button class="btn-mini" data-act="editrec" data-id="'+esc(rec.id)+'">Editar</button> '+
                '<button class="btn-mini" data-act="notify" data-id="'+esc(rec.id)+'">Notificar SNTE</button>'+
+               (isAdmin()?fin:'')+
                (isAdmin()?' <button class="btn-del" data-act="del" data-id="'+esc(rec.id)+'">Eliminar</button>':'');
       var esp=(rec.autEspecial==='Sí')?' <span style="background:#FDECEC;color:#b23b3b;border:1px solid #f1c7c7;border-radius:999px;padding:1px 7px;font-size:10px;font-weight:800;">ESPECIAL</span>':'';
+      if(rec.cerrado) esp+=' <span style="background:#EEF2F4;color:#5a6b74;border:1px solid #dfe6ea;border-radius:999px;padding:1px 7px;font-size:10px;font-weight:800;">FINALIZADO</span>';
       tr.innerHTML='<td>'+esc(rec.folio)+'</td><td>'+esc(rec.fechaEmision)+'</td><td>'+esc(rec.paciente)+esp+'</td><td>'+esc(rec.curp)+'</td><td>'+esc(rec.rfc)+'</td><td>'+esc(rec.numAfiliado)+'</td><td>'+esc(rec.tipoTramite)+'</td><td>'+esc(rec.tipoServicio)+'</td><td>'+esc(serv)+'</td><td>'+esc(rec.hospital)+'</td><td>'+esc(rec.fechaProc)+'</td><td>'+esc(rec.capturadoPor)+'</td><td>'+(rec.notifiedAt?esc(fmtDate(rec.notifiedAt)):'—')+'</td><td style="white-space:nowrap;">'+acts+'</td>';
       tbody.appendChild(tr);
     });
@@ -1252,6 +1262,16 @@
     tbody.querySelectorAll('[data-act=del]').forEach(function(b){ b.addEventListener('click', function(){ delRecord(b.getAttribute('data-id')); }); });
     tbody.querySelectorAll('[data-act=editrec]').forEach(function(b){ b.addEventListener('click', function(){ editRecord(b.getAttribute('data-id')); }); });
     tbody.querySelectorAll('[data-act=verrec]').forEach(function(b){ b.addEventListener('click', function(){ verAtencion(recById(b.getAttribute('data-id'))); }); });
+    tbody.querySelectorAll('[data-act=finalizar]').forEach(function(b){ b.addEventListener('click', function(){ closeRecord(b.getAttribute('data-id'), true); }); });
+    tbody.querySelectorAll('[data-act=reabrir]').forEach(function(b){ b.addEventListener('click', function(){ closeRecord(b.getAttribute('data-id'), false); }); });
+  }
+  async function closeRecord(id, cerrar){
+    var rec=recById(id); if(!rec) return;
+    var motivo='';
+    if(cerrar){ if(!confirm('¿Finalizar el caso '+(rec.folio||'')+' de '+(rec.paciente||'')+'?\nSaldrá de "procedimientos abiertos" del informe.')) return; motivo=prompt('Motivo / nota de cierre (opcional):')||''; }
+    else { if(!confirm('¿Reabrir el caso '+(rec.folio||'')+'?')) return; }
+    try{ var r=await api(RECORDS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'close', id:id, reabrir:!cerrar, motivo:motivo})}); var d=await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status)); loadRecords(); }
+    catch(e){ alert('No se pudo: '+e.message); }
   }
   var editAtencionId=null;
   function fillFormFromRec(frm, rec){
@@ -1453,7 +1473,11 @@
     if(!BEN_RESULTS.length){ benStatus.textContent='Sin coincidencias. Esa persona no aparece en el listado de beneficiarios.'; renderPager(document.getElementById('ben-pager'),1,1,function(){}); return; }
     var pages=Math.max(1,Math.ceil(BEN_RESULTS.length/PAGE_SIZE)); if(BEN_PAGE>pages) BEN_PAGE=pages;
     var start=(BEN_PAGE-1)*PAGE_SIZE, pageItems=BEN_RESULTS.slice(start,start+PAGE_SIZE);
-    pageItems.forEach(function(x){ var tr=document.createElement('tr'); tr.innerHTML='<td><strong>'+esc(x.cert)+'</strong></td><td>'+esc(x.tipo||'')+'</td><td>'+esc(x.nombre)+'</td><td>'+esc(x.rfc)+'</td><td>'+esc(x.curp)+'</td><td>'+esc(x.funcion)+'</td><td>'+esc(x.cct)+'</td><td>'+esc(x.ct)+'</td><td><button class="btn-mini" data-curp="'+esc(x.curp)+'" data-cert="'+esc(x.cert)+'" data-nom="'+esc(x.nombre)+'">📎 Ver</button></td>'; benTbody.appendChild(tr); });
+    pageItems.forEach(function(x){ var tr=document.createElement('tr');
+      var orig = x.origen==='alta'
+        ? '<span style="background:#E6F6F6;color:#0E9A9C;border:1px solid #bfe6e6;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700;">Dado de alta</span>'
+        : '<span style="background:#F1F4F6;color:#5a6b74;border:1px solid #dfe6ea;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700;">Padrón base</span>';
+      tr.innerHTML='<td><strong>'+esc(x.cert)+'</strong></td><td>'+esc(x.tipo||'')+'</td><td>'+esc(x.nombre)+'</td><td>'+esc(x.rfc)+'</td><td>'+esc(x.curp)+'</td><td>'+esc(x.funcion)+'</td><td>'+esc(x.cct)+'</td><td>'+esc(x.ct)+'</td><td>'+orig+'</td><td><button class="btn-mini" data-curp="'+esc(x.curp)+'" data-cert="'+esc(x.cert)+'" data-nom="'+esc(x.nombre)+'">📎 Ver</button></td>'; benTbody.appendChild(tr); });
     benTbody.querySelectorAll('[data-cert]').forEach(function(b){ b.addEventListener('click', function(){ openExpediente(b.getAttribute('data-curp'), b.getAttribute('data-cert'), b.getAttribute('data-nom')); }); });
     benStatus.textContent='Mostrando '+(start+1)+'–'+(start+pageItems.length)+' de '+BEN_COUNT+' coincidencia(s)'+(BEN_COUNT>=100?' (máx. 100)':'')+'. Las personas listadas cuentan con el beneficio.';
     renderPager(document.getElementById('ben-pager'), BEN_PAGE, pages, function(p){ BEN_PAGE=p; renderBen(); });
@@ -1839,7 +1863,7 @@
     titTbody.querySelectorAll('[data-act=titexp]').forEach(function(b){ b.addEventListener('click', function(){ openExpediente(b.getAttribute('data-curp'), b.getAttribute('data-cert'), b.getAttribute('data-nom')); }); });
     titTbody.querySelectorAll('[data-act=titdel]').forEach(function(b){ b.addEventListener('click', function(){ delTit(b.getAttribute('data-id')); }); });
   }
-  async function delTit(id){ if(!confirm('¿Eliminar este titular (dado de alta manualmente)?')) return; try{ var r=await api(TITU,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id:id})}); if(!r.ok) throw new Error('HTTP '+r.status); loadTit(); }catch(e){ alert('Error: '+e.message); } }
+  async function delTit(id){ if(!confirm('¿Eliminar este titular?\nSi tiene dependientes registrados, también se eliminarán.')) return; try{ var r=await api(TITU,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id:id})}); var d=await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status)); if(d.depsBorrados) alert('Titular eliminado junto con '+d.depsBorrados+' dependiente(s).'); loadTit(); }catch(e){ alert('Error: '+e.message); } }
 
   // Etiqueta automáticamente cada celda con el título de su columna (para la vista en tarjetas en celular)
   function labelTables(){
@@ -1852,6 +1876,21 @@
 
   // Cancelar edición de autorización
   (function(){ var c=document.getElementById('aut-edit-cancel'); if(c) c.addEventListener('click', cancelEditRecord); })();
+
+  // Respaldo general (JSON) — solo admin
+  (function(){ var b=document.getElementById('btn-backup'); if(b) b.addEventListener('click', backupAll); })();
+  async function backupAll(){
+    var msg=document.getElementById('backup-msg'); var btn=document.getElementById('btn-backup'); btn.disabled=true; msg.textContent='Generando respaldo…';
+    var fuentes=[['titulares',TITU],['dependientes',DEPS],['solicitudes',SOLIC],['atenciones',RECORDS],['ordenes',ORDENES],['proveedores',PROV],['altas',ALTAS+'?list=1']];
+    var out={ generado:new Date().toISOString(), por:email()||'' };
+    try{
+      for(var i=0;i<fuentes.length;i++){ try{ var r=await api(fuentes[i][1]); var d=await r.json(); out[fuentes[i][0]]=r.ok?d:{error:(d&&d.error)||('HTTP '+r.status)}; }catch(e){ out[fuentes[i][0]]={error:e.message}; } }
+      var blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
+      var url=URL.createObjectURL(blob); var a=document.createElement('a'); a.href=url; a.download='respaldo-pasem-'+new Date().toISOString().slice(0,10)+'.json'; a.click(); URL.revokeObjectURL(url);
+      msg.innerHTML='<span style="color:#1e9e52;font-weight:700;">✓ Respaldo descargado.</span>';
+    }catch(e){ msg.textContent='Error: '+e.message; }
+    finally{ btn.disabled=false; }
+  }
 
   // ===== Etiqueta dinámica de la fecha del trámite en Solicitud =====
   (function(){
@@ -2199,11 +2238,12 @@
     countEl.textContent= total? ('Mostrando '+(start+1)+'–'+(start+pageItems.length)+' de '+total+' · Total: '+OP_CACHE.length+' orden(es).') : 'Sin resultados.';
     tb.innerHTML='';
     pageItems.forEach(function(o){ var idx=o._i;
-      var estado=o.estado==='solicitada'?'<span style="color:#1e9e52;font-weight:700;">Solicitada</span>':'Registrada';
+      var estado=o.estado==='pagada'?'<span style="color:#0E9A9C;font-weight:800;">Pagada</span>':(o.estado==='solicitada'?'<span style="color:#1e9e52;font-weight:700;">Solicitada</span>':'Registrada');
       var acts='<button class="btn-mini" data-over="'+idx+'">Ver</button> '+
                '<button class="btn-mini" data-oprint="'+idx+'">Imprimir</button> '+
                '<button class="btn-mini" data-oedit="'+idx+'">Editar</button> '+
                '<button class="btn-mini" data-osol="'+idx+'" style="color:#0E9A9C">Solicitar pago</button>'+
+               (o.estado!=='pagada'?' <button class="btn-mini" data-opag="'+idx+'" style="color:#1e7e3e">Marcar pagada</button>':'')+
                (isAdmin()?' <button class="btn-del" data-odel="'+idx+'">Eliminar</button>':'');
       var tr=document.createElement('tr');
       tr.innerHTML='<td>'+esc(o.folio||'')+'</td><td>'+esc(o.paciente||'')+'</td><td>'+esc(o.tipoTramite||'')+'</td><td>'+money(opTotal(o))+'</td><td>'+money(parseMoney(o.reserva))+'</td><td>'+estado+'</td><td style="white-space:nowrap">'+acts+'</td>';
@@ -2214,6 +2254,7 @@
     tb.querySelectorAll('[data-oedit]').forEach(function(b){ b.addEventListener('click', function(){ editOrden(OP_CACHE[+b.getAttribute('data-oedit')]); }); });
     tb.querySelectorAll('[data-osol]').forEach(function(b){ b.addEventListener('click', function(){ solicitarOrden(OP_CACHE[+b.getAttribute('data-osol')]); }); });
     tb.querySelectorAll('[data-odel]').forEach(function(b){ b.addEventListener('click', function(){ delOrden(OP_CACHE[+b.getAttribute('data-odel')]); }); });
+    tb.querySelectorAll('[data-opag]').forEach(function(b){ b.addEventListener('click', function(){ pagarOrden(OP_CACHE[+b.getAttribute('data-opag')]); }); });
     renderPager(document.getElementById('op-pager'), OP_PAGE, pages, function(p){ OP_PAGE=p; renderOrdenes(); });
   }
   function editOrden(o){
@@ -2233,6 +2274,11 @@
     if(!o) return; if(!confirm('¿Eliminar la orden '+(o.folio||'')+'?')) return;
     try{ var r=await api(ORDENES,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id:o.id})}); var d=await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status)); loadOrdenes(); }
     catch(e){ alert('No se pudo eliminar: '+e.message); }
+  }
+  async function pagarOrden(o){
+    if(!o) return; if(!confirm('¿Marcar como PAGADA la orden '+(o.folio||'')+'?')) return;
+    try{ var r=await api(ORDENES,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'pagar', id:o.id})}); var d=await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status)); loadOrdenes(); }
+    catch(e){ alert('No se pudo marcar como pagada: '+e.message); }
   }
   async function solicitarOrden(o){
     if(!o) return;

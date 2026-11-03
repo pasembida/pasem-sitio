@@ -44,8 +44,16 @@ export const handler = async (event) => {
       }
       if(body.action==='delete'){
         if(!isAdmin) return {statusCode:403,headers,body:JSON.stringify({error:'Solo administración'})};
+        const tit=await store.get(body.id,{type:'json'});
+        let depsBorrados=0;
+        if(tit && tit.cert){
+          try{ const ds=makeStore('pasem-dependientes'); const {blobs:db}=await ds.list();
+            const deps=(await Promise.all(db.map(b=>ds.get(b.key,{type:'json'}).then(v=>({key:b.key,v}))))).filter(x=>x.v);
+            for(const d of deps){ if(String(d.v.titularCert||'').toUpperCase()===String(tit.cert).toUpperCase()){ await ds.delete(d.key); depsBorrados++; } }
+          }catch(e){}
+        }
         await store.delete(body.id);
-        return {statusCode:200,headers,body:JSON.stringify({ok:true})};
+        return {statusCode:200,headers,body:JSON.stringify({ok:true, depsBorrados})};
       }
       return {statusCode:400,headers,body:JSON.stringify({error:'Acción no reconocida'})};
     }

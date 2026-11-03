@@ -58,8 +58,19 @@ export const handler = async (event) => {
     if(body.action==='login'){
       await ensureSeed(store);
       const em=String(body.email||'').toLowerCase().trim();
+      // Límite de intentos: máx. 8 fallos en 15 min por correo
+      const lim=makeStore('pasem-authlimit'); const now=Date.now(); const WIN=15*60*1000, MAX=8;
+      let reg=null; try{ reg=await lim.get('fail:'+em,{type:'json'}); }catch(e){}
+      if(reg && reg.until && now<reg.until) return {statusCode:429,headers,body:JSON.stringify({error:'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.'})};
+      if(reg && reg.first && (now-reg.first)>WIN) reg=null; // ventana expirada
       const u=await getUser(store,em);
-      if(!u || !checkPw(body.password||'',u.salt,u.hash)) return {statusCode:401,headers,body:JSON.stringify({error:'Correo o contraseña incorrectos'})};
+      if(!u || !checkPw(body.password||'',u.salt,u.hash)){
+        const cnt=((reg&&reg.count)||0)+1; const first=(reg&&reg.first)||now;
+        const rec={count:cnt, first:first}; if(cnt>=MAX){ rec.until=now+WIN; rec.count=0; rec.first=now; }
+        try{ await lim.setJSON('fail:'+em, rec); }catch(e){}
+        return {statusCode:401,headers,body:JSON.stringify({error:'Correo o contraseña incorrectos'})};
+      }
+      try{ await lim.delete('fail:'+em); }catch(e){}
       const token=sign({email:u.email,role:u.role,exp:Math.floor(Date.now()/1000)+60*60*8});
       return {statusCode:200,headers,body:JSON.stringify({token,email:u.email,role:u.role})};
     }

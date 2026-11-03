@@ -30,6 +30,11 @@ export const handler = async (event) => {
       if(body.action==='init'){
         const chunks=Number(body.chunks||1);
         if(!(chunks>=1 && chunks<=40)) return {statusCode:400,headers,body:JSON.stringify({error:'Número de partes inválido'})};
+        const size=Number(body.size||0); if(size>16_000_000) return {statusCode:413,headers,body:JSON.stringify({error:'El archivo supera el máximo permitido (15 MB).'})};
+        const fn=String(body.filename||'').toLowerCase(); const type=String(body.type||'').toLowerCase();
+        const okExt=/\.(pdf|xml|jpg|jpeg|png|webp)$/.test(fn);
+        const okType=!type || /pdf|xml|image\//.test(type);
+        if(!(okExt||okType)) return {statusCode:400,headers,body:JSON.stringify({error:'Tipo de archivo no permitido. Usa PDF, XML o imagen.'})};
         const docId=crypto.randomUUID();
         await store.setJSON('meta:'+docId, { id:docId, filename:String(body.filename||'documento').slice(0,160), type:String(body.type||'application/octet-stream').slice(0,80), size:Number(body.size||0), chunks, createdAt:new Date().toISOString(), subidoPor:p.email||'usuario' });
         return {statusCode:200,headers,body:JSON.stringify({docId})};

@@ -48,6 +48,16 @@ export const handler = async (event) => {
         await store.setJSON(nid,rec);
         return {statusCode:200,headers,body:JSON.stringify(rec)};
       }
+      // finalizar / cerrar caso (sale de "procedimientos abiertos")
+      if(data.action==='close'){
+        const cid=data.id; if(!cid) return {statusCode:400,headers,body:JSON.stringify({error:'Falta id'})};
+        const rec=await store.get(cid,{type:'json'}); if(!rec) return {statusCode:404,headers,body:JSON.stringify({error:'Registro no encontrado'})};
+        rec.cerrado = data.reabrir ? false : true;
+        if(rec.cerrado){ rec.cerradoAt=new Date().toISOString(); rec.cerradoPor=p.email||'usuario'; rec.motivoCierre=String(data.motivo||'').slice(0,300); }
+        else { rec.reabiertoAt=new Date().toISOString(); rec.reabiertoPor=p.email||'usuario'; }
+        await store.setJSON(cid,rec);
+        return {statusCode:200,headers,body:JSON.stringify(rec)};
+      }
       // editar una autorización existente (conserva id, fecha y auditoría)
       if(data.action==='update'){
         const uid=data.id; if(!uid) return {statusCode:400,headers,body:JSON.stringify({error:'Falta id'})};
