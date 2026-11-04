@@ -933,6 +933,15 @@
       <div class="tabpane" id="pane-repdir">
         <h3 style="font-family:var(--serif); color:var(--brown-deep); margin:0 0 6px;">Reporte Dirección</h3>
         <p style="color:var(--ink); font-size:14px; margin:0 0 14px;">Reporte ejecutivo para la Dirección: cifras agregadas, sin nombres ni detalle diario. Reclamaciones por tipo de trámite y su reserva.</p>
+        <div id="cuota-box" style="display:none;background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;max-width:520px;">
+          <div style="font-weight:800;color:var(--brown-deep);margin-bottom:6px;">Cuota pendiente del contrato</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <input id="cuota-input" type="text" inputmode="decimal" placeholder="$ 0.00" style="max-width:200px;">
+            <button class="btn btn-mini" id="cuota-save" type="button">Guardar</button>
+            <span id="cuota-msg" style="font-size:12px;color:var(--ink);"></span>
+          </div>
+          <div style="font-size:12px;color:var(--ink);margin-top:4px;">Se usa para calcular los porcentajes del resumen. Actualiza el informe después de guardar.</div>
+        </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
           <button class="btn btn-primary" id="btn-repdir" type="button">Actualizar informe</button>
           <button class="btn btn-ghost" id="btn-repdir-print" type="button" style="display:none;">Descargar PDF</button>
@@ -1110,7 +1119,7 @@
 </script>
 <script>
 (function(){
-  var AUTH='/.netlify/functions/auth', RECORDS='/.netlify/functions/records', USERS='/.netlify/functions/usuarios', BEN='/.netlify/functions/beneficiarios', EXPED='/.netlify/functions/expediente', ALTAS='/.netlify/functions/alta', INFORME='/.netlify/functions/informe', PROV='/.netlify/functions/proveedores', ORDENES='/.netlify/functions/ordenes', DOCUP='/.netlify/functions/docs-upload';
+  var AUTH='/.netlify/functions/auth', RECORDS='/.netlify/functions/records', USERS='/.netlify/functions/usuarios', BEN='/.netlify/functions/beneficiarios', EXPED='/.netlify/functions/expediente', ALTAS='/.netlify/functions/alta', INFORME='/.netlify/functions/informe', PROV='/.netlify/functions/proveedores', ORDENES='/.netlify/functions/ordenes', DOCUP='/.netlify/functions/docs-upload', CONFIG='/.netlify/functions/config';
   var SOLIC='/.netlify/functions/solicitudes', DEPS='/.netlify/functions/dependientes', TITU='/.netlify/functions/titulares';
   var STAGE_MAIL='telesecundariaseccion26@pasem.com';
   var MAIL='/.netlify/functions/enviar-correo', MAIL_TO='telesecundariaseccion26@pasem.com', MAIL_CC='bidaseguros@bidaseguros.org';
@@ -1193,6 +1202,7 @@
     if(name==='expediente') loadExp();
     if(name==='proveedores' && isAdmin()) loadProv();
     if(name==='ordenpago') initOrdenPago();
+    if(name==='repdir' && isAdmin()) initCuota();
     if(name==='solicitud') loadSolic();
     if(name==='autorizacion'){ loadRecords(); loadAuthPicker(); }
     if(name==='dependientes') loadDeps();
@@ -2989,9 +2999,40 @@
     h+='</tbody></table></div></div>';
     return h;
   }
+  function pctCuota(monto, cuota){ return (cuota>0)? (Math.round(monto/cuota*100)+'%') : '—'; }
+  function repdirResumenHTML(data){
+    var cuota=Number(data.cuota||0); var contrato=data.contrato||'SLP';
+    var pr=data.procedimientos||[];
+    var rep={n:pr.length, m:pr.reduce(function(a,s){return a+(s.reservaNum||0);},0)};
+    var pag=pr.filter(function(s){return s.pagado;}); var pagS={n:pag.length, m:pag.reduce(function(a,s){return a+(s.reservaNum||0);},0)};
+    var rec=pr.filter(function(s){return !s.pagado;}); var recS={n:rec.length, m:rec.reduce(function(a,s){return a+(s.reservaNum||0);},0)};
+    var th='font-size:11px;font-weight:800;color:var(--ink);background:#EFEFEF;padding:6px 8px;border:1px solid #C9D4D8;text-align:center;';
+    var td='font-size:13px;padding:6px 8px;border:1px solid #C9D4D8;';
+    var h='<div class="card" style="padding:14px;margin:0 0 14px;overflow-x:auto;"><div style="font-family:var(--serif);color:var(--ochre);font-size:13px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Resumen de reclamaciones</div>';
+    h+='<table style="border-collapse:collapse;width:100%;min-width:720px;">';
+    h+='<thead>'+
+       '<tr><th style="'+th+'"></th><th style="'+th+'">CUOTA PENDIENTE</th><th style="'+th+'" colspan="3">REPORTADOS</th><th style="'+th+'" colspan="3">PAGADOS</th><th style="'+th+'" colspan="3">RECLAMADOS</th></tr>'+
+       '<tr><th style="'+th+'">CONTRATO</th><th style="'+th+'"></th>'+
+         '<th style="'+th+'">Casos</th><th style="'+th+'">Monto</th><th style="'+th+'">%</th>'+
+         '<th style="'+th+'">Casos</th><th style="'+th+'">Monto</th><th style="'+th+'">%</th>'+
+         '<th style="'+th+'">Casos</th><th style="'+th+'">Monto</th><th style="'+th+'">%</th></tr></thead><tbody>';
+    function fila(label,bold,hlFirst){
+      var b=bold?'font-weight:800;':'';
+      return '<tr><td style="'+td+b+'">'+esc(label)+'</td>'+
+        '<td style="'+td+b+'text-align:right;">'+moneyR(cuota)+'</td>'+
+        '<td style="'+td+b+'text-align:center;">'+rep.n+'</td><td style="'+td+b+'text-align:right;">'+moneyR(rep.m)+'</td><td style="'+td+b+'text-align:center;'+(hlFirst?'background:#FFF27A;':'')+'">'+pctCuota(rep.m,cuota)+'</td>'+
+        '<td style="'+td+b+'text-align:center;">'+pagS.n+'</td><td style="'+td+b+'text-align:right;">'+moneyR(pagS.m)+'</td><td style="'+td+b+'text-align:center;">'+pctCuota(pagS.m,cuota)+'</td>'+
+        '<td style="'+td+b+'text-align:center;">'+recS.n+'</td><td style="'+td+b+'text-align:right;">'+moneyR(recS.m)+'</td><td style="'+td+b+'text-align:center;">'+pctCuota(recS.m,cuota)+'</td></tr>';
+    }
+    h+=fila(contrato,false,false);
+    h+=fila('S U M A S :',true,true);
+    h+='</tbody></table><div style="font-size:11px;color:var(--ink);margin-top:6px;">Los porcentajes se calculan sobre la Cuota pendiente. Reportados = en trámite + pagados.</div></div>';
+    return h;
+  }
   function repdirHTML(data){
     var s=repdirSecciones(data);
     var h='<div style="color:var(--ink);font-size:13px;margin-bottom:10px;">Generado: '+esc(fmtDate(data.generatedAt))+'</div>';
+    h+=repdirResumenHTML(data);
     // Padrón (sin nombres)
     var t=data.totals||{};
     var base=data.padronTotal||0, nuevos=data.titularesNuevosAlta||0, actualizado=data.padronActualizado||(base+nuevos);
@@ -3009,7 +3050,22 @@
     h+=repdirTablaHTML('Reclamaciones Pagadas', s.pagadas);
     return h;
   }
+  var CUOTA_INIT=false;
+  async function initCuota(){
+    var box=document.getElementById('cuota-box'); if(box) box.style.display=isAdmin()?'':'none';
+    if(!CUOTA_INIT){ CUOTA_INIT=true; var sv=document.getElementById('cuota-save'); if(sv) sv.addEventListener('click', saveCuota); }
+    try{ var r=await api(CONFIG); if(r.ok){ var c=await r.json(); var inp=document.getElementById('cuota-input'); if(inp) inp.value=moneyR(c.cuota||0); } }catch(e){}
+  }
+  async function saveCuota(){
+    var inp=document.getElementById('cuota-input'); var msg=document.getElementById('cuota-msg'); var val=parseMoney(inp.value);
+    msg.textContent='Guardando…';
+    try{ var r=await api(CONFIG,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cuota:val})}); var d=await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
+      inp.value=moneyR(d.cuota||0); msg.innerHTML='<span style="color:#1e9e52;font-weight:700;">✓ Guardada.</span> Actualiza el informe.';
+      if(REPDIR_DATA){ REPDIR_DATA.cuota=d.cuota; document.getElementById('repdir-out').innerHTML=repdirHTML(REPDIR_DATA); }
+    }catch(e){ msg.textContent='Error: '+e.message; }
+  }
   async function loadRepDir(){
+    await initCuota();
     var out=document.getElementById('repdir-out'); var btn=document.getElementById('btn-repdir');
     var old=btn?btn.textContent:''; if(btn){ btn.disabled=true; btn.textContent='Generando…'; }
     document.getElementById('repdir-msg').textContent='';
@@ -3027,7 +3083,7 @@
     try{
       var ok=await ensureJsPDF(); if(!ok) throw new Error('no-lib');
       var d=REPDIR_DATA; var s=repdirSecciones(d);
-      var jsPDF=window.jspdf.jsPDF; var doc=new jsPDF({unit:'mm', format:'letter', orientation:'portrait'});
+      var jsPDF=window.jspdf.jsPDF; var doc=new jsPDF({unit:'mm', format:'letter', orientation:'landscape'});
       var M=12, W=doc.internal.pageSize.getWidth(), y=12;
       var ORANGE=[221,107,32], INK=[31,52,66], GRAY=[118,118,118], PEACH=[255,243,234];
       var snte=imgToDataURL('.logo-snte'), bida=imgToDataURL('.logo-bida');
@@ -3059,6 +3115,28 @@
       doc.setFont('helvetica','bold'); doc.text('Padrón actualizado (suma): '+actz.toLocaleString('es-MX'), M, y+13); doc.setFont('helvetica','normal');
       doc.text('Dependientes dados de alta: '+depReg.toLocaleString('es-MX'), M, y+18);
       doc.text('Titulares que actualizaron sus datos: '+(tt.titularesEnPadron||0).toLocaleString('es-MX'), M, y+23); y+=28;
+      // Resumen de reclamaciones (estilo tabla ejecutiva)
+      var cuota=Number(d.cuota||0), contrato=d.contrato||'SLP';
+      var prAll2=d.procedimientos||[];
+      var rep={n:prAll2.length,m:prAll2.reduce(function(a,x){return a+(x.reservaNum||0);},0)};
+      var pagX=prAll2.filter(function(x){return x.pagado;}); var pagS={n:pagX.length,m:pagX.reduce(function(a,x){return a+(x.reservaNum||0);},0)};
+      var recX=prAll2.filter(function(x){return !x.pagado;}); var recS={n:recX.length,m:recX.reduce(function(a,x){return a+(x.reservaNum||0);},0)};
+      function pctc(n){ return cuota>0?Math.round(n/cuota*100)+'%':'—'; }
+      bar('Resumen de reclamaciones');
+      var fila=function(lbl){ return [lbl, money(cuota), String(rep.n), money(rep.m), pctc(rep.m), String(pagS.n), money(pagS.m), pctc(pagS.m), String(recS.n), money(recS.m), pctc(recS.m)]; };
+      doc.autoTable({ startY:y,
+        head:[
+          [{content:'CONTRATO',rowSpan:2,styles:{valign:'middle'}},{content:'CUOTA PENDIENTE',rowSpan:2,styles:{valign:'middle',halign:'center'}},{content:'REPORTADOS',colSpan:3},{content:'PAGADOS',colSpan:3},{content:'RECLAMADOS',colSpan:3}],
+          ['Casos','Monto','%','Casos','Monto','%','Casos','Monto','%']
+        ],
+        body:[ fila(contrato), fila('SUMAS:') ],
+        margin:{left:M,right:M}, theme:'grid',
+        styles:{fontSize:7,cellPadding:1.5,textColor:INK,lineColor:[201,212,216],lineWidth:0.1,halign:'center'},
+        headStyles:{fillColor:[239,239,239],textColor:INK,fontStyle:'bold',halign:'center'},
+        columnStyles:{0:{halign:'left',fontStyle:'bold'},1:{halign:'right'},3:{halign:'right'},6:{halign:'right'},9:{halign:'right'}},
+        didParseCell:function(data){ if(data.section==='body'&&data.row.index===1) data.cell.styles.fontStyle='bold'; }
+      });
+      y=doc.lastAutoTable.finalY+5;
       tablaSec('Total de Reclamaciones Reportadas', s.reportadas);
       tablaSec('Reclamaciones en trámite', s.tramite);
       tablaSec('Reclamaciones Pagadas', s.pagadas);
