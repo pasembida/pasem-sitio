@@ -394,9 +394,11 @@
             <div class="nav-group">Documentos</div>
             <button class="tab" type="button" data-pane="expediente">Expediente</button>
             <button class="tab" type="button" data-pane="descargas">Descargas</button>
+            <div class="nav-group" id="nav-reportes" style="display:none;">Reportes</div>
+            <button class="tab" type="button" data-pane="informe" id="tab-informe-btn" style="display:none;">Reporte Comercial</button>
+            <button class="tab" type="button" data-pane="repdir" id="tab-repdir-btn" style="display:none;">Reporte Dirección</button>
             <div class="nav-group">Gestión</div>
             <button class="tab" type="button" data-pane="proveedores" id="tab-prov-btn" style="display:none;">Proveedores</button>
-            <button class="tab" type="button" data-pane="informe" id="tab-informe-btn" style="display:none;">Informe a Dirección</button>
             <button class="tab" type="button" data-pane="usuarios" id="tab-usuarios-btn" style="display:none;">Usuarios</button>
           </div>
         </nav>
@@ -637,7 +639,8 @@
           <fieldset><legend>Autorización</legend>
             <div class="fgrid">
               <div class="field full"><label>Nombre de quien autoriza</label><input name="autoriza" type="text" value="DRA. ADRIANA PAMPLONA TRUJILLO"></div>
-              <div class="field"><label>Cargo / puesto</label><input name="cargo" type="text"></div>
+              <div class="field"><label>Cargo / puesto</label><input name="cargo" type="text" value="Coordinador Médico PASEM"></div>
+              <div class="field"><label>Monto de pago autorizado <span style="font-weight:400;color:var(--ink);font-size:11px;">(distinto a la reserva)</span></label><input name="montoPago" type="text" inputmode="decimal" placeholder="$ 0.00"></div>
               <div class="field"><label>Fecha de autorización</label><input name="fechaAutorizacion" type="date"></div>
             </div>
           </fieldset>
@@ -901,17 +904,28 @@
         <div class="table-wrap"><table class="dtable" id="alta-detail"><thead><tr><th>Campo</th><th>Valor</th></tr></thead><tbody></tbody></table></div>
       </div></div>
 
-      <!-- Informe a Dirección -->
+      <!-- Reporte Comercial -->
       <div class="tabpane" id="pane-informe">
-        <h3 style="font-family:var(--serif); color:var(--brown-deep); margin:0 0 6px;">Informe a Dirección</h3>
-        <p style="color:var(--ink); font-size:14px; margin:0 0 14px;">Genera un reporte dirigido a la Dirección General con el estado del padrón, las actualizaciones de datos recibidas y los procedimientos abiertos.</p>
+        <h3 style="font-family:var(--serif); color:var(--brown-deep); margin:0 0 6px;">Reporte Comercial</h3>
+        <p style="color:var(--ink); font-size:14px; margin:0 0 14px;">Reporte detallado para clientes: estado del padrón, actualizaciones de datos recibidas, titulares nuevos y procedimientos (abiertos y pagados), con nombres.</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-          <button class="btn btn-primary" id="btn-informe" type="button">Informe a Dirección</button>
+          <button class="btn btn-primary" id="btn-informe" type="button">Actualizar informe</button>
           <button class="btn btn-ghost" id="btn-informe-print" type="button" style="display:none;">Descargar PDF</button>
-          <button class="btn btn-ghost" id="btn-informe-send" type="button" style="display:none;">Enviar a Dirección</button>
         </div>
         <div id="informe-msg" style="font-size:14px;margin-bottom:10px;"></div>
         <div id="informe-out"></div>
+      </div>
+
+      <!-- Reporte Dirección -->
+      <div class="tabpane" id="pane-repdir">
+        <h3 style="font-family:var(--serif); color:var(--brown-deep); margin:0 0 6px;">Reporte Dirección</h3>
+        <p style="color:var(--ink); font-size:14px; margin:0 0 14px;">Reporte ejecutivo para la Dirección: cifras agregadas, sin nombres ni detalle diario. Reclamaciones por tipo de trámite y su reserva.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+          <button class="btn btn-primary" id="btn-repdir" type="button">Actualizar informe</button>
+          <button class="btn btn-ghost" id="btn-repdir-print" type="button" style="display:none;">Descargar PDF</button>
+        </div>
+        <div id="repdir-msg" style="font-size:14px;margin-bottom:10px;"></div>
+        <div id="repdir-out"></div>
       </div>
 
       <!-- Proveedores -->
@@ -948,6 +962,7 @@
               <div class="field full"><label>Dirección</label><input id="prov-direccionM" type="text"></div>
               <div class="field"><label>Teléfono de contacto</label><input id="prov-telContacto" type="text"></div>
               <div class="field"><label>Correo electrónico</label><input id="prov-correoM" type="email"></div>
+              <div class="field"><label>Costo convenido por consulta</label><input id="prov-costoConsulta" type="text" inputmode="decimal" placeholder="$ 0.00"></div>
             </div>
           </div>
           <div style="font-family:var(--serif);color:var(--ochre);font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin:12px 0 6px;">Datos bancarios (para la orden de pago)</div>
@@ -997,13 +1012,14 @@
               <div class="field"><label>Fecha del procedimiento</label><input id="op-fechaProc" type="text" readonly></div>
               <div class="field"><label>Programa</label><select id="op-programa"><option>PASEM</option><option>ABC</option></select></div>
               <div class="field"><label>Reserva autorizada</label><input id="op-reserva" type="text" readonly style="font-weight:800;color:var(--brown-deep);"></div>
+              <div class="field"><label>Monto de pago autorizado <span style="font-weight:400;color:var(--ink);font-size:11px;">(referencia)</span></label><input id="op-montopago" type="text" readonly style="font-weight:700;color:#0E9A9C;"></div>
             </div>
           </div>
           <div style="font-family:var(--serif);color:var(--ochre);font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px;">Pago</div>
           <div class="fgrid">
             <div class="field"><label>Fecha de pago programada</label><input id="op-fechapago" type="date"></div>
-            <div class="field"><label>Factura a pagar (PDF/XML)</label><input id="op-factura" type="file" accept=".pdf,.xml,.jpg,.jpeg,.png"><div id="op-factura-cur" style="font-size:12px;color:var(--ink);margin-top:4px;"></div></div>
           </div>
+          <p style="font-size:12px;color:var(--ink);margin:4px 0 0;">La factura (PDF) y el XML se suben en cada receptor, más abajo. Se adjuntan al correo al solicitar el pago.</p>
           <div style="font-family:var(--serif);color:var(--ochre);font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px;">Receptores del pago (hasta 5)</div>
           <div id="op-receptores"></div>
           <div id="op-resumen" style="margin-top:10px;font-size:14px;"></div>
@@ -1219,6 +1235,8 @@
     var tp=document.getElementById('tab-prov-btn'); if(tp) tp.style.display = isAdmin()?'':'none';
     var bb=document.getElementById('backup-box'); if(bb) bb.style.display = isAdmin()?'':'none';
     var ti=document.getElementById('tab-informe-btn'); if(ti) ti.style.display = isAdmin()?'':'none';
+    var trd=document.getElementById('tab-repdir-btn'); if(trd) trd.style.display = isAdmin()?'':'none';
+    var nr=document.getElementById('nav-reportes'); if(nr) nr.style.display = isAdmin()?'':'none';
     activate('solicitud');
   }
   async function doLogin(){
@@ -2086,7 +2104,7 @@
       razonSocial:g('prov-razonSocial'), rfcH:g('prov-rfcH'), sucursal:g('prov-sucursal'), direccionH:g('prov-direccionH'),
       telHospital:g('prov-telHospital'), nombreResp:g('prov-nombreResp'), telResp:g('prov-telResp'), correoH:g('prov-correoH'),
       nombreDoctor:g('prov-nombreDoctor'), rfcM:g('prov-rfcM'), especialidad:g('prov-especialidad'), direccionM:g('prov-direccionM'),
-      telContacto:g('prov-telContacto'), correoM:g('prov-correoM'),
+      telContacto:g('prov-telContacto'), correoM:g('prov-correoM'), costoConsulta:g('prov-costoConsulta'),
       banco:g('prov-banco'), cuenta:g('prov-cuenta'), clabe:g('prov-clabe') };
     return provUnified(o);
   }
@@ -2096,7 +2114,7 @@
     s('prov-fechaAlta',o.fechaAlta); s('prov-razonSocial',o.razonSocial); s('prov-rfcH',o.rfcH); s('prov-sucursal',o.sucursal); s('prov-direccionH',o.direccionH);
     s('prov-telHospital',o.telHospital); s('prov-nombreResp',o.nombreResp); s('prov-telResp',o.telResp); s('prov-correoH',o.correoH);
     s('prov-nombreDoctor',o.nombreDoctor); s('prov-rfcM',o.rfcM); s('prov-especialidad',o.especialidad); s('prov-direccionM',o.direccionM);
-    s('prov-telContacto',o.telContacto); s('prov-correoM',o.correoM);
+    s('prov-telContacto',o.telContacto); s('prov-correoM',o.correoM); s('prov-costoConsulta',o.costoConsulta);
     fillBancos(document.getElementById('prov-banco'), o.banco||''); s('prov-cuenta',o.cuenta); s('prov-clabe',o.clabe);
     PROV_EDIT_DOCS={ csfDoc:o.csfDoc||null, edoCuentaDoc:o.edoCuentaDoc||null };
     docCur('prov-csf-cur', o.csfDoc, 'pasem-prov-docs');
@@ -2205,10 +2223,15 @@
         '<div class="field"><label>Receptor '+(i+1)+' — Tipo</label><select class="rcp-tipo"><option value="">—</option><option>Gastos Hospitalarios</option><option>Honorarios Médicos</option><option>Laboratorios</option><option>Médico General</option><option>Médico Especialista</option></select></div>'+
         '<div class="field"><label>Proveedor</label><select class="rcp-prov"><option value="">—</option></select></div>'+
         '<div class="field"><label>Monto a pagar</label><input class="rcp-monto" type="text" inputmode="decimal" placeholder="$ 0.00"></div>'+
+        '<div class="field"><label>Factura (PDF)</label><input class="rcp-factura" type="file" accept=".pdf,.jpg,.jpeg,.png"><div class="rcp-factura-cur" style="font-size:11px;color:var(--ink);margin-top:2px;"></div></div>'+
+        '<div class="field"><label>XML de la factura</label><input class="rcp-xml" type="file" accept=".xml"><div class="rcp-xml-cur" style="font-size:11px;color:var(--ink);margin-top:2px;"></div></div>'+
         '</div><div class="rcp-info" style="font-size:12px;color:var(--ink);margin-top:2px;"></div>';
       wrap.appendChild(div);
       (function(div,r){
         var selT=div.querySelector('.rcp-tipo'), selP=div.querySelector('.rcp-prov'), inM=div.querySelector('.rcp-monto'), info=div.querySelector('.rcp-info');
+        div._facturaDoc=r.facturaDoc||null; div._xmlDoc=r.xmlDoc||null;
+        docCur2(div.querySelector('.rcp-factura-cur'), r.facturaDoc);
+        docCur2(div.querySelector('.rcp-xml-cur'), r.xmlDoc);
         function fillProv(selectedId){
           var f=provFilterFor(selT.value); var list=PROV_CACHE.filter(f);
           selP.innerHTML='<option value="">—</option>'+list.map(function(pv){ return '<option value="'+esc(pv.id)+'"'+(pv.id===selectedId?' selected':'')+'>'+esc(pv.nombre||'(sin nombre)')+(pv.rfc?(' · '+esc(pv.rfc)):'')+'</option>'; }).join('');
@@ -2227,13 +2250,14 @@
     }
     recomputeOP();
   }
+  function docCur2(el, doc){ if(!el) return; if(doc && doc.docId){ el.innerHTML='Actual: '+esc(doc.filename||'archivo')+' <button type="button" class="btn-mini" data-dl2="'+esc(doc.docId)+'|'+esc(doc.filename||'archivo')+'">Descargar</button>'; var b=el.querySelector('[data-dl2]'); if(b) b.addEventListener('click', function(){ var p=b.getAttribute('data-dl2').split('|'); downloadDocFrom('pasem-orden-docs',p[0],p[1]); }); } else el.textContent=''; }
   function readReceptores(){
     var out=[]; var divs=document.querySelectorAll('#op-receptores .card');
     divs.forEach(function(div){
       var tipo=div.querySelector('.rcp-tipo').value; var provId=div.querySelector('.rcp-prov').value; var monto=div.querySelector('.rcp-monto').value;
       if(!tipo && !provId && !parseMoney(monto)) return;
       var pv=PROV_CACHE.filter(function(x){return x.id===provId;})[0]||{};
-      out.push({ tipo:tipo, provId:provId, nombre:pv.nombre||'', rfc:pv.rfc||'', banco:pv.banco||'', cuenta:pv.cuenta||'', clabe:pv.clabe||'', correo:pv.correo||'', telefono:pv.telefono||'', monto:monto });
+      out.push({ tipo:tipo, provId:provId, nombre:pv.nombre||'', rfc:pv.rfc||'', banco:pv.banco||'', cuenta:pv.cuenta||'', clabe:pv.clabe||'', correo:pv.correo||'', telefono:pv.telefono||'', monto:monto, facturaDoc:div._facturaDoc||null, xmlDoc:div._xmlDoc||null, _div:div });
     });
     return out;
   }
@@ -2262,6 +2286,7 @@
     s('op-hospital',rec.hospital); s('op-fechaProc',rec.fechaProc);
     OP_RESERVA_STR=reservaDeAut(rec);
     s('op-reserva', parseMoney(OP_RESERVA_STR)>0?money(parseMoney(OP_RESERVA_STR)):'');
+    s('op-montopago', parseMoney(rec.montoPago)>0?money(parseMoney(rec.montoPago)):'—');
     recomputeOP();
   }
   async function initOrdenPago(){
@@ -2300,13 +2325,19 @@
     if(suma>reserva+0.001){ document.getElementById('op-msg').textContent='La suma ('+money(suma)+') supera la Reserva ('+money(reserva)+').'; return; }
     var o={ autId:autId, folioAutorizacion:rec.folio||'', paciente:rec.paciente||'', titular:document.getElementById('op-titular').value||rec.titular||'', parentesco:document.getElementById('op-parentesco').value||rec.parentesco||'', curp:rec.curp||'', certificado:rec.numAfiliado||rec.certificado||'',
       tipoTramite:rec.tipoTramite||'', servicio:document.getElementById('op-servicio').value, hospital:rec.hospital||'', fechaProc:rec.fechaProc||'',
-      programa:document.getElementById('op-programa').value, reserva:reservaStr||'', fechaPago:document.getElementById('op-fechapago').value||'',
-      facturaDoc:OP_EDIT_FACTURA||null, receptores:receptores };
+      programa:document.getElementById('op-programa').value, reserva:reservaStr||'', montoPago:(rec.montoPago||''), fechaPago:document.getElementById('op-fechapago').value||'',
+      receptores:receptores };
     var id=document.getElementById('op-id').value; if(id){ o.action='update'; o.id=id; }
     var btn=document.getElementById('op-save'); btn.disabled=true; var old=btn.textContent; btn.textContent='Guardando…';
     try{
-      var fFac=document.getElementById('op-factura');
-      if(fFac && fFac.files[0]){ btn.textContent='Subiendo factura…'; o.facturaDoc=await uploadDocTo('pasem-orden-docs', fFac.files[0]); }
+      // subir factura y XML por receptor (si se eligieron)
+      for(var ri=0;ri<receptores.length;ri++){ var rc=receptores[ri]; var dv=rc._div;
+        var fFac=dv&&dv.querySelector('.rcp-factura'); var fXml=dv&&dv.querySelector('.rcp-xml');
+        if(fFac && fFac.files[0]){ btn.textContent='Subiendo factura '+(ri+1)+'…'; rc.facturaDoc=await uploadDocTo('pasem-orden-docs', fFac.files[0]); }
+        if(fXml && fXml.files[0]){ btn.textContent='Subiendo XML '+(ri+1)+'…'; rc.xmlDoc=await uploadDocTo('pasem-orden-docs', fXml.files[0]); }
+        delete rc._div;
+      }
+      o.receptores=receptores;
       btn.textContent='Guardando…';
       var r=await api(ORDENES,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o)}); var d=await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
       document.getElementById('op-msg').innerHTML='<span style="color:#1e9e52;font-weight:700;">✓ Orden registrada ('+esc(d.folio||'')+').</span>'; opReset(); loadOrdenes();
@@ -2462,6 +2493,8 @@
         : a.enPadron===false ? '<span style="background:#FFF3EA;color:#9a4a12;border:1px solid #f0d2b4;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:800;">NUEVO</span>'
         : '<span style="color:#9aa;">—</span>';
       var darAlta = (a.enPadron===false && isAdmin()) ? ' <button class="btn btn-mini" data-alta="'+idx+'" type="button" style="color:#0E9A9C">Dar de alta</button>' : '';
+      // Si el titular YA está en el padrón, permitir registrar solo sus dependientes
+      var regDeps = (a.enPadron===true && isAdmin()) ? ' <button class="btn btn-mini" data-regdeps="'+idx+'" type="button" style="color:#0E9A9C" title="Registrar los dependientes de esta alta bajo el titular del padrón">Registrar dependientes</button>' : '';
       var toExp = (docs.length>0) ? ' <button class="btn btn-mini" data-toexp="'+idx+'" type="button" style="color:#1e7e3e" title="Copiar sus documentos al expediente del titular">→ Expediente</button>' : '';
       tr.innerHTML='<td>'+esc(fmtDate(a.createdAt))+'</td>'+
         '<td>'+esc(f['Contacto - Nombre']||'—')+'</td>'+
@@ -2470,7 +2503,7 @@
         '<td>'+esc(f['Titular - CURP']||f['Contacto - CURP']||'—')+'</td>'+
         '<td>'+padBadge+'</td>'+
         '<td>'+docs.length+'</td>'+
-        '<td style="white-space:nowrap"><button class="btn btn-mini" data-ver="'+idx+'" type="button">Ver</button>'+darAlta+toExp+
+        '<td style="white-space:nowrap"><button class="btn btn-mini" data-ver="'+idx+'" type="button">Ver</button>'+darAlta+regDeps+toExp+
           (isAdmin()?' <button class="btn btn-mini btn-del" data-del="'+idx+'" type="button" style="color:#b23b3b">Eliminar</button>':'')+
         '</td>';
       tb.appendChild(tr);
@@ -2479,7 +2512,23 @@
     tb.querySelectorAll('[data-del]').forEach(function(b){ b.addEventListener('click', function(){ delAlta(Number(b.getAttribute('data-del')), b); }); });
     tb.querySelectorAll('[data-alta]').forEach(function(b){ b.addEventListener('click', function(){ darDeAltaDesdeAlta(Number(b.getAttribute('data-alta')), b); }); });
     tb.querySelectorAll('[data-toexp]').forEach(function(b){ b.addEventListener('click', function(){ pasarDocsAExpediente(Number(b.getAttribute('data-toexp')), b); }); });
+    tb.querySelectorAll('[data-regdeps]').forEach(function(b){ b.addEventListener('click', function(){ registrarDepsDeAlta(Number(b.getAttribute('data-regdeps')), b); }); });
     renderPager(document.getElementById('altas-pager'), ALTAS_PAGE, pages, function(p){ ALTAS_PAGE=p; renderAltas(); window.scrollTo({top:0,behavior:'smooth'}); });
+  }
+  async function registrarDepsDeAlta(idx, btn){
+    var a=ALTAS_CACHE[idx]; if(!a) return; var f=a.fields||{};
+    var nombre=titularName(f)||f['Contacto - Nombre']||'';
+    var deps=dependientesDeAlta(f);
+    if(!deps.length){ alert('Esta alta no trae dependientes para registrar.'); return; }
+    if(!confirm('El titular "'+nombre+'" ya está en el padrón.\n¿Registrar sus '+deps.length+' dependiente(s) y copiar documentos al expediente?\n\n'+deps.map(function(x){return '· '+x.nombre+' ('+x.parentesco+')';}).join('\n'))) return;
+    if(btn){ btn.disabled=true; btn.textContent='Registrando…'; }
+    try{
+      var r=await api(ALTAS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'register-deps', id:a.id})});
+      var d=await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
+      var msg='Dependientes registrados: '+(d.creados||0)+(d.yaExiste&&d.yaExiste.length?('\nYa estaban: '+d.yaExiste.join(', ')):'')+'\nCertificado del titular: '+(d.cert||'')+'\nDocumentos al expediente: '+(d.docsCopiados||0)+'.';
+      alert(msg);
+      if(btn){ btn.textContent='✓ Dependientes registrados'; }
+    }catch(e){ alert('No se pudo: '+e.message); if(btn){ btn.disabled=false; btn.textContent='Registrar dependientes'; } }
   }
   async function pasarDocsAExpediente(idx, btn){
     var a=ALTAS_CACHE[idx]; if(!a) return; var f=a.fields||{};
@@ -2517,7 +2566,7 @@
       var cert=d.cert||'';
       var okDeps=0, failDeps=[];
       for(var k=0;k<deps.length;k++){
-        var dp=Object.assign({ action:'create', titularCert:cert, origen:'alta-en-linea', altaId:a.id }, deps[k]);
+        var dp=Object.assign({ action:'create', titularCert:cert, titularNombre:nombre, origen:'alta-en-linea', altaId:a.id }, deps[k]);
         try{ var rd=await api(DEPS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dp)}); var dj=await rd.json(); if(!rd.ok) throw new Error(dj.error||('HTTP '+rd.status)); okDeps++; }
         catch(ed){ failDeps.push(deps[k].nombre+': '+ed.message); }
       }
@@ -2693,7 +2742,6 @@
       if(!r.ok) throw new Error((data&&data.error)||('HTTP '+r.status));
       INFORME_DATA=data; out.innerHTML=informeHTML(data);
       document.getElementById('btn-informe-print').style.display='';
-      document.getElementById('btn-informe-send').style.display='';
     }catch(e){ out.innerHTML='<div style="padding:10px;color:#b23b3b;">Error: '+esc(e.message)+'</div>'; }
     finally{ btn.disabled=false; btn.textContent='Actualizar informe'; }
   }
@@ -2850,6 +2898,98 @@
     finally{ if(btn){ btn.disabled=false; btn.textContent=old||'Descargar PDF'; } }
   }
 
+  // ===================== REPORTE DIRECCIÓN (agregado, sin nombres) =====================
+  var REPDIR_DATA=null;
+  function moneyR(n){ return '$'+Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function aggTramite(arr){
+    var m={}; (arr||[]).forEach(function(s){ var t=s.tipoTramite||'(Sin tipo)'; if(!m[t]) m[t]={n:0,reserva:0}; m[t].n++; m[t].reserva+=(s.reservaNum||0); });
+    return Object.keys(m).sort().map(function(t){ return {tipo:t, n:m[t].n, reserva:m[t].reserva}; });
+  }
+  function repdirSecciones(data){
+    var pr=data.procedimientos||[];
+    var abiertos=pr.filter(function(s){return !s.pagado;}), pagadas=pr.filter(function(s){return s.pagado;});
+    return {
+      reportadas:{ rows:aggTramite(pr), n:pr.length, reserva:pr.reduce(function(a,s){return a+(s.reservaNum||0);},0) },
+      tramite:{ rows:aggTramite(abiertos), n:abiertos.length, reserva:abiertos.reduce(function(a,s){return a+(s.reservaNum||0);},0) },
+      pagadas:{ rows:aggTramite(pagadas), n:pagadas.length, reserva:pagadas.reduce(function(a,s){return a+(s.reservaNum||0);},0) }
+    };
+  }
+  function repdirTablaHTML(titulo, sec){
+    var h='<div class="card" style="padding:16px;margin:0 0 14px;"><div style="font-family:var(--serif);color:var(--ochre);font-size:13px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">'+titulo+' ('+sec.n+')</div>';
+    h+='<div class="table-wrap"><table class="dtable"><thead><tr><th>Tipo de trámite</th><th>Núm. de casos</th><th>Suma de reservas</th></tr></thead><tbody>';
+    if(sec.rows.length){ sec.rows.forEach(function(r){ h+='<tr><td>'+esc(r.tipo)+'</td><td>'+r.n+'</td><td style="text-align:right">'+moneyR(r.reserva)+'</td></tr>'; }); }
+    else h+='<tr><td colspan="3">Sin casos.</td></tr>';
+    h+='<tr><td style="font-weight:800;background:var(--cream-2)">TOTAL</td><td style="font-weight:800;background:var(--cream-2)">'+sec.n+'</td><td style="text-align:right;font-weight:800;background:var(--cream-2)">'+moneyR(sec.reserva)+'</td></tr>';
+    h+='</tbody></table></div></div>';
+    return h;
+  }
+  function repdirHTML(data){
+    var s=repdirSecciones(data);
+    var h='<div style="color:var(--ink);font-size:13px;margin-bottom:10px;">Generado: '+esc(fmtDate(data.generatedAt))+'</div>';
+    // Padrón (sin nombres)
+    h+='<div class="card" style="padding:16px;margin:0 0 14px;"><div style="font-family:var(--serif);color:var(--ochre);font-size:13px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Padrón</div>';
+    h+='<div style="font-size:14px;color:var(--ink)">Titulares en el padrón: <b>'+(data.padronTotal||0).toLocaleString('es-MX')+'</b><br>Dependientes dados de alta: <b>'+(data.dependientesPadron||0)+'</b><br>Total de personas: <b style="color:var(--brown-deep)">'+(data.padronPersonas||0).toLocaleString('es-MX')+'</b></div></div>';
+    // Reclamaciones Reportadas (total = en trámite + pagadas)
+    h+=repdirTablaHTML('Reclamaciones Reportadas', s.reportadas);
+    h+=repdirTablaHTML('Reclamaciones en trámite', s.tramite);
+    h+=repdirTablaHTML('Reclamaciones Pagadas', s.pagadas);
+    return h;
+  }
+  async function loadRepDir(){
+    var out=document.getElementById('repdir-out'); var btn=document.getElementById('btn-repdir');
+    var old=btn?btn.textContent:''; if(btn){ btn.disabled=true; btn.textContent='Generando…'; }
+    document.getElementById('repdir-msg').textContent='';
+    try{
+      var r=await api(INFORME); var data=await r.json(); if(!r.ok) throw new Error((data&&data.error)||('HTTP '+r.status));
+      REPDIR_DATA=data; out.innerHTML=repdirHTML(data);
+      document.getElementById('btn-repdir-print').style.display='';
+    }catch(e){ document.getElementById('repdir-msg').textContent='Error: '+e.message; }
+    finally{ if(btn){ btn.disabled=false; btn.textContent=old||'Actualizar informe'; } }
+  }
+  async function downloadRepDirPDF(){
+    if(!REPDIR_DATA) return;
+    var btn=document.getElementById('btn-repdir-print'); var old=btn?btn.textContent:'';
+    if(btn){ btn.disabled=true; btn.textContent='Generando PDF…'; }
+    try{
+      var ok=await ensureJsPDF(); if(!ok) throw new Error('no-lib');
+      var d=REPDIR_DATA; var s=repdirSecciones(d);
+      var jsPDF=window.jspdf.jsPDF; var doc=new jsPDF({unit:'mm', format:'letter', orientation:'portrait'});
+      var M=12, W=doc.internal.pageSize.getWidth(), y=12;
+      var ORANGE=[221,107,32], INK=[31,52,66], GRAY=[118,118,118], PEACH=[255,243,234];
+      var snte=imgToDataURL('.logo-snte'), bida=imgToDataURL('.logo-bida');
+      if(snte){ var sh=12, sw=sh*(snte.w/snte.h); try{ doc.addImage(snte.data,'PNG',M,y,sw,sh); }catch(e){} }
+      if(bida){ var bh=13, bw=bh*(bida.w/bida.h); try{ doc.addImage(bida.data,'PNG',W-M-bw,y-0.5,bw,bh); }catch(e){} }
+      doc.setFont('helvetica','normal'); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]); doc.setFontSize(9); doc.text('Programa de Apoyo de Servicios Médicos', W/2, y+3, {align:'center'});
+      doc.setFont('helvetica','bold'); doc.setTextColor(ORANGE[0],ORANGE[1],ORANGE[2]); doc.setFontSize(18); doc.text('PASEM', W/2, y+9.5, {align:'center'});
+      doc.setFont('helvetica','normal'); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]); doc.setFontSize(8); doc.text('Sección 26 del SNTE · San Luis Potosí', W/2, y+13.5, {align:'center'});
+      y+=16; doc.setDrawColor(ORANGE[0],ORANGE[1],ORANGE[2]); doc.setLineWidth(0.6); doc.line(M,y,W-M,y); y+=6;
+      doc.setFont('helvetica','bold'); doc.setTextColor(ORANGE[0],ORANGE[1],ORANGE[2]); doc.setFontSize(13); doc.text('Reporte Dirección', M, y); y+=4.5;
+      doc.setFont('helvetica','normal'); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]); doc.setFontSize(9); doc.text('Generado: '+fmtDate(d.generatedAt), M, y); y+=6;
+      function bar(txt){ doc.setFillColor(ORANGE[0],ORANGE[1],ORANGE[2]); doc.rect(M,y,W-2*M,6,'F'); doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.text(txt,M+2,y+4); y+=8; }
+      function money(n){ return '$'+Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+      function tablaSec(titulo, sec){
+        bar(titulo+' ('+sec.n+')');
+        var rows=sec.rows.map(function(r){ return [r.tipo, String(r.n), money(r.reserva)]; });
+        rows.push([{content:'TOTAL', styles:{fontStyle:'bold', fillColor:PEACH}}, {content:String(sec.n), styles:{fontStyle:'bold', fillColor:PEACH}}, {content:money(sec.reserva), styles:{halign:'right', fontStyle:'bold', fillColor:PEACH}}]);
+        doc.autoTable({ startY:y, head:[['Tipo de trámite','Núm. de casos','Suma de reservas']], body:rows.length?rows:[['Sin casos','','']], margin:{left:M,right:M}, styles:{fontSize:8.5,cellPadding:2,textColor:INK,lineColor:[226,232,234],lineWidth:0.1}, headStyles:{fillColor:PEACH,textColor:INK,fontStyle:'bold'}, columnStyles:{1:{halign:'center'},2:{halign:'right'}}, theme:'grid' });
+        y=doc.lastAutoTable.finalY+4;
+      }
+      // Padrón
+      bar('Padrón');
+      doc.setFont('helvetica','normal'); doc.setTextColor(INK[0],INK[1],INK[2]); doc.setFontSize(10);
+      doc.text('Titulares en el padrón: '+(d.padronTotal||0).toLocaleString('es-MX'), M, y+3);
+      doc.text('Dependientes dados de alta: '+(d.dependientesPadron||0), M, y+8);
+      doc.text('Total de personas: '+(d.padronPersonas||0).toLocaleString('es-MX'), M, y+13); y+=18;
+      tablaSec('Reclamaciones Reportadas', s.reportadas);
+      tablaSec('Reclamaciones en trámite', s.tramite);
+      tablaSec('Reclamaciones Pagadas', s.pagadas);
+      doc.setFontSize(8); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
+      doc.text('PASEM · Sección 26 del SNTE · Administrado por MULTICATERIN, S.A. de C.V. con respaldo de BIDA Seguros.', M, doc.internal.pageSize.getHeight()-10);
+      doc.save('reporte-direccion-pasem-'+new Date().toISOString().slice(0,10)+'.pdf');
+    }catch(e){ alert('No se pudo generar el PDF: '+e.message); }
+    finally{ if(btn){ btn.disabled=false; btn.textContent=old||'Descargar PDF'; } }
+  }
+
   async function sendInforme(){
     var msg=document.getElementById('informe-msg'); var btn=document.getElementById('btn-informe-send');
     if(!confirm('¿Enviar el informe por correo a Dirección (bidaseguros@bidaseguros.org)?')) return;
@@ -2865,7 +3005,8 @@
   (function(){
     var b=document.getElementById('btn-informe'); if(b) b.addEventListener('click', loadInforme);
     var pb=document.getElementById('btn-informe-print'); if(pb) pb.addEventListener('click', downloadInformePDF);
-    var sb=document.getElementById('btn-informe-send'); if(sb) sb.addEventListener('click', sendInforme);
+    var rb=document.getElementById('btn-repdir'); if(rb) rb.addEventListener('click', loadRepDir);
+    var rpb=document.getElementById('btn-repdir-print'); if(rpb) rpb.addEventListener('click', downloadRepDirPDF);
   })();
 })();
 </script>

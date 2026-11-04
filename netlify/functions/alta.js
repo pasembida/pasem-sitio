@@ -142,6 +142,60 @@ export const handler = async (event) => {
     }catch(e){ return {statusCode:500,headers,body:JSON.stringify({error:String(e&&e.message?e.message:e)})}; }
   }
 
+  // Registrar los DEPENDIENTES de un alta bajo el titular (aunque el titular ya exista en el padrón)
+  if(event.httpMethod==='POST' && (()=>{try{return JSON.parse(event.body||'{}').action==='register-deps';}catch(e){return false;}})()){
+    const p=verify((event.headers.authorization||event.headers.Authorization||'').replace('Bearer ',''));
+    if(!p || !(p.role==='administracion'||p.role==='operacion')) return {statusCode:401,headers,body:JSON.stringify({error:'No autorizado'})};
+    try{
+      const body=JSON.parse(event.body||'{}');
+      if(!body.id) return {statusCode:400,headers,body:JSON.stringify({error:'Falta id del alta'})};
+      const rs=makeStore('pasem-altas'); const rec=await rs.get('alta:'+body.id,{type:'json'});
+      if(!rec) return {statusCode:404,headers,body:JSON.stringify({error:'Alta no encontrada'})};
+      const f=rec.fields||{};
+      const titCurp=String(f['Titular - CURP']||f['Contacto - CURP']||'').trim().toUpperCase();
+      if(!titCurp) return {statusCode:400,headers,body:JSON.stringify({error:'El alta no tiene CURP del titular'})};
+      const nom=(a,b,c)=>[a,b,c].filter(Boolean).join(' ').trim();
+      const titNombre = nom(f['Titular - Primer apellido'],f['Titular - Segundo apellido'],f['Titular - Nombres']) || f['Contacto - Nombre'] || '';
+      // Resolver certificado del titular: 1) titulares dados de alta, 2) padrón base
+      let cert='';
+      try{ const ts=makeStore('pasem-titulares'); const {blobs:tb}=await ts.list(); const tits=(await Promise.all(tb.map(b=>ts.get(b.key,{type:'json'})))).filter(Boolean); const t=tits.find(x=>String(x.curp||'').trim().toUpperCase()===titCurp); if(t) cert=t.cert; }catch(e){}
+      if(!cert){ const be=(Array.isArray(BASE_RAW)?BASE_RAW:[]).find(x=>String(x.c||x.curp||'').trim().toUpperCase()===titCurp); if(be) cert=be.ce||be.cert||''; }
+      if(!cert) return {statusCode:404,headers,body:JSON.stringify({error:'El titular no está en el padrón ni dado de alta. Primero da de alta al titular.'})};
+      // Construir dependientes del alta
+      const deps=[];
+      const cony=nom(f['Cónyuge - Nombres'],f['Cónyuge - Primer apellido'],f['Cónyuge - Segundo apellido']);
+      if(cony||f['Cónyuge - CURP']) deps.push({nombre:cony||'(Cónyuge)',parentesco:'Cónyuge',curp:f['Cónyuge - CURP']||'',fechaNacimiento:f['Cónyuge - Fecha nacimiento']||'',sexo:f['Cónyuge - Sexo']||''});
+      for(let i=1;i<=4;i++){ const hn=f['Hijo '+i+' - Nombre']; if(hn&&String(hn).trim()) deps.push({nombre:hn,parentesco:'Hijo(a)',curp:f['Hijo '+i+' - CURP']||'',fechaNacimiento:f['Hijo '+i+' - Fecha nacimiento']||'',estudia:f['Hijo '+i+' - Estudia']||''}); }
+      for(let j=1;j<=2;j++){ const pn=f['Padre '+j+' - Nombre']; if(pn&&String(pn).trim()) deps.push({nombre:pn,parentesco:f['Padre '+j+' - Parentesco']||'Padre/Madre',curp:f['Padre '+j+' - CURP']||'',fechaNacimiento:f['Padre '+j+' - Fecha nacimiento']||''}); }
+      // Guardar dependientes (dedupe por CURP, con letra correlativa)
+      const ds=makeStore('pasem-dependientes'); const {blobs:db}=await ds.list();
+      const all=(await Promise.all(db.map(b=>ds.get(b.key,{type:'json'})))).filter(Boolean);
+      const certU=cert.toUpperCase();
+      const usadas=all.filter(d=>String(d.titularCert||'').toUpperCase()===certU).map(d=>String(d.cert||'').slice(cert.length));
+      let creados=0; const yaExiste=[];
+      for(const dp of deps){
+        const cu=String(dp.curp||'').trim().toUpperCase();
+        if(cu && all.find(d=>String(d.titularCert||'').toUpperCase()===certU && String(d.curp||'').trim().toUpperCase()===cu)){ yaExiste.push(dp.nombre); continue; }
+        let letter='A'; for(let k=0;k<26;k++){ const L=String.fromCharCode(65+k); if(usadas.indexOf(L)<0){ letter=L; break; } }
+        usadas.push(letter);
+        const id=crypto.randomUUID();
+        await ds.setJSON(id, { id, cert:cert+letter, titularCert:cert, titularNombre:titNombre, nombre:dp.nombre, parentesco:dp.parentesco, curp:dp.curp||'', fechaNacimiento:dp.fechaNacimiento||'', sexo:dp.sexo||'', estudia:dp.estudia||'', origen:'alta-en-linea', altaId:rec.id, createdAt:new Date().toISOString(), capturadoPor:p.email||'usuario' });
+        creados++;
+      }
+      // Copiar documentos del alta al expediente del titular (idempotente)
+      let docsCopiados=0;
+      try{
+        rec.copiados=rec.copiados||{};
+        if(!rec.copiados[titCurp] && Array.isArray(rec.docs) && rec.docs.length){
+          const dds=makeStore('pasem-altas-docs'); const ex=makeStore('pasem-expedientes');
+          for(const d of rec.docs){ const meta=await dds.get('meta:'+d.docId,{type:'json'}); if(!meta) continue; const n=meta.chunks||1; const nid=crypto.randomUUID(); for(let i=0;i<n;i++){ const c=await dds.get('chunk:'+d.docId+':'+i,{type:'text'}); if(c!=null) await ex.set('chunk:'+nid+':'+i,String(c)); } await ex.setJSON('meta:'+nid,{id:nid,filename:meta.filename||'documento',mime:meta.type||'application/octet-stream',ref:titCurp,desc:'Documento del alta en línea',chunks:n,uploadedBy:(p.email||'sistema'),createdAt:new Date().toISOString()}); docsCopiados++; }
+          rec.copiados[titCurp]=new Date().toISOString(); await rs.setJSON('alta:'+rec.id, rec);
+        }
+      }catch(e){}
+      return {statusCode:200,headers,body:JSON.stringify({ok:true, cert, creados, yaExiste, docsCopiados})};
+    }catch(e){ return {statusCode:500,headers,body:JSON.stringify({error:String(e&&e.message?e.message:e)})}; }
+  }
+
   if(event.httpMethod!=='POST') return {statusCode:405,headers,body:JSON.stringify({error:'Método no permitido'})};
   const key=process.env.RESEND_API_KEY;
   try{

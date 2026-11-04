@@ -112,16 +112,24 @@ export const handler = async (event) => {
         // Adjuntos: factura de la orden + CSF y estado de cuenta de cada proveedor receptor
         const attachments=[]; const faltantes=[]; let totalB64=0;
         const push=(doc, etiqueta)=>{ if(!doc){ if(etiqueta) faltantes.push(etiqueta); return; } totalB64+=doc.content.length; if(totalB64<=26_000_000) attachments.push({ filename: doc.filename, content: doc.content }); else faltantes.push(etiqueta+' (excede el límite de tamaño del correo)'); };
-        // factura
-        push(await readDoc('pasem-orden-docs', o.facturaDoc && o.facturaDoc.docId), o.facturaDoc?'Factura':null);
-        // docs de proveedores (sin duplicar el mismo proveedor)
         const provStore=makeStore('pasem-proveedores'); const vistos={};
-        for(const r of (o.receptores||[])){ if(!r.provId || vistos[r.provId]) continue; vistos[r.provId]=1;
-          const pv=await provStore.get('prov:'+r.provId,{type:'json'}); if(!pv) continue;
-          if(pv.csfDoc&&pv.csfDoc.docId) push(await readDoc('pasem-prov-docs', pv.csfDoc.docId), 'CSF de '+(pv.nombre||''));
-          else faltantes.push('CSF de '+(pv.nombre||''));
-          if(pv.edoCuentaDoc&&pv.edoCuentaDoc.docId) push(await readDoc('pasem-prov-docs', pv.edoCuentaDoc.docId), 'Estado de cuenta de '+(pv.nombre||''));
-          else faltantes.push('Estado de cuenta de '+(pv.nombre||''));
+        for(const r of (o.receptores||[])){
+          const etq=(r.nombre||r.tipo||'receptor');
+          // factura y XML de ESTE receptor
+          if(r.facturaDoc&&r.facturaDoc.docId) push(await readDoc('pasem-orden-docs', r.facturaDoc.docId), 'Factura de '+etq);
+          else faltantes.push('Factura de '+etq);
+          if(r.xmlDoc&&r.xmlDoc.docId) push(await readDoc('pasem-orden-docs', r.xmlDoc.docId), 'XML de '+etq);
+          else faltantes.push('XML de '+etq);
+          // expediente del proveedor (CSF + estado de cuenta), sin duplicar el mismo proveedor
+          if(r.provId && !vistos[r.provId]){ vistos[r.provId]=1;
+            const pv=await provStore.get('prov:'+r.provId,{type:'json'});
+            if(pv){
+              if(pv.csfDoc&&pv.csfDoc.docId) push(await readDoc('pasem-prov-docs', pv.csfDoc.docId), 'CSF de '+(pv.nombre||''));
+              else faltantes.push('CSF de '+(pv.nombre||''));
+              if(pv.edoCuentaDoc&&pv.edoCuentaDoc.docId) push(await readDoc('pasem-prov-docs', pv.edoCuentaDoc.docId), 'Estado de cuenta de '+(pv.nombre||''));
+              else faltantes.push('Estado de cuenta de '+(pv.nombre||''));
+            }
+          }
         }
         let htmlFull=correoHtml(o);
         if(faltantes.length){ htmlFull=htmlFull.replace('</body>', '<div style="max-width:680px;margin:0 auto 18px;padding:10px 14px;background:#FFF7E6;border:1px solid #f0d08a;border-radius:8px;font-family:Arial;color:#7a5b00;font-size:12px;">Documentos no adjuntados (verificar en el expediente del proveedor): '+faltantes.map(esc).join('; ')+'.</div></body>'); }
@@ -177,8 +185,8 @@ export const handler = async (event) => {
       // crear
       const id=crypto.randomUUID();
       const folio='OP-'+Date.now().toString(36).toUpperCase().slice(-6);
-      const rec={...data, id, folio, estado:'registrada', createdAt:new Date().toISOString(), capturadoPor:p.email||'usuario'};
-      delete rec.action;
+      const rec={...data, id, folio, createdAt:new Date().toISOString(), capturadoPor:p.email||'usuario'};
+      delete rec.action; delete rec.estado; delete rec.pagadaAt; delete rec.pagadaPor; delete rec.solicitadoAt; rec.estado='registrada';
       await store.setJSON('orden:'+id, rec);
       return {statusCode:200,headers,body:JSON.stringify(rec)};
     }
