@@ -889,10 +889,14 @@
           <button class="btn btn-primary" id="altas-export" type="button">Exportar a Excel (CSV)</button>
         </div>
         <div id="altas-bulk" style="display:none;background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;">
-          <div style="font-weight:800;color:var(--brown-deep);margin-bottom:6px;">Acciones masivas (un solo clic)</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <div style="font-weight:800;color:var(--brown-deep);margin-bottom:2px;">Acciones masivas (un solo clic)</div>
+          <div style="font-size:12px;color:var(--ink);margin-bottom:8px;">Procésalas en orden: primero el 1, luego el 2 y al final el 3.</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#0E9A9C;color:#fff;font-weight:800;font-size:12px;">1</span>
             <button class="btn btn-mini" id="bulk-titulares" type="button" style="color:#0E9A9C">Dar de alta TODOS los titulares nuevos</button>
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#0E9A9C;color:#fff;font-weight:800;font-size:12px;margin-left:6px;">2</span>
             <button class="btn btn-mini" id="bulk-deps" type="button" style="color:#0E9A9C">Registrar TODOS los dependientes</button>
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#1e7e3e;color:#fff;font-weight:800;font-size:12px;margin-left:6px;">3</span>
             <button class="btn btn-mini" id="bulk-docs" type="button" style="color:#1e7e3e">Copiar TODOS los documentos al expediente</button>
           </div>
           <div id="bulk-status" style="font-size:13px;color:var(--ink);margin-top:8px;"></div>

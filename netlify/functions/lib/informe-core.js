@@ -208,4 +208,45 @@ async function computeInforme(){
     };
   }
 
-export { computeInforme, informeEmailHtml, dayOf, fmtFecha };
+// ===== Reporte Dirección por correo (agregado por tipo de trámite, sin nombres) =====
+function repdirEmailHtml(d){
+  const base=(process.env.SITE_URL||'https://pasem.com').replace(/\/$/,'');
+  const snte=base+'/img/snte26.jpg', bida=base+'/img/bida.png';
+  const money=n=>'$'+Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const pr=d.procedimientos||[];
+  const abiertos=pr.filter(s=>!s.pagado), pagadas=pr.filter(s=>s.pagado);
+  const agg=arr=>{ const m={}; arr.forEach(s=>{ const t=s.tipoTramite||'(Sin tipo)'; if(!m[t]) m[t]={n:0,r:0}; m[t].n++; m[t].r+=(s.reservaNum||0); }); return Object.keys(m).sort().map(t=>({tipo:t,n:m[t].n,r:m[t].r})); };
+  const sumR=arr=>arr.reduce((a,s)=>a+(s.reservaNum||0),0);
+  const bar=t=>'<tr><td colspan="3" style="background:#DD6B20;color:#fff;font-weight:700;font-size:13px;padding:8px 10px;">'+esc(t)+'</td></tr>';
+  const th='<tr><td style="background:#FFF3EA;font-weight:700;font-size:12px;padding:6px 10px;border:1px solid #E9EEF0;">Tipo de trámite</td><td style="background:#FFF3EA;font-weight:700;font-size:12px;padding:6px 10px;border:1px solid #E9EEF0;">Núm. de casos</td><td style="background:#FFF3EA;font-weight:700;font-size:12px;padding:6px 10px;border:1px solid #E9EEF0;text-align:right;">Suma de reservas</td></tr>';
+  const tabla=(titulo,arr)=>{ const rows=agg(arr); let body=rows.map(x=>'<tr><td style="padding:6px 10px;border:1px solid #E9EEF0;font-size:13px;">'+esc(x.tipo)+'</td><td style="padding:6px 10px;border:1px solid #E9EEF0;font-size:13px;">'+x.n+'</td><td style="padding:6px 10px;border:1px solid #E9EEF0;font-size:13px;text-align:right;">'+money(x.r)+'</td></tr>').join('')||'<tr><td colspan="3" style="padding:6px 10px;border:1px solid #E9EEF0;font-size:13px;">Sin casos.</td></tr>';
+    const tot='<tr><td style="padding:6px 10px;border:1px solid #E9EEF0;font-weight:800;background:#FFF7EF;">TOTAL</td><td style="padding:6px 10px;border:1px solid #E9EEF0;font-weight:800;background:#FFF7EF;">'+arr.length+'</td><td style="padding:6px 10px;border:1px solid #E9EEF0;font-weight:800;background:#FFF7EF;text-align:right;">'+money(sumR(arr))+'</td></tr>';
+    return bar(titulo+' ('+arr.length+')')+th+body+tot; };
+  const padBase=d.padronTotal||0, padNuevos=d.titularesNuevosAlta||0, padAct=d.padronActualizado||(padBase+padNuevos);
+  const depReg=(d.dependientesRegistrados!=null?d.dependientesRegistrados:d.dependientesPadron)||0;
+  const titAct=(d.totals&&d.totals.titularesEnPadron)||0;
+  return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;background:#EAF6F6;font-family:Arial,Helvetica,sans-serif;color:#1f3442;">'+
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EAF6F6;padding:18px 10px;"><tr><td align="center">'+
+    '<table role="presentation" width="680" cellpadding="0" cellspacing="0" style="max-width:680px;width:100%;background:#fff;border:1px solid #D9E9E9;border-radius:12px;overflow:hidden;">'+
+      '<tr><td style="padding:14px 18px;"><table role="presentation" width="100%"><tr><td align="left"><img src="'+snte+'" height="44" style="height:44px;"></td><td align="center" style="font-size:12px;color:#767676;">Programa de Apoyo de Servicios Médicos<br><span style="font-size:20px;font-weight:900;color:#DD6B20;">PASEM</span></td><td align="right"><img src="'+bida+'" height="44" style="height:44px;"></td></tr></table></td></tr>'+
+      '<tr><td style="background:#DD6B20;padding:12px 18px;text-align:center;color:#fff;font-size:18px;font-weight:800;">Reporte Dirección</td></tr>'+
+      '<tr><td style="height:4px;background:#14B4B6;font-size:0;line-height:0;">&nbsp;</td></tr>'+
+      '<tr><td style="padding:12px 18px 2px;color:#767676;font-size:12px;">Generado: '+esc(fmtFecha(d.generatedAt))+'</td></tr>'+
+      '<tr><td style="padding:8px 18px 4px;"><table role="presentation" width="100%" style="border-collapse:collapse;">'+
+        bar('Padrón')+
+        '<tr><td colspan="3" style="padding:8px 10px;border:1px solid #E9EEF0;font-size:13px;line-height:1.8;">'+
+          'Titulares del padrón: <b>'+padBase.toLocaleString('es-MX')+'</b><br>'+
+          'Titulares nuevos (dados de alta): <b>'+padNuevos.toLocaleString('es-MX')+'</b><br>'+
+          'Padrón actualizado (suma): <b style="color:#DD6B20;">'+padAct.toLocaleString('es-MX')+'</b><br>'+
+          'Dependientes dados de alta: <b>'+depReg.toLocaleString('es-MX')+'</b><br>'+
+          'Titulares que actualizaron sus datos: <b>'+titAct.toLocaleString('es-MX')+'</b>'+
+        '</td></tr>'+
+      '</table></td></tr>'+
+      '<tr><td style="padding:4px 18px;"><table role="presentation" width="100%" style="border-collapse:collapse;">'+tabla('Total de Reclamaciones Reportadas', pr)+'</table></td></tr>'+
+      '<tr><td style="padding:4px 18px;"><table role="presentation" width="100%" style="border-collapse:collapse;">'+tabla('Reclamaciones en trámite', abiertos)+'</table></td></tr>'+
+      '<tr><td style="padding:4px 18px 14px;"><table role="presentation" width="100%" style="border-collapse:collapse;">'+tabla('Reclamaciones Pagadas', pagadas)+'</table></td></tr>'+
+      '<tr><td style="padding:0 18px 18px;color:#767676;font-size:11px;">PASEM · Sección 26 del SNTE · Administrado por MULTICATERIN, S.A. de C.V. con respaldo de BIDA Seguros.</td></tr>'+
+    '</table></td></tr></table></body></html>';
+}
+
+export { computeInforme, informeEmailHtml, repdirEmailHtml, dayOf, fmtFecha };
