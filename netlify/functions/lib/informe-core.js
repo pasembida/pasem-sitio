@@ -116,13 +116,18 @@ async function computeInforme(){
       for(let j=1;j<=2;j++){ if(norm(f['Padre '+j+' - Nombre'])||norm(f['Padre '+j+' - CURP'])) add(f['Padre '+j+' - CURP']); }
     });
     // Dependientes registrados desde el módulo de administración (pasem-dependientes)
+    let dependientesRegistrados=0;
     try{
       const ds2=makeStore('pasem-dependientes');
       const {blobs}=await ds2.list();
       const deps=(await Promise.all(blobs.map(b=>ds2.get(b.key,{type:'json'})))).filter(Boolean);
+      dependientesRegistrados=deps.length;
       deps.forEach(x=>{ const k=norm(x.curp); if(k) depCurps.add(k); else depSinCurp++; });
     }catch(e){}
     const dependientesPadron = depCurps.size + depSinCurp;
+    // Titulares nuevos dados de alta (pasem-titulares)
+    let titularesNuevosAlta=0;
+    try{ const ts2=makeStore('pasem-titulares'); const {blobs:tb2}=await ts2.list(); titularesNuevosAlta=tb2.length; }catch(e){}
 
     // Procedimientos abiertos (solicitudes con estado < 4)
     const ss=makeStore('pasem-solicitudes');
@@ -191,6 +196,9 @@ async function computeInforme(){
       generatedAt:new Date().toISOString(),
       padronTotal,
       dependientesPadron,
+      dependientesRegistrados,
+      titularesNuevosAlta,
+      padronActualizado: padronTotal + titularesNuevosAlta,
       padronPersonas: padronTotal + dependientesPadron,
       totals:{ altas:altas.length, titularesUnicos:tCurpVistos.size, titularesConDatos:totalTitulares, dependientes:totalDependientes, titularesEnPadron:enPadronSet.size, titularesNuevos:nuevos.length },
       diario:diarioArr,

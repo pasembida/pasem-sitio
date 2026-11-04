@@ -78,10 +78,23 @@ export const handler = async (event) => {
       const { blobs }=await rs.list({ prefix:'alta:' });
       let items=await Promise.all(blobs.map(b=>rs.get(b.key,{type:'json'})));
       items=items.filter(Boolean).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
-      // CURPs ya dadas de alta como titulares (para no marcarlas como "NUEVO" otra vez)
-      const curpsAlta=new Set();
-      try{ const ts=makeStore('pasem-titulares'); const tb=await ts.list(); const tits=(await Promise.all(tb.blobs.map(b=>ts.get(b.key,{type:'json'})))).filter(Boolean); tits.forEach(t=>{ const c=String(t.curp||'').trim().toUpperCase(); if(c) curpsAlta.add(c); }); }catch(e){}
-      items.forEach(it=>{ const f=it.fields||{}; const c=String(f['Titular - CURP']||f['Contacto - CURP']||'').trim().toUpperCase(); it.titularCurp=c; it.enPadron = c ? (PADRON_CURPS.has(c)||curpsAlta.has(c)) : null; });
+      const norm=s=>String(s==null?'':s).trim().toUpperCase();
+      // CURP → certificado del titular (padrón base + titulares dados de alta)
+      const curpsAlta=new Set(); const titCertByCurp={};
+      (Array.isArray(BASE_RAW)?BASE_RAW:[]).forEach(x=>{ const c=norm(x.c||x.curp); if(c) titCertByCurp[c]=x.ce||x.cert||''; });
+      try{ const ts=makeStore('pasem-titulares'); const tb=await ts.list(); const tits=(await Promise.all(tb.blobs.map(b=>ts.get(b.key,{type:'json'})))).filter(Boolean); tits.forEach(t=>{ const c=norm(t.curp); if(c){ curpsAlta.add(c); titCertByCurp[c]=t.cert||titCertByCurp[c]||''; } }); }catch(e){}
+      // Dependientes registrados: por certificado del titular → conjuntos de CURP y de nombres
+      const depByCert={};
+      try{ const dds=makeStore('pasem-dependientes'); const dbb=await dds.list(); const deps=(await Promise.all(dbb.blobs.map(b=>dds.get(b.key,{type:'json'})))).filter(Boolean); deps.forEach(d=>{ const tc=norm(d.titularCert); if(!tc) return; if(!depByCert[tc]) depByCert[tc]={curps:new Set(),nombres:new Set()}; const cu=norm(d.curp); if(cu) depByCert[tc].curps.add(cu); if(d.nombre) depByCert[tc].nombres.add(norm(d.nombre)); }); }catch(e){}
+      function depsDeAltaList(f){ const nom=(a,b,c)=>[a,b,c].filter(Boolean).join(' ').trim(); const out=[]; const cy=nom(f['Cónyuge - Nombres'],f['Cónyuge - Primer apellido'],f['Cónyuge - Segundo apellido']); if(cy||f['Cónyuge - CURP']) out.push({nombre:cy,curp:f['Cónyuge - CURP']||''}); for(let i=1;i<=4;i++){ const hn=f['Hijo '+i+' - Nombre']; if(hn&&String(hn).trim()) out.push({nombre:hn,curp:f['Hijo '+i+' - CURP']||''}); } for(let j=1;j<=2;j++){ const pn=f['Padre '+j+' - Nombre']; if(pn&&String(pn).trim()) out.push({nombre:pn,curp:f['Padre '+j+' - CURP']||''}); } return out; }
+      items.forEach(it=>{ const f=it.fields||{}; const c=norm(f['Titular - CURP']||f['Contacto - CURP']); it.titularCurp=c; it.enPadron = c ? (PADRON_CURPS.has(c)||curpsAlta.has(c)) : null;
+        // ¿Incorporada? titular existe + todos los dependientes registrados + documentos copiados
+        const cert=norm(titCertByCurp[c]||''); const titularOk = !!cert;
+        const deps=depsDeAltaList(f); const reg=depByCert[cert]||{curps:new Set(),nombres:new Set()};
+        const depsOk = titularOk && deps.every(d=>{ const cu=norm(d.curp); if(cu) return reg.curps.has(cu); return reg.nombres.has(norm(d.nombre)); });
+        const docsOk = !(Array.isArray(it.docs)&&it.docs.length) || !!(it.copiados && it.copiados[c]);
+        it.incorporada = titularOk && depsOk && docsOk;
+      });
       return {statusCode:200,headers,body:JSON.stringify(items)};
     }catch(e){ return {statusCode:500,headers,body:JSON.stringify({error:String(e&&e.message?e.message:e)})}; }
   }

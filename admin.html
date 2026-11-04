@@ -888,9 +888,18 @@
           <button class="btn btn-ghost" id="altas-reload" type="button">Actualizar</button>
           <button class="btn btn-primary" id="altas-export" type="button">Exportar a Excel (CSV)</button>
         </div>
+        <div id="altas-bulk" style="display:none;background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;">
+          <div style="font-weight:800;color:var(--brown-deep);margin-bottom:6px;">Acciones masivas (un solo clic)</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-mini" id="bulk-titulares" type="button" style="color:#0E9A9C">Dar de alta TODOS los titulares nuevos</button>
+            <button class="btn btn-mini" id="bulk-deps" type="button" style="color:#0E9A9C">Registrar TODOS los dependientes</button>
+            <button class="btn btn-mini" id="bulk-docs" type="button" style="color:#1e7e3e">Copiar TODOS los documentos al expediente</button>
+          </div>
+          <div id="bulk-status" style="font-size:13px;color:var(--ink);margin-top:8px;"></div>
+        </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
           <input id="altas-q" type="text" placeholder="Buscar por nombre, CURP o teléfono…" style="flex:1;min-width:220px;">
-          <select id="altas-filtro" style="min-width:150px;"><option value="">Todos</option><option value="nuevo">Solo NUEVO</option><option value="padron">En padrón</option></select>
+          <select id="altas-filtro" style="min-width:170px;"><option value="">Todos</option><option value="nuevo">Solo NUEVO</option><option value="padron">En padrón</option><option value="incorp">Incorporadas</option><option value="pend">Pendientes</option></select>
         </div>
         <div id="altas-count" style="color:var(--ink);font-size:14px;margin-bottom:8px;"></div>
         <div class="table-wrap"><table class="dtable" id="altas-table"><thead><tr><th>Fecha</th><th>Contacto</th><th>Teléfono</th><th>Titular</th><th>CURP titular</th><th>En padrón</th><th>Docs</th><th></th></tr></thead><tbody></tbody></table></div>
@@ -2463,6 +2472,7 @@
       if(!r.ok) throw new Error((items&&items.error)||('HTTP '+r.status));
       ALTAS_CACHE=Array.isArray(items)?items:[];
       ALTAS_CACHE.forEach(function(a,i){ a._i=i; });
+      var bk=document.getElementById('altas-bulk'); if(bk) bk.style.display=isAdmin()?'':'none';
       ALTAS_PAGE=1; renderAltas();
     }catch(e){ tb.innerHTML='<tr><td colspan="8">Error: '+esc(e.message)+'</td></tr>'; }
   }
@@ -2479,12 +2489,15 @@
       var f=a.fields||{};
       if(ALTAS_FILTRO==='nuevo' && a.enPadron!==false) return false;
       if(ALTAS_FILTRO==='padron' && a.enPadron!==true) return false;
+      if(ALTAS_FILTRO==='incorp' && !a.incorporada) return false;
+      if(ALTAS_FILTRO==='pend' && a.incorporada) return false;
       return matchQ(ALTAS_Q, [f['Contacto - Nombre'], titularName(f), f['Titular - CURP']||f['Contacto - CURP'], f['Contacto - Telefono']]);
     });
     var total=filtered.length, pages=Math.max(1,Math.ceil(total/PAGE_SIZE));
     if(ALTAS_PAGE>pages) ALTAS_PAGE=pages;
     var start=(ALTAS_PAGE-1)*PAGE_SIZE, pageItems=filtered.slice(start, start+PAGE_SIZE);
-    countEl.innerHTML = total? ('Mostrando '+(start+1)+'–'+(start+pageItems.length)+' de '+total+' · Total: '+ALTAS_CACHE.length+' · <b style="color:#9a4a12">NUEVO: '+nuevos+'</b>') : 'Sin resultados para el filtro.';
+    var incorp=ALTAS_CACHE.filter(function(a){return a.incorporada;}).length; var pend=ALTAS_CACHE.length-incorp;
+    countEl.innerHTML = total? ('Mostrando '+(start+1)+'–'+(start+pageItems.length)+' de '+total+' · Total: '+ALTAS_CACHE.length+' · <b style="color:#9a4a12">NUEVO: '+nuevos+'</b> · <b style="color:#1e7e3e">Incorporadas: '+incorp+'</b> · Pendientes: '+pend) : 'Sin resultados para el filtro.';
     tb.innerHTML='';
     pageItems.forEach(function(a){
       var idx=a._i; var f=a.fields||{}; var docs=a.docs||[];
@@ -2503,7 +2516,7 @@
         '<td>'+esc(f['Titular - CURP']||f['Contacto - CURP']||'—')+'</td>'+
         '<td>'+padBadge+'</td>'+
         '<td>'+docs.length+'</td>'+
-        '<td style="white-space:nowrap"><button class="btn btn-mini" data-ver="'+idx+'" type="button">Ver</button>'+darAlta+regDeps+toExp+
+        '<td style="white-space:nowrap">'+(a.incorporada?'<span style="background:#E8F8EE;color:#1e7e3e;border:1px solid #bfe6cc;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:800;">✓ Incorporada</span> ':'')+'<button class="btn btn-mini" data-ver="'+idx+'" type="button">Ver</button>'+darAlta+regDeps+toExp+
           (isAdmin()?' <button class="btn btn-mini btn-del" data-del="'+idx+'" type="button" style="color:#b23b3b">Eliminar</button>':'')+
         '</td>';
       tb.appendChild(tr);
@@ -2583,6 +2596,55 @@
       if(btn){ btn.textContent='Dado de alta ✓'; }
     }catch(e){ alert('No se pudo dar de alta: '+e.message); if(btn){ btn.disabled=false; btn.textContent='Dar de alta'; } }
   }
+  // ===== Acciones masivas en Altas recibidas =====
+  function titularPayloadFromAlta(a){
+    var f=a.fields||{};
+    return { action:'create', nombre:titularName(f)||f['Contacto - Nombre']||'', curp:f['Titular - CURP']||f['Contacto - CURP']||'', rfc:f['Titular - RFC']||'',
+      fechaNacimiento:f['Titular - Fecha nacimiento']||'', sexo:f['Titular - Sexo']||'', municipio:f['Afiliación - Municipio']||'', ct:f['Afiliación - Centro de trabajo']||'', cct:f['Afiliación - Clave CT']||'',
+      tipoPersonal:f['Afiliación - Tipo de personal']||'', telefono:f['Titular - Telefono']||f['Contacto - Telefono']||'', correo:f['Titular - Correo']||f['Contacto - Correo']||'', domicilio:f['Titular - Domicilio']||'', origen:'alta-en-linea', altaId:a.id };
+  }
+  function bulkBtns(dis){ ['bulk-titulares','bulk-deps','bulk-docs'].forEach(function(id){ var b=document.getElementById(id); if(b) b.disabled=dis; }); }
+  async function bulkDarAltaTitulares(){
+    var nuevos=ALTAS_CACHE.filter(function(a){return a.enPadron===false;});
+    if(!nuevos.length){ alert('No hay titulares nuevos por dar de alta.'); return; }
+    if(!confirm('¿Dar de alta a '+nuevos.length+' titular(es) nuevo(s), con sus dependientes y documentos?')) return;
+    var st=document.getElementById('bulk-status'); var okT=0, dupT=0, okD=0, errs=[]; bulkBtns(true);
+    for(var i=0;i<nuevos.length;i++){ var a=nuevos[i];
+      st.textContent='Dando de alta titulares… '+(i+1)+' de '+nuevos.length;
+      try{
+        var r=await api(TITU,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(titularPayloadFromAlta(a))});
+        var d=await r.json();
+        if(r.status===409) dupT++; else if(!r.ok) throw new Error(d.error||('HTTP '+r.status)); else okT++;
+        try{ var rd=await api(ALTAS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'register-deps', id:a.id})}); var dd=await rd.json(); if(rd.ok) okD+=(dd.creados||0); }catch(e){}
+      }catch(e){ errs.push((titularName(a.fields||{})||a.id)+': '+e.message); }
+    }
+    st.innerHTML='<b style="color:#1e9e52">Listo.</b> Titulares nuevos: '+okT+(dupT?(' · ya existían: '+dupT):'')+' · Dependientes registrados: '+okD+(errs.length?(' · <span style="color:#b23b3b">errores: '+errs.length+'</span>'):''); bulkBtns(false); loadAltas();
+  }
+  async function bulkRegistrarDeps(){
+    if(!confirm('¿Registrar los dependientes de TODAS las altas cuyo titular ya exista (padrón o dado de alta)?\nLos que ya estén registrados no se duplican.')) return;
+    var st=document.getElementById('bulk-status'); var okD=0, sinTit=0, errs=[]; bulkBtns(true);
+    for(var i=0;i<ALTAS_CACHE.length;i++){ var a=ALTAS_CACHE[i];
+      st.textContent='Registrando dependientes… '+(i+1)+' de '+ALTAS_CACHE.length;
+      try{ var r=await api(ALTAS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'register-deps', id:a.id})}); var d=await r.json();
+        if(r.status===404) sinTit++; else if(!r.ok) throw new Error(d.error||('HTTP '+r.status)); else okD+=(d.creados||0);
+      }catch(e){ errs.push(a.id+': '+e.message); }
+    }
+    st.innerHTML='<b style="color:#1e9e52">Listo.</b> Dependientes registrados: '+okD+(sinTit?(' · sin titular en base: '+sinTit):'')+(errs.length?(' · <span style="color:#b23b3b">errores: '+errs.length+'</span>'):''); bulkBtns(false); loadAltas();
+  }
+  async function bulkDocsExpediente(){
+    var conDocs=ALTAS_CACHE.filter(function(a){return (a.docs||[]).length>0;});
+    if(!conDocs.length){ alert('No hay altas con documentos.'); return; }
+    if(!confirm('¿Copiar al expediente los documentos de '+conDocs.length+' alta(s)?')) return;
+    var st=document.getElementById('bulk-status'); var okDocs=0, errs=[]; bulkBtns(true);
+    for(var i=0;i<conDocs.length;i++){ var a=conDocs[i]; var f=a.fields||{}; var curp=f['Titular - CURP']||f['Contacto - CURP']||'';
+      st.textContent='Copiando documentos… '+(i+1)+' de '+conDocs.length;
+      if(!curp) continue;
+      try{ var r=await api(ALTAS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'to-expediente', id:a.id, curp:curp})}); var d=await r.json(); if(r.ok) okDocs+=(d.copiados||0); }catch(e){ errs.push(a.id+': '+e.message); }
+    }
+    st.innerHTML='<b style="color:#1e9e52">Listo.</b> Documentos copiados al expediente: '+okDocs+(errs.length?(' · <span style="color:#b23b3b">errores: '+errs.length+'</span>'):''); bulkBtns(false); loadAltas();
+  }
+  (function(){ var b1=document.getElementById('bulk-titulares'); if(b1) b1.addEventListener('click', bulkDarAltaTitulares); var b2=document.getElementById('bulk-deps'); if(b2) b2.addEventListener('click', bulkRegistrarDeps); var b3=document.getElementById('bulk-docs'); if(b3) b3.addEventListener('click', bulkDocsExpediente); })();
+
   // Reúne los dependientes capturados en una alta en línea (cónyuge, hijos, padres)
   function dependientesDeAlta(f){
     f=f||{}; var deps=[]; var nom=function(a,b,c){ return [a,b,c].filter(Boolean).join(' ').trim(); };
@@ -2927,10 +2989,18 @@
     var s=repdirSecciones(data);
     var h='<div style="color:var(--ink);font-size:13px;margin-bottom:10px;">Generado: '+esc(fmtDate(data.generatedAt))+'</div>';
     // Padrón (sin nombres)
+    var t=data.totals||{};
+    var base=data.padronTotal||0, nuevos=data.titularesNuevosAlta||0, actualizado=data.padronActualizado||(base+nuevos);
     h+='<div class="card" style="padding:16px;margin:0 0 14px;"><div style="font-family:var(--serif);color:var(--ochre);font-size:13px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Padrón</div>';
-    h+='<div style="font-size:14px;color:var(--ink)">Titulares en el padrón: <b>'+(data.padronTotal||0).toLocaleString('es-MX')+'</b><br>Dependientes dados de alta: <b>'+(data.dependientesPadron||0)+'</b><br>Total de personas: <b style="color:var(--brown-deep)">'+(data.padronPersonas||0).toLocaleString('es-MX')+'</b></div></div>';
-    // Reclamaciones Reportadas (total = en trámite + pagadas)
-    h+=repdirTablaHTML('Reclamaciones Reportadas', s.reportadas);
+    h+='<div style="font-size:14px;color:var(--ink);line-height:1.9">'+
+       'Titulares del padrón: <b>'+base.toLocaleString('es-MX')+'</b><br>'+
+       'Titulares nuevos (dados de alta): <b>'+nuevos.toLocaleString('es-MX')+'</b><br>'+
+       '<span style="border-top:1px solid var(--border);display:inline-block;padding-top:4px;margin-top:2px;">Padrón actualizado (suma): <b style="color:var(--brown-deep)">'+actualizado.toLocaleString('es-MX')+'</b></span><br>'+
+       'Dependientes dados de alta: <b>'+((data.dependientesRegistrados!=null?data.dependientesRegistrados:data.dependientesPadron)||0).toLocaleString('es-MX')+'</b><br>'+
+       'Titulares que actualizaron sus datos: <b>'+(t.titularesEnPadron||0).toLocaleString('es-MX')+'</b>'+
+       '</div></div>';
+    // Total de Reclamaciones Reportadas (total = en trámite + pagadas)
+    h+=repdirTablaHTML('Total de Reclamaciones Reportadas', s.reportadas);
     h+=repdirTablaHTML('Reclamaciones en trámite', s.tramite);
     h+=repdirTablaHTML('Reclamaciones Pagadas', s.pagadas);
     return h;
@@ -2975,12 +3045,17 @@
         y=doc.lastAutoTable.finalY+4;
       }
       // Padrón
+      var tt=d.totals||{};
+      var base=d.padronTotal||0, nuev=d.titularesNuevosAlta||0, actz=d.padronActualizado||(base+nuev);
+      var depReg=(d.dependientesRegistrados!=null?d.dependientesRegistrados:d.dependientesPadron)||0;
       bar('Padrón');
       doc.setFont('helvetica','normal'); doc.setTextColor(INK[0],INK[1],INK[2]); doc.setFontSize(10);
-      doc.text('Titulares en el padrón: '+(d.padronTotal||0).toLocaleString('es-MX'), M, y+3);
-      doc.text('Dependientes dados de alta: '+(d.dependientesPadron||0), M, y+8);
-      doc.text('Total de personas: '+(d.padronPersonas||0).toLocaleString('es-MX'), M, y+13); y+=18;
-      tablaSec('Reclamaciones Reportadas', s.reportadas);
+      doc.text('Titulares del padrón: '+base.toLocaleString('es-MX'), M, y+3);
+      doc.text('Titulares nuevos (dados de alta): '+nuev.toLocaleString('es-MX'), M, y+8);
+      doc.setFont('helvetica','bold'); doc.text('Padrón actualizado (suma): '+actz.toLocaleString('es-MX'), M, y+13); doc.setFont('helvetica','normal');
+      doc.text('Dependientes dados de alta: '+depReg.toLocaleString('es-MX'), M, y+18);
+      doc.text('Titulares que actualizaron sus datos: '+(tt.titularesEnPadron||0).toLocaleString('es-MX'), M, y+23); y+=28;
+      tablaSec('Total de Reclamaciones Reportadas', s.reportadas);
       tablaSec('Reclamaciones en trámite', s.tramite);
       tablaSec('Reclamaciones Pagadas', s.pagadas);
       doc.setFontSize(8); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
