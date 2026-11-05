@@ -129,8 +129,8 @@ async function computeInforme(){
     let titularesNuevosAlta=0;
     try{ const ts2=makeStore('pasem-titulares'); const {blobs:tb2}=await ts2.list(); titularesNuevosAlta=tb2.length; }catch(e){}
     // Configuración (cuota pendiente del contrato)
-    let cuota=3123000, contrato='SLP';
-    try{ const cs=makeStore('pasem-config'); const cfg=await cs.get('config',{type:'json'}); if(cfg){ if(cfg.cuota!=null) cuota=Number(cfg.cuota); if(cfg.contrato) contrato=cfg.contrato; } }catch(e){}
+    let cuota=3123000, contrato='PASEM SNTE 26', periodo='Oct-Nov-Dic 2026';
+    try{ const cs=makeStore('pasem-config'); const cfg=await cs.get('config',{type:'json'}); if(cfg){ if(cfg.cuota!=null) cuota=Number(cfg.cuota); if(cfg.contrato) contrato=cfg.contrato; if(cfg.periodo!=null) periodo=cfg.periodo; } }catch(e){}
 
     // Procedimientos abiertos (solicitudes con estado < 4)
     const ss=makeStore('pasem-solicitudes');
@@ -201,7 +201,7 @@ async function computeInforme(){
       dependientesPadron,
       dependientesRegistrados,
       titularesNuevosAlta,
-      cuota, contrato,
+      cuota, contrato, periodo,
       padronActualizado: padronTotal + titularesNuevosAlta,
       padronPersonas: padronTotal + dependientesPadron,
       totals:{ altas:altas.length, titularesUnicos:tCurpVistos.size, titularesConDatos:totalTitulares, dependientes:totalDependientes, titularesEnPadron:enPadronSet.size, titularesNuevos:nuevos.length },
@@ -232,20 +232,21 @@ function repdirEmailHtml(d){
   // Resumen de reclamaciones (tabla ejecutiva con % de la cuota)
   let emailResumen='';
   {
-    const cuota=Number(d.cuota||0), contrato=d.contrato||'SLP';
+    const cuota=Number(d.cuota||0), contrato=d.contrato||'PASEM SNTE 26', periodo=d.periodo||'';
     const rep={n:pr.length,m:sumR(pr)}; const pagX=pr.filter(s=>s.pagado); const pagS={n:pagX.length,m:sumR(pagX)}; const recX=pr.filter(s=>!s.pagado); const recS={n:recX.length,m:sumR(recX)};
     const pct=n=> cuota>0 ? Math.round(n/cuota*100)+'%' : '—';
-    const th='font-size:11px;font-weight:700;background:#EFEFEF;padding:5px 6px;border:1px solid #C9D4D8;text-align:center;';
-    const td='font-size:12px;padding:5px 6px;border:1px solid #C9D4D8;';
-    const row=(lbl,b)=>'<tr><td style="'+td+(b?'font-weight:800;':'')+'">'+esc(lbl)+'</td><td style="'+td+(b?'font-weight:800;':'')+'text-align:right;">'+money(cuota)+'</td>'+
-      '<td style="'+td+'text-align:center;">'+rep.n+'</td><td style="'+td+'text-align:right;">'+money(rep.m)+'</td><td style="'+td+'text-align:center;'+(b?'background:#FFF27A;font-weight:800;':'')+'">'+pct(rep.m)+'</td>'+
-      '<td style="'+td+'text-align:center;">'+pagS.n+'</td><td style="'+td+'text-align:right;">'+money(pagS.m)+'</td><td style="'+td+'text-align:center;">'+pct(pagS.m)+'</td>'+
-      '<td style="'+td+'text-align:center;">'+recS.n+'</td><td style="'+td+'text-align:right;">'+money(recS.m)+'</td><td style="'+td+'text-align:center;">'+pct(recS.m)+'</td></tr>';
-    emailResumen='<tr><td style="padding:4px 18px;"><div style="overflow-x:auto;"><table role="presentation" style="border-collapse:collapse;width:100%;min-width:640px;">'+
+    const th='font-size:13px;font-weight:800;background:#EFEFEF;padding:8px 8px;border:1px solid #C9D4D8;text-align:center;';
+    const td='font-size:15px;padding:9px 10px;border:1px solid #C9D4D8;';
+    const bigpct='font-size:17px;font-weight:800;color:#DD6B20;';
+    const row=(lbl,per,b)=>'<tr><td style="'+td+(b?'font-weight:800;':'')+'white-space:nowrap;">'+esc(lbl)+'</td><td style="'+td+'text-align:center;font-size:13px;">'+esc(per)+'</td><td style="'+td+(b?'font-weight:800;':'')+'text-align:right;white-space:nowrap;">'+money(cuota)+'</td>'+
+      '<td style="'+td+'text-align:center;">'+rep.n+'</td><td style="'+td+'text-align:right;white-space:nowrap;">'+money(rep.m)+'</td><td style="'+td+bigpct+'text-align:center;'+(b?'background:#FFF27A;':'')+'">'+pct(rep.m)+'</td>'+
+      '<td style="'+td+'text-align:center;">'+pagS.n+'</td><td style="'+td+'text-align:right;white-space:nowrap;">'+money(pagS.m)+'</td><td style="'+td+bigpct+'text-align:center;">'+pct(pagS.m)+'</td>'+
+      '<td style="'+td+'text-align:center;">'+recS.n+'</td><td style="'+td+'text-align:right;white-space:nowrap;">'+money(recS.m)+'</td><td style="'+td+bigpct+'text-align:center;">'+pct(recS.m)+'</td></tr>';
+    emailResumen='<tr><td style="padding:8px 18px 4px;"><div style="overflow-x:auto;"><table role="presentation" style="border-collapse:collapse;width:100%;min-width:760px;">'+
       bar('Resumen de reclamaciones')+
-      '<tr><th style="'+th+'">CONTRATO</th><th style="'+th+'">CUOTA PENDIENTE</th><th style="'+th+'" colspan="3">REPORTADOS</th><th style="'+th+'" colspan="3">PAGADOS</th><th style="'+th+'" colspan="3">RECLAMADOS</th></tr>'+
-      '<tr><th style="'+th+'"></th><th style="'+th+'"></th><th style="'+th+'">Casos</th><th style="'+th+'">Monto</th><th style="'+th+'">%</th><th style="'+th+'">Casos</th><th style="'+th+'">Monto</th><th style="'+th+'">%</th><th style="'+th+'">Casos</th><th style="'+th+'">Monto</th><th style="'+th+'">%</th></tr>'+
-      row(contrato,false)+row('SUMAS:',true)+
+      '<tr><th style="'+th+'" rowspan="2">CONTRATO</th><th style="'+th+'" rowspan="2">PERIODO CUBIERTO</th><th style="'+th+'" rowspan="2">CUOTA PENDIENTE</th><th style="'+th+'" colspan="3">REPORTADOS</th><th style="'+th+'" colspan="3">PAGADOS</th><th style="'+th+'" colspan="3">RECLAMADOS</th></tr>'+
+      '<tr><th style="'+th+'">Casos</th><th style="'+th+'">Monto</th><th style="'+th+'">%</th><th style="'+th+'">Casos</th><th style="'+th+'">Monto</th><th style="'+th+'">%</th><th style="'+th+'">Casos</th><th style="'+th+'">Monto</th><th style="'+th+'">%</th></tr>'+
+      row(contrato,periodo,false)+row('SUMAS:','',true)+
     '</table></div></td></tr>';
   }
   return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;background:#EAF6F6;font-family:Arial,Helvetica,sans-serif;color:#1f3442;">'+
@@ -255,6 +256,7 @@ function repdirEmailHtml(d){
       '<tr><td style="background:#DD6B20;padding:12px 18px;text-align:center;color:#fff;font-size:18px;font-weight:800;">Reporte Dirección</td></tr>'+
       '<tr><td style="height:4px;background:#14B4B6;font-size:0;line-height:0;">&nbsp;</td></tr>'+
       '<tr><td style="padding:12px 18px 2px;color:#767676;font-size:12px;">Generado: '+esc(fmtFecha(d.generatedAt))+'</td></tr>'+
+      emailResumen+
       '<tr><td style="padding:8px 18px 4px;"><table role="presentation" width="100%" style="border-collapse:collapse;">'+
         bar('Padrón')+
         '<tr><td colspan="3" style="padding:8px 10px;border:1px solid #E9EEF0;font-size:13px;line-height:1.8;">'+
@@ -265,7 +267,6 @@ function repdirEmailHtml(d){
           'Titulares que actualizaron sus datos: <b>'+titAct.toLocaleString('es-MX')+'</b>'+
         '</td></tr>'+
       '</table></td></tr>'+
-      emailResumen+
       '<tr><td style="padding:4px 18px;"><table role="presentation" width="100%" style="border-collapse:collapse;">'+tabla('Total de Reclamaciones Reportadas', pr)+'</table></td></tr>'+
       '<tr><td style="padding:4px 18px;"><table role="presentation" width="100%" style="border-collapse:collapse;">'+tabla('Reclamaciones en trámite', abiertos)+'</table></td></tr>'+
       '<tr><td style="padding:4px 18px 14px;"><table role="presentation" width="100%" style="border-collapse:collapse;">'+tabla('Reclamaciones Pagadas', pagadas)+'</table></td></tr>'+

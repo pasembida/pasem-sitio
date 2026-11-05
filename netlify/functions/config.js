@@ -16,17 +16,19 @@ export const handler = async (event) => {
     if(event.httpMethod==='GET'){
       const cfg=(await store.get('config',{type:'json'}))||{};
       const cuotaDef=(cfg.cuota==null?3123000:Number(cfg.cuota));
-      return {statusCode:200,headers,body:JSON.stringify({ cuota:cuotaDef, contrato:cfg.contrato||'SLP', updatedAt:cfg.updatedAt||'' })};
+      const periodoDef=(cfg.periodo==null?'Oct-Nov-Dic 2026':String(cfg.periodo));
+      return {statusCode:200,headers,body:JSON.stringify({ cuota:cuotaDef, periodo:periodoDef, contrato:cfg.contrato||'PASEM SNTE 26', updatedAt:cfg.updatedAt||'' })};
     }
     if(event.httpMethod==='POST'){
       if(p.role!=='administracion') return {statusCode:403,headers,body:JSON.stringify({error:'Solo administración puede editar la configuración'})};
       const body=JSON.parse(event.body||'{}');
       const cfg=(await store.get('config',{type:'json'}))||{};
       if(body.cuota!=null) cfg.cuota=parseMoney(body.cuota);
+      if(body.periodo!=null) cfg.periodo=String(body.periodo).slice(0,60);
       if(body.contrato!=null) cfg.contrato=String(body.contrato).slice(0,40);
       cfg.updatedAt=new Date().toISOString(); cfg.updatedBy=p.email||'usuario';
       await store.setJSON('config', cfg);
-      return {statusCode:200,headers,body:JSON.stringify({ ok:true, cuota:Number(cfg.cuota||0), contrato:cfg.contrato||'SLP' })};
+      return {statusCode:200,headers,body:JSON.stringify({ ok:true, cuota:Number(cfg.cuota||0), periodo:cfg.periodo||'', contrato:cfg.contrato||'PASEM SNTE 26' })};
     }
     return {statusCode:405,headers,body:JSON.stringify({error:'Método no permitido'})};
   }catch(e){ return {statusCode:500,headers,body:JSON.stringify({error:String(e&&e.message?e.message:e)})}; }
