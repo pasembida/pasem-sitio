@@ -955,6 +955,8 @@
 
       <!-- Proveedores -->
       <div class="tabpane" id="pane-proveedores">
+        <div id="prov-detail" style="display:none;"></div>
+        <div id="prov-list">
         <h3 style="font-family:var(--serif);color:var(--brown-deep);margin:0 0 6px;">Registro de proveedor</h3>
         <p style="color:var(--ink);font-size:14px;margin:0 0 14px;">Da de alta hospitales, laboratorios y médicos a los que después podrás generar una orden de pago. Solo administración gestiona esta sección.</p>
         <form id="form-prov" class="admin-form card">
@@ -1012,6 +1014,7 @@
         <div id="prov-count" style="color:var(--ink);font-size:14px;margin-bottom:8px;"></div>
         <div class="table-wrap"><table class="dtable" id="prov-table"><thead><tr><th>Tipo</th><th>Nombre</th><th>RFC</th><th>Teléfono</th><th>Banco</th><th>Programa</th><th></th></tr></thead><tbody></tbody></table></div>
         <div id="prov-pager" style="display:flex;gap:8px;align-items:center;justify-content:center;margin-top:10px;"></div>
+        </div>
       </div>
 
       <!-- Orden de pago -->
@@ -2165,6 +2168,7 @@
     var c1=document.getElementById('prov-csf-cur'); if(c1) c1.textContent=''; var c2=document.getElementById('prov-edo-cur'); if(c2) c2.textContent='';
   }
   async function loadProv(){
+    var pd=document.getElementById('prov-detail'); if(pd){ pd.style.display='none'; } var pl=document.getElementById('prov-list'); if(pl){ pl.style.display=''; }
     if(!provInit){
       provInit=true;
       fillBancos(document.getElementById('prov-banco'),'');
@@ -2191,12 +2195,66 @@
     pageItems.forEach(function(o){ var idx=o._i;
       var tr=document.createElement('tr');
       tr.innerHTML='<td>'+esc(o.tipo||'')+'</td><td>'+esc(o.nombre||'')+'</td><td>'+esc(o.rfc||'')+'</td><td>'+esc(o.telefono||'')+'</td><td>'+esc(o.banco||'')+'</td><td>'+esc(o.programa||'')+'</td>'+
-        '<td style="white-space:nowrap"><button class="btn-mini" data-ped="'+idx+'">Editar</button> <button class="btn-del" data-pdel="'+idx+'">Eliminar</button></td>';
+        '<td style="white-space:nowrap"><button class="btn-mini" data-pver="'+idx+'" style="color:#0E9A9C">Consultar</button> <button class="btn-mini" data-ped="'+idx+'">Editar</button> <button class="btn-del" data-pdel="'+idx+'">Eliminar</button></td>';
       tb.appendChild(tr);
     });
     tb.querySelectorAll('[data-ped]').forEach(function(b){ b.addEventListener('click', function(){ provFormFill(PROV_CACHE[+b.getAttribute('data-ped')]); document.getElementById('prov-save').textContent='Guardar cambios'; document.getElementById('prov-cancel').style.display=''; window.scrollTo({top:0,behavior:'smooth'}); }); });
     tb.querySelectorAll('[data-pdel]').forEach(function(b){ b.addEventListener('click', function(){ delProv(PROV_CACHE[+b.getAttribute('data-pdel')]); }); });
+    tb.querySelectorAll('[data-pver]').forEach(function(b){ b.addEventListener('click', function(){ verProveedor(PROV_CACHE[+b.getAttribute('data-pver')]); }); });
     renderPager(document.getElementById('prov-pager'), PROV_PAGE, pages, function(p){ PROV_PAGE=p; renderProv(); });
+  }
+  function cerrarProvDetalle(){ document.getElementById('prov-detail').style.display='none'; document.getElementById('prov-list').style.display=''; }
+  async function verProveedor(o){
+    if(!o) return;
+    var det=document.getElementById('prov-detail'); var list=document.getElementById('prov-list');
+    list.style.display='none'; det.style.display=''; window.scrollTo({top:0,behavior:'smooth'});
+    var esMed=(o.tipo==='Médico General'||o.tipo==='Especialista');
+    det.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">'+
+      '<div><div style="font-family:var(--serif);color:var(--brown-deep);font-size:20px;font-weight:800;">'+esc(o.nombre||'(sin nombre)')+'</div>'+
+      '<div style="color:var(--ink);font-size:13px;">'+esc(o.tipo||'')+(o.programa?(' · '+esc(o.programa)):'')+(o.rfc?(' · RFC '+esc(o.rfc)):'')+'</div></div>'+
+      '<button class="btn btn-ghost" id="prov-back" type="button">← Volver a proveedores</button></div>';
+    // Datos
+    var pairs=[];
+    if(esMed){ pairs=[['Nombre del doctor',o.nombreDoctor||o.nombre],['Especialidad',o.especialidad],['Costo convenido por consulta', o.costoConsulta?money(parseMoney(o.costoConsulta)):''],['RFC',o.rfc],['Dirección',o.direccion||o.direccionM],['Teléfono',o.telefono||o.telContacto],['Correo',o.correo||o.correoM]]; }
+    else { pairs=[['Razón social',o.razonSocial||o.nombre],['RFC',o.rfc],['Sucursal',o.sucursal],['Dirección',o.direccion||o.direccionH],['Teléfono',o.telefono||o.telHospital],['Responsable',o.nombreResp],['Teléfono del responsable',o.telResp],['Correo',o.correo||o.correoH]]; }
+    pairs=pairs.concat([['Banco',o.banco],['Número de cuenta',o.cuenta],['CLABE',o.clabe],['Programa',o.programa],['Fecha de alta',o.fechaAlta]]);
+    var cols=pairs.filter(function(p){return p[1]!=null && String(p[1]).trim()!=='';});
+    var dh='<div style="font-family:var(--serif);color:var(--ochre);font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin:6px 0 6px;">Datos del proveedor</div>';
+    dh+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;">'+cols.map(function(p){ return '<div style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;"><div style="font-size:11px;color:var(--ink);text-transform:uppercase;letter-spacing:.3px;">'+esc(p[0])+'</div><div style="font-size:14px;font-weight:600;color:var(--brown-deep);">'+esc(p[1])+'</div></div>'; }).join('')+'</div>';
+    // Documentos
+    dh+='<div style="font-family:var(--serif);color:var(--ochre);font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px;">Expediente / documentos</div>';
+    function docLine(label,doc){ if(doc&&doc.docId) return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:6px;"><span><b>'+esc(label)+':</b> '+esc(doc.filename||'documento')+'</span><button class="btn-mini" data-provdl="'+esc(doc.docId)+'|'+esc(doc.filename||label)+'">Descargar</button></div>'; return '<div style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:6px;color:var(--ink);"><b>'+esc(label)+':</b> Sin documento.</div>'; }
+    dh+=docLine('Constancia de Situación Fiscal (CSF)', o.csfDoc)+docLine('Estado de cuenta', o.edoCuentaDoc);
+    // Órdenes donde participa
+    dh+='<div style="font-family:var(--serif);color:var(--ochre);font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px;">Órdenes de pago donde participa</div>';
+    dh+='<div id="prov-ordenes" style="color:var(--ink);font-size:13px;">Cargando órdenes…</div>';
+    det.innerHTML+=dh;
+    var bk=document.getElementById('prov-back'); if(bk) bk.addEventListener('click', cerrarProvDetalle);
+    det.querySelectorAll('[data-provdl]').forEach(function(b){ b.addEventListener('click', function(){ var p=b.getAttribute('data-provdl').split('|'); downloadDocFrom('pasem-prov-docs',p[0],p[1]); }); });
+    // Cargar órdenes y filtrar por este proveedor
+    try{
+      var r=await api(ORDENES); var ordenes=await r.json(); if(!r.ok) throw new Error((ordenes&&ordenes.error)||('HTTP '+r.status));
+      var filas=[]; var totMonto=0, nOrd=0, pagadas=0, solicitadas=0, registradas=0;
+      (Array.isArray(ordenes)?ordenes:[]).forEach(function(od){
+        (od.receptores||[]).forEach(function(rc){
+          if(rc.provId===o.id){
+            var m=parseMoney(rc.monto); totMonto+=m; nOrd++;
+            if(od.estado==='pagada') pagadas++; else if(od.estado==='solicitada') solicitadas++; else registradas++;
+            var est=od.estado==='pagada'?'<span style="color:#0E9A9C;font-weight:700;">Pagada</span>':(od.estado==='solicitada'?'<span style="color:#1e9e52;font-weight:700;">Solicitada</span>':'Registrada');
+            var fac=(rc.facturaDoc&&rc.facturaDoc.docId)?'<button class="btn-mini" data-odl="pasem-orden-docs|'+esc(rc.facturaDoc.docId)+'|'+esc(rc.facturaDoc.filename||'factura')+'">Factura</button>':'';
+            var xml=(rc.xmlDoc&&rc.xmlDoc.docId)?' <button class="btn-mini" data-odl="pasem-orden-docs|'+esc(rc.xmlDoc.docId)+'|'+esc(rc.xmlDoc.filename||'xml')+'">XML</button>':'';
+            filas.push('<tr><td data-label="Folio">'+esc(od.folio||'')+'</td><td data-label="Paciente">'+esc(od.paciente||'')+'</td><td data-label="Concepto">'+esc(rc.tipo||'')+'</td><td data-label="Monto" style="text-align:right">'+money(m)+'</td><td data-label="Estatus">'+est+'</td><td data-label="Fecha pago">'+esc(od.fechaPago||'—')+'</td><td data-label="Docs">'+(fac+xml||'—')+'</td></tr>');
+          }
+        });
+      });
+      var cont=document.getElementById('prov-ordenes');
+      if(!filas.length){ cont.innerHTML='Este proveedor no aparece en ninguna orden de pago todavía.'; }
+      else {
+        cont.innerHTML='<div style="margin-bottom:8px;">Órdenes: <b>'+nOrd+'</b> · Pagadas: <b style="color:#0E9A9C">'+pagadas+'</b> · Solicitadas: <b>'+solicitadas+'</b> · Registradas: <b>'+registradas+'</b> · Monto total a este proveedor: <b style="color:var(--brown-deep)">'+money(totMonto)+'</b></div>'+
+          '<div class="table-wrap"><table class="dtable"><thead><tr><th>Folio</th><th>Paciente</th><th>Concepto</th><th>Monto</th><th>Estatus</th><th>Fecha pago</th><th>Docs</th></tr></thead><tbody>'+filas.join('')+'</tbody></table></div>';
+        cont.querySelectorAll('[data-odl]').forEach(function(b){ b.addEventListener('click', function(){ var p=b.getAttribute('data-odl').split('|'); downloadDocFrom(p[0],p[1],p[2]); }); });
+      }
+    }catch(e){ var cont=document.getElementById('prov-ordenes'); if(cont) cont.textContent='No se pudieron cargar las órdenes: '+e.message; }
   }
   async function saveProv(e){
     e.preventDefault();

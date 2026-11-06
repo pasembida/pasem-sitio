@@ -107,6 +107,8 @@ export const handler = async (event) => {
         const key=process.env.RESEND_API_KEY; if(!key) return {statusCode:500,headers,body:JSON.stringify({error:'Falta RESEND_API_KEY'})};
         const from=process.env.PAGO_FROM||process.env.MAIL_FROM||'PASEM <asistenciaseccion26@pasem.com>';
         const to=(process.env.PAGO_TO||'gustavocabrera@bidaseguros.org,gcocampo@bidaseguros.org,gloriavergara@bidaseguros.org,rodrigoperez@bidaseguros.org').split(',').map(s=>s.trim()).filter(Boolean);
+        const cc=(process.env.PAGO_CC||'').split(',').map(s=>s.trim()).filter(Boolean);
+        const bcc=(process.env.PAGO_BCC||'').split(',').map(s=>s.trim()).filter(Boolean);
         o.solicitadoPor=p.email||'usuario';
         const total=(o.receptores||[]).filter(r=>parseMoney(r.monto)>0).reduce((a,r)=>a+parseMoney(r.monto),0);
         // Adjuntos: factura de la orden + CSF y estado de cuenta de cada proveedor receptor
@@ -134,6 +136,8 @@ export const handler = async (event) => {
         let htmlFull=correoHtml(o);
         if(faltantes.length){ htmlFull=htmlFull.replace('</body>', '<div style="max-width:680px;margin:0 auto 18px;padding:10px 14px;background:#FFF7E6;border:1px solid #f0d08a;border-radius:8px;font-family:Arial;color:#7a5b00;font-size:12px;">Documentos no adjuntados (verificar en el expediente del proveedor): '+faltantes.map(esc).join('; ')+'.</div></body>'); }
         const payload={ from, to, subject:'PASEM — Solicitud de Orden de Pago '+(o.folio||'')+' · '+(o.paciente||'')+' · '+money(total), html: htmlFull, attachments: attachments.length?attachments:undefined };
+        if(cc.length) payload.cc=cc;
+        if(bcc.length) payload.bcc=bcc;
         const r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify(payload)});
         const rd=await r.json().catch(()=>({}));
         if(!r.ok) return {statusCode:502,headers,body:JSON.stringify({error:(rd&&(rd.message||rd.name))||('Resend '+r.status)})};
