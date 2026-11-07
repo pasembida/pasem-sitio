@@ -23,3 +23,9 @@
   to = "/alta/index.html"
   status = 200
   force = true
+
+[[redirects]]
+  from = "/altafederalizados"
+  to = "/altafederalizados/index.html"
+  status = 200
+  force = true

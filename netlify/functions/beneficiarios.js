@@ -34,7 +34,7 @@ export const handler = async (event) => {
   function matchAll(hay){ for(const t of terms){ if(hay.indexOf(t)<0) return false; } return true; }
   const results=[];
   for(let i=0;i<INDEX.length && results.length<100;i++){
-    if(matchAll(INDEX[i])){ const x=DATA[i]; results.push({cert:x.ce,tipo:'Titular',nombre:x.n,rfc:x.r,curp:x.c,funcion:x.f,cct:x.cct,ct:x.t,nivel:x.nv,origen:'base'}); }
+    if(matchAll(INDEX[i])){ const x=DATA[i]; results.push({cert:x.ce,tipo:'Titular',nombre:x.n,rfc:x.r,curp:x.c,funcion:x.f,cct:x.cct,ct:x.t,nivel:x.nv,origen:'base',programa:'telesecundaria'}); }
   }
   // titulares dados de alta
   try{
@@ -44,7 +44,7 @@ export const handler = async (event) => {
     for(const t of tits){
       if(results.length>=200) break;
       const hay=norm([t.cert,t.nombre,t.curp,t.rfc,t.cct,t.ct].join(' '));
-      if(matchAll(hay)){ results.push({cert:t.cert,tipo:'Titular',nombre:t.nombre,rfc:t.rfc,curp:t.curp,funcion:t.funcion||'',cct:t.cct||'',ct:t.ct||'',nivel:t.nivel||'',origen:'alta'}); }
+      if(matchAll(hay)){ results.push({cert:t.cert,tipo:'Titular',nombre:t.nombre,rfc:t.rfc,curp:t.curp,funcion:t.funcion||'',cct:t.cct||'',ct:t.ct||'',nivel:t.nivel||'',origen:'alta',programa:(t.programa||'telesecundaria')}); }
     }
   }catch(e){}
   // dependientes dados de alta
@@ -55,7 +55,7 @@ export const handler = async (event) => {
     for(const d of deps){
       if(results.length>=150) break;
       const hay=norm([d.cert,d.nombre,d.curp,d.rfc,d.titularCert,d.titularNombre,d.parentesco].join(' '));
-      if(matchAll(hay)){ results.push({cert:d.cert,tipo:'Dependiente',nombre:d.nombre,rfc:d.rfc,curp:d.curp,funcion:d.parentesco,cct:'',ct:'Titular: '+(d.titularNombre||d.titularCert),nivel:'',origen:'alta'}); }
+      if(matchAll(hay)){ results.push({cert:d.cert,tipo:'Dependiente',nombre:d.nombre,rfc:d.rfc,curp:d.curp,funcion:d.parentesco,cct:'',ct:'Titular: '+(d.titularNombre||d.titularCert),nivel:'',origen:'alta',programa:(d.programa||'telesecundaria')}); }
     }
   }catch(e){}
   return {statusCode:200,headers,body:JSON.stringify({total:DATA.length, count:results.length, results})};

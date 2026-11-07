@@ -391,6 +391,7 @@
             <button class="tab" type="button" data-pane="altatitular">Alta titular</button>
             <button class="tab" type="button" data-pane="dependientes">Dependientes</button>
             <button class="tab" type="button" data-pane="altas">Altas recibidas</button>
+            <button class="tab" type="button" data-pane="altasfed">Altas Federalizados</button>
             <div class="nav-group">Documentos</div>
             <button class="tab" type="button" data-pane="expediente">Expediente</button>
             <button class="tab" type="button" data-pane="descargas">Descargas</button>
@@ -674,11 +675,12 @@
         <div class="search-row">
           <input id="ben-q" type="text" placeholder="Nombre, RFC o CURP…">
           <button class="btn btn-primary" id="ben-btn" type="button">Buscar</button>
+          <select id="ben-programa" style="min-width:160px;"><option value="">Todos los programas</option><option value="telesecundaria">Telesecundaria</option><option value="federalizados">Federalizados</option></select>
         </div>
         <div id="ben-status"></div>
         <div class="table-wrap">
           <table id="ben-table" class="dtable">
-            <thead><tr><th>Certificado</th><th>Tipo</th><th>Nombre</th><th>RFC</th><th>CURP</th><th>Función</th><th>CCT</th><th>Centro de trabajo</th><th>Origen</th><th>Expediente</th></tr></thead>
+            <thead><tr><th>Certificado</th><th>Tipo</th><th>Nombre</th><th>RFC</th><th>CURP</th><th>Función</th><th>CCT</th><th>Centro de trabajo</th><th>Programa</th><th>Origen</th><th>Expediente</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
@@ -882,8 +884,8 @@
 
       <!-- Altas recibidas -->
       <div class="tabpane" id="pane-altas">
-        <h3 style="font-family:var(--serif); color:var(--brown-deep); margin:0 0 6px;">Altas recibidas</h3>
-        <p style="color:var(--ink); font-size:14px; margin:0 0 14px;">Registros enviados desde el formulario público <strong>pasem.com/alta</strong>. Puedes ver el detalle, descargar sus documentos y exportar a Excel.</p>
+        <h3 id="altas-title" style="font-family:var(--serif); color:var(--brown-deep); margin:0 0 6px;">Altas recibidas</h3>
+        <p style="color:var(--ink); font-size:14px; margin:0 0 14px;">Registros enviados desde los formularios públicos de alta (<strong>pasem.com/alta</strong> y <strong>pasem.com/altafederalizados</strong>). Puedes ver el detalle, descargar sus documentos y exportar a Excel.</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
           <button class="btn btn-ghost" id="altas-reload" type="button">Actualizar</button>
           <button class="btn btn-primary" id="altas-export" type="button">Exportar a Excel (CSV)</button>
@@ -1189,6 +1191,7 @@
   document.getElementById('btn-export').addEventListener('click', exportCSV);
   document.getElementById('ben-btn').addEventListener('click', searchBen);
   document.getElementById('ben-q').addEventListener('keydown', function(e){ if(e.key==='Enter') searchBen(); });
+  (function(){ var bp=document.getElementById('ben-programa'); if(bp) bp.addEventListener('change', function(){ BEN_PAGE=1; renderBen(); }); })();
   // pestañas
   document.querySelectorAll('.tab').forEach(function(b){ b.addEventListener('click', function(){ activate(b.getAttribute('data-pane')); }); });
   (function(){
@@ -1201,10 +1204,12 @@
     window.__navRefresh=refresh; refresh();
   })();
   function activate(name){
+    var paneName=(name==='altasfed')?'altas':name;
     document.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('active', t.getAttribute('data-pane')===name); });
-    document.querySelectorAll('.tabpane').forEach(function(p){ p.classList.toggle('active', p.id==='pane-'+name); });
+    document.querySelectorAll('.tabpane').forEach(function(p){ p.classList.toggle('active', p.id==='pane-'+paneName); });
     if(name==='usuarios' && isAdmin()) loadUsers();
-    if(name==='altas') loadAltas();
+    if(name==='altas'){ ALTAS_PROGRAMA='telesecundaria'; ALTAS_PAGE=1; ALTAS_Q=''; ALTAS_FILTRO=''; loadAltas(); }
+    if(name==='altasfed'){ ALTAS_PROGRAMA='federalizados'; ALTAS_PAGE=1; ALTAS_Q=''; ALTAS_FILTRO=''; loadAltas(); }
     if(name==='expediente') loadExp();
     if(name==='proveedores' && isAdmin()) loadProv();
     if(name==='ordenpago') initOrdenPago();
@@ -1540,18 +1545,26 @@
       renderBen();
     }catch(e){ benStatus.textContent='Error: '+e.message; }
   }
+  function progBadge(programa){
+    return (programa==='federalizados')
+      ? '<span style="background:#FFF3EA;color:#b9560e;border:1px solid #f1cba6;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:800;">Federalizados</span>'
+      : '<span style="background:#EEF6FF;color:#2563a6;border:1px solid #bcd6f0;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:800;">Telesecundaria</span>';
+  }
   function renderBen(){
     benTbody.innerHTML='';
     if(!BEN_RESULTS.length){ benStatus.textContent='Sin coincidencias. Esa persona no aparece en el listado de beneficiarios.'; renderPager(document.getElementById('ben-pager'),1,1,function(){}); return; }
-    var pages=Math.max(1,Math.ceil(BEN_RESULTS.length/PAGE_SIZE)); if(BEN_PAGE>pages) BEN_PAGE=pages;
-    var start=(BEN_PAGE-1)*PAGE_SIZE, pageItems=BEN_RESULTS.slice(start,start+PAGE_SIZE);
+    var prog=(document.getElementById('ben-programa')||{}).value||'';
+    var lista=BEN_RESULTS.filter(function(x){ return !prog || (x.programa||'telesecundaria')===prog; });
+    if(!lista.length){ benStatus.textContent='Sin coincidencias para ese programa.'; renderPager(document.getElementById('ben-pager'),1,1,function(){}); return; }
+    var pages=Math.max(1,Math.ceil(lista.length/PAGE_SIZE)); if(BEN_PAGE>pages) BEN_PAGE=pages;
+    var start=(BEN_PAGE-1)*PAGE_SIZE, pageItems=lista.slice(start,start+PAGE_SIZE);
     pageItems.forEach(function(x){ var tr=document.createElement('tr');
       var orig = x.origen==='alta'
         ? '<span style="background:#E6F6F6;color:#0E9A9C;border:1px solid #bfe6e6;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700;">Dado de alta</span>'
         : '<span style="background:#F1F4F6;color:#5a6b74;border:1px solid #dfe6ea;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700;">Padrón base</span>';
-      tr.innerHTML='<td><strong>'+esc(x.cert)+'</strong></td><td>'+esc(x.tipo||'')+'</td><td>'+esc(x.nombre)+'</td><td>'+esc(x.rfc)+'</td><td>'+esc(x.curp)+'</td><td>'+esc(x.funcion)+'</td><td>'+esc(x.cct)+'</td><td>'+esc(x.ct)+'</td><td>'+orig+'</td><td><button class="btn-mini" data-curp="'+esc(x.curp)+'" data-cert="'+esc(x.cert)+'" data-nom="'+esc(x.nombre)+'">📎 Ver</button></td>'; benTbody.appendChild(tr); });
+      tr.innerHTML='<td><strong>'+esc(x.cert)+'</strong></td><td>'+esc(x.tipo||'')+'</td><td>'+esc(x.nombre)+'</td><td>'+esc(x.rfc)+'</td><td>'+esc(x.curp)+'</td><td>'+esc(x.funcion)+'</td><td>'+esc(x.cct)+'</td><td>'+esc(x.ct)+'</td><td>'+progBadge(x.programa)+'</td><td>'+orig+'</td><td><button class="btn-mini" data-curp="'+esc(x.curp)+'" data-cert="'+esc(x.cert)+'" data-nom="'+esc(x.nombre)+'">📎 Ver</button></td>'; benTbody.appendChild(tr); });
     benTbody.querySelectorAll('[data-cert]').forEach(function(b){ b.addEventListener('click', function(){ openExpediente(b.getAttribute('data-curp'), b.getAttribute('data-cert'), b.getAttribute('data-nom')); }); });
-    benStatus.textContent='Mostrando '+(start+1)+'–'+(start+pageItems.length)+' de '+BEN_COUNT+' coincidencia(s)'+(BEN_COUNT>=100?' (máx. 100)':'')+'. Las personas listadas cuentan con el beneficio.';
+    benStatus.textContent='Mostrando '+(start+1)+'–'+(start+pageItems.length)+' de '+lista.length+' coincidencia(s)'+(BEN_COUNT>=100?' (máx. 100)':'')+'. Las personas listadas cuentan con el beneficio.';
     renderPager(document.getElementById('ben-pager'), BEN_PAGE, pages, function(p){ BEN_PAGE=p; renderBen(); });
   }
 
@@ -2203,6 +2216,7 @@
     tb.querySelectorAll('[data-pver]').forEach(function(b){ b.addEventListener('click', function(){ verProveedor(PROV_CACHE[+b.getAttribute('data-pver')]); }); });
     renderPager(document.getElementById('prov-pager'), PROV_PAGE, pages, function(p){ PROV_PAGE=p; renderProv(); });
   }
+  var PROV_DET_ORDENES=[];
   function cerrarProvDetalle(){ document.getElementById('prov-detail').style.display='none'; document.getElementById('prov-list').style.display=''; }
   async function verProveedor(o){
     if(!o) return;
@@ -2212,7 +2226,11 @@
     det.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">'+
       '<div><div style="font-family:var(--serif);color:var(--brown-deep);font-size:20px;font-weight:800;">'+esc(o.nombre||'(sin nombre)')+'</div>'+
       '<div style="color:var(--ink);font-size:13px;">'+esc(o.tipo||'')+(o.programa?(' · '+esc(o.programa)):'')+(o.rfc?(' · RFC '+esc(o.rfc)):'')+'</div></div>'+
-      '<button class="btn btn-ghost" id="prov-back" type="button">← Volver a proveedores</button></div>';
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;">'+
+        '<button class="btn btn-ghost" id="prov-det-pdf" type="button">Descargar expediente (PDF)</button>'+
+        '<button class="btn btn-mini" id="prov-det-edit" type="button">Editar</button>'+
+        '<button class="btn btn-ghost" id="prov-back" type="button">← Volver</button>'+
+      '</div></div>';
     // Datos
     var pairs=[];
     if(esMed){ pairs=[['Nombre del doctor',o.nombreDoctor||o.nombre],['Especialidad',o.especialidad],['Costo convenido por consulta', o.costoConsulta?money(parseMoney(o.costoConsulta)):''],['RFC',o.rfc],['Dirección',o.direccion||o.direccionM],['Teléfono',o.telefono||o.telContacto],['Correo',o.correo||o.correoM]]; }
@@ -2230,16 +2248,19 @@
     dh+='<div id="prov-ordenes" style="color:var(--ink);font-size:13px;">Cargando órdenes…</div>';
     det.innerHTML+=dh;
     var bk=document.getElementById('prov-back'); if(bk) bk.addEventListener('click', cerrarProvDetalle);
+    var be=document.getElementById('prov-det-edit'); if(be) be.addEventListener('click', function(){ cerrarProvDetalle(); provFormFill(o); var sv=document.getElementById('prov-save'); if(sv) sv.textContent='Guardar cambios'; var cn=document.getElementById('prov-cancel'); if(cn) cn.style.display=''; window.scrollTo({top:0,behavior:'smooth'}); });
+    var bp=document.getElementById('prov-det-pdf'); if(bp) bp.addEventListener('click', function(){ downloadProvPDF(o, PROV_DET_ORDENES); });
     det.querySelectorAll('[data-provdl]').forEach(function(b){ b.addEventListener('click', function(){ var p=b.getAttribute('data-provdl').split('|'); downloadDocFrom('pasem-prov-docs',p[0],p[1]); }); });
     // Cargar órdenes y filtrar por este proveedor
     try{
       var r=await api(ORDENES); var ordenes=await r.json(); if(!r.ok) throw new Error((ordenes&&ordenes.error)||('HTTP '+r.status));
-      var filas=[]; var totMonto=0, nOrd=0, pagadas=0, solicitadas=0, registradas=0;
+      var filas=[]; var totMonto=0, nOrd=0, pagadas=0, solicitadas=0, registradas=0; PROV_DET_ORDENES=[];
       (Array.isArray(ordenes)?ordenes:[]).forEach(function(od){
         (od.receptores||[]).forEach(function(rc){
           if(rc.provId===o.id){
             var m=parseMoney(rc.monto); totMonto+=m; nOrd++;
             if(od.estado==='pagada') pagadas++; else if(od.estado==='solicitada') solicitadas++; else registradas++;
+            PROV_DET_ORDENES.push({folio:od.folio||'',paciente:od.paciente||'',concepto:rc.tipo||'',monto:m,estado:od.estado||'registrada',fechaPago:od.fechaPago||''});
             var est=od.estado==='pagada'?'<span style="color:#0E9A9C;font-weight:700;">Pagada</span>':(od.estado==='solicitada'?'<span style="color:#1e9e52;font-weight:700;">Solicitada</span>':'Registrada');
             var fac=(rc.facturaDoc&&rc.facturaDoc.docId)?'<button class="btn-mini" data-odl="pasem-orden-docs|'+esc(rc.facturaDoc.docId)+'|'+esc(rc.facturaDoc.filename||'factura')+'">Factura</button>':'';
             var xml=(rc.xmlDoc&&rc.xmlDoc.docId)?' <button class="btn-mini" data-odl="pasem-orden-docs|'+esc(rc.xmlDoc.docId)+'|'+esc(rc.xmlDoc.filename||'xml')+'">XML</button>':'';
@@ -2255,6 +2276,52 @@
         cont.querySelectorAll('[data-odl]').forEach(function(b){ b.addEventListener('click', function(){ var p=b.getAttribute('data-odl').split('|'); downloadDocFrom(p[0],p[1],p[2]); }); });
       }
     }catch(e){ var cont=document.getElementById('prov-ordenes'); if(cont) cont.textContent='No se pudieron cargar las órdenes: '+e.message; }
+  }
+  async function downloadProvPDF(o, ordenes){
+    try{
+      var ok=await ensureJsPDF(); if(!ok) throw new Error('no-lib');
+      var jsPDF=window.jspdf.jsPDF; var doc=new jsPDF({unit:'mm', format:'letter', orientation:'portrait'});
+      var M=14, W=doc.internal.pageSize.getWidth(), y=12;
+      var ORANGE=[221,107,32], INK=[31,52,66], GRAY=[118,118,118], PEACH=[255,243,234];
+      var snte=imgToDataURL('.logo-snte'), bida=imgToDataURL('.logo-bida');
+      if(snte){ var sh=12, sw=sh*(snte.w/snte.h); try{ doc.addImage(snte.data,'PNG',M,y,sw,sh); }catch(e){} }
+      if(bida){ var bh=13, bw=bh*(bida.w/bida.h); try{ doc.addImage(bida.data,'PNG',W-M-bw,y-0.5,bw,bh); }catch(e){} }
+      doc.setFont('helvetica','bold'); doc.setTextColor(ORANGE[0],ORANGE[1],ORANGE[2]); doc.setFontSize(16); doc.text('PASEM', W/2, y+6, {align:'center'});
+      doc.setFont('helvetica','normal'); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]); doc.setFontSize(8); doc.text('Expediente de proveedor', W/2, y+11, {align:'center'});
+      y+=16; doc.setDrawColor(ORANGE[0],ORANGE[1],ORANGE[2]); doc.setLineWidth(0.6); doc.line(M,y,W-M,y); y+=6;
+      doc.setFont('helvetica','bold'); doc.setTextColor(INK[0],INK[1],INK[2]); doc.setFontSize(14); doc.text(String(o.nombre||'(sin nombre)'), M, y); y+=5;
+      doc.setFont('helvetica','normal'); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]); doc.setFontSize(9);
+      doc.text((o.tipo||'')+(o.programa?(' · '+o.programa):'')+(o.rfc?(' · RFC '+o.rfc):''), M, y); y+=6;
+      function bar(t){ doc.setFillColor(ORANGE[0],ORANGE[1],ORANGE[2]); doc.rect(M,y,W-2*M,6,'F'); doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.text(t,M+2,y+4); y+=8; }
+      var esMed=(o.tipo==='Médico General'||o.tipo==='Especialista');
+      var pairs=esMed?[['Especialidad',o.especialidad],['Costo convenido por consulta', o.costoConsulta?money(parseMoney(o.costoConsulta)):''],['Dirección',o.direccion||o.direccionM],['Teléfono',o.telefono||o.telContacto],['Correo',o.correo||o.correoM]]
+        :[['Razón social',o.razonSocial||o.nombre],['Dirección',o.direccion||o.direccionH],['Teléfono',o.telefono||o.telHospital],['Responsable',o.nombreResp],['Correo',o.correo||o.correoH]];
+      pairs=pairs.concat([['Banco',o.banco],['Número de cuenta',o.cuenta],['CLABE',o.clabe],['Fecha de alta',o.fechaAlta]]);
+      pairs=pairs.filter(function(p){return p[1]!=null && String(p[1]).trim()!=='';});
+      bar('Datos del proveedor');
+      doc.autoTable({ startY:y, body:pairs.map(function(p){return [p[0], String(p[1])];}), margin:{left:M,right:M}, theme:'plain',
+        styles:{fontSize:9,cellPadding:1.5,textColor:INK}, columnStyles:{0:{fontStyle:'bold',cellWidth:60,textColor:GRAY},1:{cellWidth:W-2*M-60}} });
+      y=doc.lastAutoTable.finalY+4;
+      bar('Expediente / documentos');
+      doc.setFont('helvetica','normal'); doc.setTextColor(INK[0],INK[1],INK[2]); doc.setFontSize(9);
+      doc.text('• CSF: '+((o.csfDoc&&o.csfDoc.filename)||'Sin documento'), M, y+3);
+      doc.text('• Estado de cuenta: '+((o.edoCuentaDoc&&o.edoCuentaDoc.filename)||'Sin documento'), M, y+8); y+=13;
+      var ords=ordenes||[];
+      bar('Órdenes de pago donde participa ('+ords.length+')');
+      if(ords.length){
+        var tot=ords.reduce(function(a,x){return a+(x.monto||0);},0);
+        doc.autoTable({ startY:y,
+          head:[['Folio','Paciente','Concepto','Monto','Estatus','Fecha pago']],
+          body:ords.map(function(x){ return [x.folio, x.paciente, x.concepto, money(x.monto), (x.estado==='pagada'?'Pagada':(x.estado==='solicitada'?'Solicitada':'Registrada')), x.fechaPago||'—']; })
+             .concat([[{content:'TOTAL',colSpan:3,styles:{fontStyle:'bold',fillColor:PEACH}},{content:money(tot),styles:{fontStyle:'bold',halign:'right',fillColor:PEACH}},{content:'',styles:{fillColor:PEACH}},{content:'',styles:{fillColor:PEACH}}]]),
+          margin:{left:M,right:M}, theme:'grid', styles:{fontSize:8.5,cellPadding:2,textColor:INK,lineColor:[226,232,234],lineWidth:0.1},
+          headStyles:{fillColor:PEACH,textColor:INK,fontStyle:'bold'}, columnStyles:{3:{halign:'right'}} });
+        y=doc.lastAutoTable.finalY+4;
+      } else { doc.setFont('helvetica','normal'); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]); doc.setFontSize(9); doc.text('Sin órdenes registradas.', M, y+3); y+=8; }
+      doc.setFontSize(8); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
+      doc.text('PASEM · Sección 26 del SNTE · Generado '+fmtDate(new Date().toISOString()), M, doc.internal.pageSize.getHeight()-10);
+      doc.save('expediente-proveedor-'+String(o.nombre||'').replace(/[^a-z0-9]+/gi,'-').toLowerCase().slice(0,40)+'.pdf');
+    }catch(e){ alert('No se pudo generar el PDF: '+e.message); }
   }
   async function saveProv(e){
     e.preventDefault();
@@ -2521,6 +2588,7 @@
 
   // ===================== ALTAS RECIBIDAS =====================
   var ALTAS_CACHE=[];
+  var ALTAS_PROGRAMA='telesecundaria';
   function fmtDate(s){ if(!s) return '—'; try{ var d=new Date(s); return d.toLocaleString('es-MX',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); }catch(e){ return s; } }
   function titularName(f){ f=f||{}; return [f['Titular - Primer apellido'],f['Titular - Segundo apellido'],f['Titular - Nombres']].filter(Boolean).join(' ').trim(); }
 
@@ -2548,6 +2616,7 @@
       ALTAS_CACHE=Array.isArray(items)?items:[];
       ALTAS_CACHE.forEach(function(a,i){ a._i=i; });
       var bk=document.getElementById('altas-bulk'); if(bk) bk.style.display=isAdmin()?'':'none';
+      var q=document.getElementById('altas-q'); if(q) q.value=ALTAS_Q; var fl=document.getElementById('altas-filtro'); if(fl) fl.value=ALTAS_FILTRO;
       ALTAS_PAGE=1; renderAltas();
     }catch(e){ tb.innerHTML='<tr><td colspan="8">Error: '+esc(e.message)+'</td></tr>'; }
   }
@@ -2556,11 +2625,15 @@
     if(q) q.addEventListener('input', function(){ ALTAS_Q=q.value; ALTAS_PAGE=1; renderAltas(); });
     if(fl) fl.addEventListener('change', function(){ ALTAS_FILTRO=fl.value; ALTAS_PAGE=1; renderAltas(); });
   })();
+  function altasDelPrograma(){ return ALTAS_CACHE.filter(function(a){ return (ALTAS_PROGRAMA==='federalizados') ? (a.programa==='federalizados') : (a.programa!=='federalizados'); }); }
   function renderAltas(){
     var tb=document.querySelector('#altas-table tbody'); var countEl=document.getElementById('altas-count');
-    if(!ALTAS_CACHE.length){ tb.innerHTML='<tr><td colspan="8">Aún no hay altas registradas.</td></tr>'; countEl.textContent=''; renderPager(document.getElementById('altas-pager'),1,1,function(){}); return; }
-    var nuevos=ALTAS_CACHE.filter(function(a){return a.enPadron===false;}).length;
-    var filtered=ALTAS_CACHE.filter(function(a){
+    // Título dinámico según programa
+    var tEl=document.getElementById('altas-title'); if(tEl) tEl.textContent = (ALTAS_PROGRAMA==='federalizados') ? 'Altas recibidas — Federalizados' : 'Altas recibidas';
+    var base=altasDelPrograma();
+    if(!base.length){ tb.innerHTML='<tr><td colspan="8">Aún no hay altas registradas'+(ALTAS_PROGRAMA==='federalizados'?' de Federalizados':'')+'.</td></tr>'; countEl.textContent=''; renderPager(document.getElementById('altas-pager'),1,1,function(){}); return; }
+    var nuevos=base.filter(function(a){return a.enPadron===false;}).length;
+    var filtered=base.filter(function(a){
       var f=a.fields||{};
       if(ALTAS_FILTRO==='nuevo' && a.enPadron!==false) return false;
       if(ALTAS_FILTRO==='padron' && a.enPadron!==true) return false;
@@ -2571,8 +2644,8 @@
     var total=filtered.length, pages=Math.max(1,Math.ceil(total/PAGE_SIZE));
     if(ALTAS_PAGE>pages) ALTAS_PAGE=pages;
     var start=(ALTAS_PAGE-1)*PAGE_SIZE, pageItems=filtered.slice(start, start+PAGE_SIZE);
-    var incorp=ALTAS_CACHE.filter(function(a){return a.incorporada;}).length; var pend=ALTAS_CACHE.length-incorp;
-    countEl.innerHTML = total? ('Mostrando '+(start+1)+'–'+(start+pageItems.length)+' de '+total+' · Total: '+ALTAS_CACHE.length+' · <b style="color:#9a4a12">NUEVO: '+nuevos+'</b> · <b style="color:#1e7e3e">Incorporadas: '+incorp+'</b> · Pendientes: '+pend) : 'Sin resultados para el filtro.';
+    var incorp=base.filter(function(a){return a.incorporada;}).length; var pend=base.length-incorp;
+    countEl.innerHTML = total? ('Mostrando '+(start+1)+'–'+(start+pageItems.length)+' de '+total+' · Total: '+base.length+' · <b style="color:#9a4a12">NUEVO: '+nuevos+'</b> · <b style="color:#1e7e3e">Incorporadas: '+incorp+'</b> · Pendientes: '+pend) : 'Sin resultados para el filtro.';
     tb.innerHTML='';
     pageItems.forEach(function(a){
       var idx=a._i; var f=a.fields||{}; var docs=a.docs||[];
@@ -2647,6 +2720,7 @@
       municipio:f['Afiliación - Municipio']||'', ct:f['Afiliación - Centro de trabajo']||'', cct:f['Afiliación - Clave CT']||'',
       tipoPersonal:f['Afiliación - Tipo de personal']||'', telefono:f['Titular - Telefono']||f['Contacto - Telefono']||'',
       correo:f['Titular - Correo']||f['Contacto - Correo']||'', domicilio:f['Titular - Domicilio']||'',
+      programa:a.programa||'telesecundaria', nivelEducativo:f['Afiliación - Nivel educativo']||'',
       origen:'alta-en-linea', altaId:a.id };
     try{
       var r=await api(TITU,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
@@ -2654,7 +2728,7 @@
       var cert=d.cert||'';
       var okDeps=0, failDeps=[];
       for(var k=0;k<deps.length;k++){
-        var dp=Object.assign({ action:'create', titularCert:cert, titularNombre:nombre, origen:'alta-en-linea', altaId:a.id }, deps[k]);
+        var dp=Object.assign({ action:'create', titularCert:cert, titularNombre:nombre, programa:a.programa||'telesecundaria', origen:'alta-en-linea', altaId:a.id }, deps[k]);
         try{ var rd=await api(DEPS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dp)}); var dj=await rd.json(); if(!rd.ok) throw new Error(dj.error||('HTTP '+rd.status)); okDeps++; }
         catch(ed){ failDeps.push(deps[k].nombre+': '+ed.message); }
       }
@@ -2676,11 +2750,11 @@
     var f=a.fields||{};
     return { action:'create', nombre:titularName(f)||f['Contacto - Nombre']||'', curp:f['Titular - CURP']||f['Contacto - CURP']||'', rfc:f['Titular - RFC']||'',
       fechaNacimiento:f['Titular - Fecha nacimiento']||'', sexo:f['Titular - Sexo']||'', municipio:f['Afiliación - Municipio']||'', ct:f['Afiliación - Centro de trabajo']||'', cct:f['Afiliación - Clave CT']||'',
-      tipoPersonal:f['Afiliación - Tipo de personal']||'', telefono:f['Titular - Telefono']||f['Contacto - Telefono']||'', correo:f['Titular - Correo']||f['Contacto - Correo']||'', domicilio:f['Titular - Domicilio']||'', origen:'alta-en-linea', altaId:a.id };
+      tipoPersonal:f['Afiliación - Tipo de personal']||'', telefono:f['Titular - Telefono']||f['Contacto - Telefono']||'', correo:f['Titular - Correo']||f['Contacto - Correo']||'', domicilio:f['Titular - Domicilio']||'', programa:a.programa||'telesecundaria', nivelEducativo:f['Afiliación - Nivel educativo']||'', origen:'alta-en-linea', altaId:a.id };
   }
   function bulkBtns(dis){ ['bulk-titulares','bulk-deps','bulk-docs'].forEach(function(id){ var b=document.getElementById(id); if(b) b.disabled=dis; }); }
   async function bulkDarAltaTitulares(){
-    var nuevos=ALTAS_CACHE.filter(function(a){return a.enPadron===false;});
+    var nuevos=altasDelPrograma().filter(function(a){return a.enPadron===false;});
     if(!nuevos.length){ alert('No hay titulares nuevos por dar de alta.'); return; }
     if(!confirm('¿Dar de alta a '+nuevos.length+' titular(es) nuevo(s), con sus dependientes y documentos?')) return;
     var st=document.getElementById('bulk-status'); var okT=0, dupT=0, okD=0, errs=[]; bulkBtns(true);
@@ -2698,8 +2772,8 @@
   async function bulkRegistrarDeps(){
     if(!confirm('¿Registrar los dependientes de TODAS las altas cuyo titular ya exista (padrón o dado de alta)?\nLos que ya estén registrados no se duplican.')) return;
     var st=document.getElementById('bulk-status'); var okD=0, sinTit=0, errs=[]; bulkBtns(true);
-    for(var i=0;i<ALTAS_CACHE.length;i++){ var a=ALTAS_CACHE[i];
-      st.textContent='Registrando dependientes… '+(i+1)+' de '+ALTAS_CACHE.length;
+    var _bl=altasDelPrograma(); for(var i=0;i<_bl.length;i++){ var a=_bl[i];
+      st.textContent='Registrando dependientes… '+(i+1)+' de '+_bl.length;
       try{ var r=await api(ALTAS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'register-deps', id:a.id})}); var d=await r.json();
         if(r.status===404) sinTit++; else if(!r.ok) throw new Error(d.error||('HTTP '+r.status)); else okD+=(d.creados||0);
       }catch(e){ errs.push(a.id+': '+e.message); }
@@ -2707,7 +2781,7 @@
     st.innerHTML='<b style="color:#1e9e52">Listo.</b> Dependientes registrados: '+okD+(sinTit?(' · sin titular en base: '+sinTit):'')+(errs.length?(' · <span style="color:#b23b3b">errores: '+errs.length+'</span>'):''); bulkBtns(false); loadAltas();
   }
   async function bulkDocsExpediente(){
-    var conDocs=ALTAS_CACHE.filter(function(a){return (a.docs||[]).length>0;});
+    var conDocs=altasDelPrograma().filter(function(a){return (a.docs||[]).length>0;});
     if(!conDocs.length){ alert('No hay altas con documentos.'); return; }
     if(!confirm('¿Copiar al expediente los documentos de '+conDocs.length+' alta(s)?')) return;
     var st=document.getElementById('bulk-status'); var okDocs=0, errs=[]; bulkBtns(true);
@@ -2775,14 +2849,15 @@
     finally{ if(btn){ btn.disabled=false; btn.textContent=old; } }
   }
   function exportAltasCSV(){
-    if(!ALTAS_CACHE.length){ alert('No hay altas para exportar.'); return; }
+    var datos=altasDelPrograma();
+    if(!datos.length){ alert('No hay altas para exportar.'); return; }
     // columnas = unión de todas las claves de fields
     var keys=[]; var seen={};
-    ALTAS_CACHE.forEach(function(a){ Object.keys(a.fields||{}).forEach(function(k){ if(k!=='bot-field' && !seen[k]){ seen[k]=1; keys.push(k); } }); });
+    datos.forEach(function(a){ Object.keys(a.fields||{}).forEach(function(k){ if(k!=='bot-field' && !seen[k]){ seen[k]=1; keys.push(k); } }); });
     var cols=['Fecha','ID'].concat(keys).concat(['Documentos']);
     function cell(v){ v=(v==null?'':String(v)); if(/[",\n;]/.test(v)) v='"'+v.replace(/"/g,'""')+'"'; return v; }
     var rows=[cols.map(cell).join(',')];
-    ALTAS_CACHE.forEach(function(a){
+    datos.forEach(function(a){
       var f=a.fields||{}; var line=[fmtDate(a.createdAt), a.id||''];
       keys.forEach(function(k){ line.push(f[k]!=null?f[k]:''); });
       line.push((a.docs||[]).map(function(d){return d.filename||'doc';}).join(' | '));

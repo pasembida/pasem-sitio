@@ -20,7 +20,8 @@ function rowsFromEntries(entries){
   return r;
 }
 
-function buildHtml(fields, docNames){
+function buildHtml(fields, docNames, programa){
+  const esFed = programa==='federalizados';
   const base=(process.env.SITE_URL||'https://pasem.com').replace(/\/$/,'');
   const snte=base+'/img/snte26.jpg', bida=base+'/img/bida.png';
   const entries=Object.entries(fields||{});
@@ -45,6 +46,7 @@ function buildHtml(fields, docNames){
       '<div style="color:#fff;font-size:12px;">Programa de Apoyo de Servicios Médicos</div>'+
       '<div style="color:#fff;font-size:22px;font-weight:800;letter-spacing:1px;">PASEM</div>'+
       '<div style="color:#fff;font-size:11px;opacity:.9;">Nueva alta de beneficiario</div>'+
+      (esFed?'<div style="display:inline-block;margin-top:6px;background:#fff;color:#DD6B20;font-weight:800;font-size:12px;letter-spacing:1px;border-radius:999px;padding:3px 12px;">FEDERALIZADOS</div>':'')+
     '</td></tr>'+
     '<tr><td style="height:4px;background:#14B4B6;font-size:0;line-height:0;">&nbsp;</td></tr>'+
     '<tr><td style="padding:16px 18px 4px;"><div style="color:#333;font-size:16px;font-weight:700;">Datos de contacto (a quién responder)</div></td></tr>'+
@@ -192,7 +194,7 @@ export const handler = async (event) => {
         let letter='A'; for(let k=0;k<26;k++){ const L=String.fromCharCode(65+k); if(usadas.indexOf(L)<0){ letter=L; break; } }
         usadas.push(letter);
         const id=crypto.randomUUID();
-        await ds.setJSON(id, { id, cert:cert+letter, titularCert:cert, titularNombre:titNombre, nombre:dp.nombre, parentesco:dp.parentesco, curp:dp.curp||'', fechaNacimiento:dp.fechaNacimiento||'', sexo:dp.sexo||'', estudia:dp.estudia||'', origen:'alta-en-linea', altaId:rec.id, createdAt:new Date().toISOString(), capturadoPor:p.email||'usuario' });
+        await ds.setJSON(id, { id, cert:cert+letter, titularCert:cert, titularNombre:titNombre, nombre:dp.nombre, parentesco:dp.parentesco, curp:dp.curp||'', fechaNacimiento:dp.fechaNacimiento||'', sexo:dp.sexo||'', estudia:dp.estudia||'', programa:(rec.programa||'telesecundaria'), origen:'alta-en-linea', altaId:rec.id, createdAt:new Date().toISOString(), capturadoPor:p.email||'usuario' });
         creados++;
       }
       // Copiar documentos del alta al expediente del titular (idempotente)
@@ -218,10 +220,13 @@ export const handler = async (event) => {
     if(fields['bot-field']) return {statusCode:200,headers,body:JSON.stringify({ok:true})}; // honeypot
     const docs=Array.isArray(body.docs)?body.docs:[];
 
+    // Distinguir el programa de origen del alta
+    const esFed = /federaliz/i.test(String(fields['Programa']||fields['Origen']||''));
+    const programa = esFed ? 'federalizados' : 'telesecundaria';
     // Guardar respaldo del alta en Blobs
     const altaId=crypto.randomUUID();
     const recStore=makeStore('pasem-altas');
-    await recStore.setJSON('alta:'+altaId, { id:altaId, createdAt:new Date().toISOString(), fields, docs });
+    await recStore.setJSON('alta:'+altaId, { id:altaId, createdAt:new Date().toISOString(), programa, fields, docs });
 
     // Reensamblar documentos desde Blobs para adjuntarlos al correo
     const docStore=makeStore('pasem-altas-docs');
@@ -248,8 +253,8 @@ export const handler = async (event) => {
     const payload={
       from,
       to:[to],
-      subject:'PASEM — Nueva alta de beneficiario'+(nombreContacto?(': '+nombreContacto):''),
-      html: buildHtml(fields, docNames),
+      subject:(esFed?'PASEM (FEDERALIZADOS) — Nueva alta de beneficiario':'PASEM — Nueva alta de beneficiario')+(nombreContacto?(': '+nombreContacto):''),
+      html: buildHtml(fields, docNames, programa),
       attachments: attachments.length?attachments:undefined
     };
     if(cc) payload.cc=[cc];
