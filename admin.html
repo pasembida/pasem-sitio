@@ -872,12 +872,13 @@
         </form>
         <div class="search-row">
           <input id="exp-q" type="text" placeholder="Buscar por CURP, folio, nombre o archivo…">
+          <select id="exp-programa" style="min-width:160px;"><option value="">Todos los programas</option><option value="telesecundaria">Telesecundaria</option><option value="federalizados">Federalizados</option></select>
           <button class="btn btn-ghost" id="exp-refresh" type="button">Actualizar</button>
         </div>
         <div id="exp-status"></div>
         <div class="table-wrap">
           <table id="exp-table" class="dtable">
-            <thead><tr><th>Archivo</th><th>Asociado a</th><th>Descripción</th><th>Subió</th><th>Fecha</th><th></th></tr></thead>
+            <thead><tr><th>Archivo</th><th>Asociado a</th><th>Programa</th><th>Descripción</th><th>Subió</th><th>Fecha</th><th></th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
@@ -924,8 +925,9 @@
       <div class="tabpane" id="pane-informe">
         <h3 style="font-family:var(--serif); color:var(--brown-deep); margin:0 0 6px;">Reporte Comercial</h3>
         <p style="color:var(--ink); font-size:14px; margin:0 0 14px;">Reporte detallado para clientes: estado del padrón, actualizaciones de datos recibidas, titulares nuevos y procedimientos (abiertos y pagados), con nombres.</p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center;">
           <button class="btn btn-primary" id="btn-informe" type="button">Actualizar informe</button>
+          <select id="informe-programa" style="min-width:170px;"><option value="">Todos los programas</option><option value="telesecundaria">Telesecundaria</option><option value="federalizados">Federalizados</option></select>
           <button class="btn btn-ghost" id="btn-informe-print" type="button" style="display:none;">Descargar PDF</button>
         </div>
         <div id="informe-msg" style="font-size:14px;margin-bottom:10px;"></div>
@@ -948,8 +950,9 @@
           </div>
           <div style="font-size:12px;color:var(--ink);margin-top:4px;">La cuota se usa para calcular los porcentajes. Actualiza el informe después de guardar.</div>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center;">
           <button class="btn btn-primary" id="btn-repdir" type="button">Actualizar informe</button>
+          <select id="repdir-programa" style="min-width:170px;"><option value="">Todos los programas</option><option value="telesecundaria">Telesecundaria</option><option value="federalizados">Federalizados</option></select>
           <button class="btn btn-ghost" id="btn-repdir-print" type="button" style="display:none;">Descargar PDF</button>
         </div>
         <div id="repdir-msg" style="font-size:14px;margin-bottom:10px;"></div>
@@ -1212,7 +1215,7 @@
     if(name==='usuarios' && isAdmin()) loadUsers();
     if(name==='altas'){ ALTAS_PROGRAMA='telesecundaria'; ALTAS_PAGE=1; ALTAS_Q=''; ALTAS_FILTRO=''; loadAltas(); }
     if(name==='altasfed'){ ALTAS_PROGRAMA='federalizados'; ALTAS_PAGE=1; ALTAS_Q=''; ALTAS_FILTRO=''; loadAltas(); }
-    if(name==='expediente') loadExp();
+    if(name==='expediente'){ ensureFedSets().then(loadExp); }
     if(name==='proveedores' && isAdmin()) loadProv();
     if(name==='ordenpago'){ ensureFedSets().then(initOrdenPago); }
     if(name==='repdir' && isAdmin()) initCuota();
@@ -1619,7 +1622,9 @@
   // ---- Expediente (documentación) ----
   var formExp=document.getElementById('form-exp'), expStatus=document.getElementById('exp-status'), expTbody=document.querySelector('#exp-table tbody');
   if(document.getElementById('exp-refresh')) document.getElementById('exp-refresh').addEventListener('click', loadExp);
+  var EXP_ITEMS=[];
   if(document.getElementById('exp-q')) document.getElementById('exp-q').addEventListener('keydown', function(e){ if(e.key==='Enter') loadExp(); });
+  if(document.getElementById('exp-programa')) document.getElementById('exp-programa').addEventListener('change', function(){ renderExp(EXP_ITEMS); });
   function fileToB64(file){ return new Promise(function(res,rej){ var fr=new FileReader(); fr.onload=function(){ res(String(fr.result).split(',')[1]); }; fr.onerror=rej; fr.readAsDataURL(file); }); }
   var MAXDOC=15*1024*1024;
   // Subir un documento a un almacén específico (proveedores / órdenes). Devuelve {docId, filename}.
@@ -1664,17 +1669,20 @@
   async function loadExp(){
     if(!expStatus) return;
     expStatus.textContent='Cargando…';
-    try{ var q=(document.getElementById('exp-q').value||'').trim(); var r=await api(EXPED+(q?('?q='+encodeURIComponent(q)):'')); if(!r.ok) throw new Error('HTTP '+r.status); var items=await r.json(); renderExp(items); expStatus.textContent=items.length+' documento(s).'; }
+    try{ var q=(document.getElementById('exp-q').value||'').trim(); var r=await api(EXPED+(q?('?q='+encodeURIComponent(q)):'')); if(!r.ok) throw new Error('HTTP '+r.status); var items=await r.json(); EXP_ITEMS=Array.isArray(items)?items:[]; renderExp(EXP_ITEMS); expStatus.textContent=EXP_ITEMS.length+' documento(s).'; }
     catch(e){ expStatus.textContent='Error: '+e.message; }
   }
   function renderExp(items){
     expTbody.innerHTML='';
-    items.forEach(function(d){
+    var progF=(document.getElementById('exp-programa')||{}).value||'';
+    var lista=(items||[]).filter(function(d){ return !progF || programaDeCert('', d.ref)===progF; });
+    lista.forEach(function(d){
       var tr=document.createElement('tr');
       var del=isAdmin()?' <button class="btn-del" data-act="xdel" data-id="'+esc(d.id)+'">Eliminar</button>':'';
-      tr.innerHTML='<td>'+esc(d.filename)+'</td><td>'+esc(d.ref)+'</td><td>'+esc(d.desc)+'</td><td>'+esc(d.uploadedBy)+'</td><td>'+esc(fmtDate(d.createdAt))+'</td><td style="white-space:nowrap"><button class="btn-mini" data-act="xdl" data-id="'+esc(d.id)+'">Descargar</button>'+del+'</td>';
+      tr.innerHTML='<td>'+esc(d.filename)+'</td><td>'+esc(d.ref)+'</td><td>'+progBadge(programaDeCert('', d.ref))+'</td><td>'+esc(d.desc)+'</td><td>'+esc(d.uploadedBy)+'</td><td>'+esc(fmtDate(d.createdAt))+'</td><td style="white-space:nowrap"><button class="btn-mini" data-act="xdl" data-id="'+esc(d.id)+'">Descargar</button>'+del+'</td>';
       expTbody.appendChild(tr);
     });
+    if(!lista.length && items && items.length) expTbody.innerHTML='<tr><td colspan="7" style="padding:10px;color:var(--ink)">Sin documentos de ese programa.</td></tr>';
     expTbody.querySelectorAll('[data-act=xdl]').forEach(function(b){ b.addEventListener('click', function(){ dlExp(b.getAttribute('data-id')); }); });
     expTbody.querySelectorAll('[data-act=xdel]').forEach(function(b){ b.addEventListener('click', function(){ delExp(b.getAttribute('data-id')); }); });
   }
@@ -2970,13 +2978,14 @@
     return h;
   }
 
+  (function(){ var ip=document.getElementById('informe-programa'); if(ip) ip.addEventListener('change', function(){ if(INFORME_DATA){ var prog=ip.value||''; document.getElementById('informe-out').innerHTML=informeHTML(filtrarInforme(INFORME_DATA, prog)); } }); })();
   async function loadInforme(){
     var out=document.getElementById('informe-out'); var btn=document.getElementById('btn-informe');
     btn.disabled=true; btn.textContent='Generando…'; out.innerHTML='<div style="padding:10px;color:var(--ink);">Calculando el informe…</div>';
     try{
       var r=await api(INFORME); var data=await r.json();
       if(!r.ok) throw new Error((data&&data.error)||('HTTP '+r.status));
-      INFORME_DATA=data; out.innerHTML=informeHTML(data);
+      INFORME_DATA=data; var prog=(document.getElementById('informe-programa')||{}).value||''; out.innerHTML=informeHTML(filtrarInforme(data, prog));
       document.getElementById('btn-informe-print').style.display='';
     }catch(e){ out.innerHTML='<div style="padding:10px;color:#b23b3b;">Error: '+esc(e.message)+'</div>'; }
     finally{ btn.disabled=false; btn.textContent='Actualizar informe'; }
@@ -3064,7 +3073,7 @@
     if(btn){ btn.disabled=true; btn.textContent='Generando PDF…'; }
     try{
       var ok=await ensureJsPDF(); if(!ok) throw new Error('no-lib');
-      var d=INFORME_DATA, t=d.totals||{};
+      var d=filtrarInforme(INFORME_DATA, (document.getElementById('informe-programa')||{}).value||''), t=d.totals||{};
       var jsPDF=window.jspdf.jsPDF;
       var doc=new jsPDF({unit:'mm', format:'letter', orientation:'portrait'});
       var M=12, W=doc.internal.pageSize.getWidth(), y=12;
@@ -3159,6 +3168,24 @@
     h+='</tbody></table></div></div>';
     return h;
   }
+  function filtrarInforme(data, prog){
+    if(!data) return data;
+    if(!prog) return data; // Todos
+    var d=Object.assign({}, data);
+    d.procedimientos=(data.procedimientos||[]).filter(function(p){ return (p.programa||'telesecundaria')===prog; });
+    if(prog==='telesecundaria'){
+      d.padronTotal=data.padronTotal||0; d.titularesNuevosAlta=data.titularesNuevosTele||0;
+      d.dependientesRegistrados=(data.dependientesTele!=null?data.dependientesTele:0);
+      d.padronActualizado=(data.padronTotal||0)+(data.titularesNuevosTele||0);
+      d.totals=Object.assign({}, data.totals);
+    } else {
+      d.padronTotal=0; d.titularesNuevosAlta=data.titularesNuevosFed||0;
+      d.dependientesRegistrados=(data.dependientesFed!=null?data.dependientesFed:0);
+      d.padronActualizado=(data.titularesNuevosFed||0);
+      d.totals=Object.assign({}, data.totals, {titularesEnPadron:0});
+    }
+    return d;
+  }
   function pctCuota(monto, cuota){ return (cuota>0)? (Math.round(monto/cuota*100)+'%') : '—'; }
   function repdirResumenHTML(data){
     var cuota=Number(data.cuota||0); var contrato=data.contrato||'PASEM SNTE 26'; var periodo=data.periodo||'';
@@ -3237,18 +3264,20 @@
     document.getElementById('repdir-msg').textContent='';
     try{
       var r=await api(INFORME); var data=await r.json(); if(!r.ok) throw new Error((data&&data.error)||('HTTP '+r.status));
-      REPDIR_DATA=data; out.innerHTML=repdirHTML(data);
+      REPDIR_DATA=data; var prog=(document.getElementById('repdir-programa')||{}).value||''; out.innerHTML=repdirHTML(filtrarInforme(data, prog));
       document.getElementById('btn-repdir-print').style.display='';
     }catch(e){ document.getElementById('repdir-msg').textContent='Error: '+e.message; }
     finally{ if(btn){ btn.disabled=false; btn.textContent=old||'Actualizar informe'; } }
   }
+  (function(){ var rp=document.getElementById('repdir-programa'); if(rp) rp.addEventListener('change', function(){ if(REPDIR_DATA){ var prog=rp.value||''; document.getElementById('repdir-out').innerHTML=repdirHTML(filtrarInforme(REPDIR_DATA, prog)); } }); })();
   async function downloadRepDirPDF(){
     if(!REPDIR_DATA) return;
+    var d=filtrarInforme(REPDIR_DATA, (document.getElementById('repdir-programa')||{}).value||'');
     var btn=document.getElementById('btn-repdir-print'); var old=btn?btn.textContent:'';
     if(btn){ btn.disabled=true; btn.textContent='Generando PDF…'; }
     try{
       var ok=await ensureJsPDF(); if(!ok) throw new Error('no-lib');
-      var d=REPDIR_DATA; var s=repdirSecciones(d);
+      var s=repdirSecciones(d);
       var jsPDF=window.jspdf.jsPDF; var doc=new jsPDF({unit:'mm', format:'letter', orientation:'landscape'});
       var M=12, W=doc.internal.pageSize.getWidth(), y=12;
       var ORANGE=[221,107,32], INK=[31,52,66], GRAY=[118,118,118], PEACH=[255,243,234];

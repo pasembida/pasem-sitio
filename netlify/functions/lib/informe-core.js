@@ -116,18 +116,20 @@ async function computeInforme(){
       for(let j=1;j<=2;j++){ if(norm(f['Padre '+j+' - Nombre'])||norm(f['Padre '+j+' - CURP'])) add(f['Padre '+j+' - CURP']); }
     });
     // Dependientes registrados desde el módulo de administración (pasem-dependientes)
-    let dependientesRegistrados=0;
+    let dependientesRegistrados=0, dependientesTele=0, dependientesFed=0;
     try{
       const ds2=makeStore('pasem-dependientes');
       const {blobs}=await ds2.list();
       const deps=(await Promise.all(blobs.map(b=>ds2.get(b.key,{type:'json'})))).filter(Boolean);
       dependientesRegistrados=deps.length;
-      deps.forEach(x=>{ const k=norm(x.curp); if(k) depCurps.add(k); else depSinCurp++; });
+      deps.forEach(x=>{ const k=norm(x.curp); if(k) depCurps.add(k); else depSinCurp++; if(x.programa==='federalizados') dependientesFed++; else dependientesTele++; });
     }catch(e){}
     const dependientesPadron = depCurps.size + depSinCurp;
-    // Titulares nuevos dados de alta (pasem-titulares)
-    let titularesNuevosAlta=0;
-    try{ const ts2=makeStore('pasem-titulares'); const {blobs:tb2}=await ts2.list(); titularesNuevosAlta=tb2.length; }catch(e){}
+    // Titulares nuevos dados de alta (pasem-titulares) + conjunto de certificados Federalizados
+    let titularesNuevosAlta=0, titularesNuevosTele=0, titularesNuevosFed=0;
+    const fedCerts=new Set(), fedCurps=new Set();
+    try{ const ts2=makeStore('pasem-titulares'); const {blobs:tb2}=await ts2.list(); const tits=(await Promise.all(tb2.map(b=>ts2.get(b.key,{type:'json'})))).filter(Boolean); titularesNuevosAlta=tits.length; tits.forEach(t=>{ if(t.programa==='federalizados'){ titularesNuevosFed++; if(t.cert) fedCerts.add(String(t.cert).toUpperCase()); if(t.curp) fedCurps.add(String(t.curp).toUpperCase()); } else titularesNuevosTele++; }); }catch(e){}
+    const progDe=(cert,curp)=>{ const c=String(cert||'').toUpperCase().replace(/[A-Z]+$/,''); const cu=String(curp||'').toUpperCase(); return (fedCerts.has(String(cert||'').toUpperCase())||fedCerts.has(c)||(cu&&fedCurps.has(cu)))?'federalizados':'telesecundaria'; };
     // Configuración (cuota pendiente del contrato)
     let cuota=3123000, contrato='PASEM SNTE 26', periodo='Oct-Nov-Dic 2026';
     try{ const cs=makeStore('pasem-config'); const cfg=await cs.get('config',{type:'json'}); if(cfg){ if(cfg.cuota!=null) cuota=Number(cfg.cuota); if(cfg.contrato) contrato=cfg.contrato; if(cfg.periodo!=null) periodo=cfg.periodo; } }catch(e){}
@@ -159,7 +161,7 @@ async function computeInforme(){
         folio:s.folio||'', folioEleonor:s.folioEleonor||'', nombre:(s.beneficiarioNombre && norm(s.beneficiarioNombre)!==norm(s.nombre) ? (s.beneficiarioNombre+' ('+(s.beneficiarioParentesco||'benef.')+' de '+(s.nombre||'')+')') : (s.nombre||'')), beneficiario:s.beneficiarioNombre||s.nombre||'', titular:s.nombre||'', certificado:s.certificado||'',
         tipoTramite:s.tipoTramite||'', comentarios:s.comentarios||'',
         reserva:s.reserva||'', reservaNum:reservaNum,
-        pagoSolicitado: foliosPagoSolicitado.has(norm(s.folio)), pagado: foliosPagados.has(norm(s.folio)),
+        pagoSolicitado: foliosPagoSolicitado.has(norm(s.folio)), pagado: foliosPagados.has(norm(s.folio)), programa: progDe(s.certificado, s.curp),
         etapa:maxEt, etapaLabel:etiquetaEtapa(s.tipoTramite,maxEt), desde:desde||'', diasEnEtapa:dias,
         createdAt:s.createdAt||''
       };
@@ -186,7 +188,7 @@ async function computeInforme(){
           folio:a.folio||'', folioEleonor:a.folioEleonor||'', nombre:(a.titular && norm(a.titular)!==norm(a.paciente) ? (a.paciente+' ('+(a.parentesco||'benef.')+' de '+a.titular+')') : (a.paciente||'')), beneficiario:a.paciente||'', titular:a.titular||a.paciente||'', certificado:a.numAfiliado||a.certificado||'',
           tipoTramite:a.tipoTramite||'', comentarios:a.observaciones||'',
           reserva:reservaStr||'', reservaNum:reservaNum,
-          pagoSolicitado: foliosPagoSolicitado.has(f), pagado: foliosPagados.has(f),
+          pagoSolicitado: foliosPagoSolicitado.has(f), pagado: foliosPagados.has(f), programa: progDe(a.numAfiliado||a.certificado, a.curp),
           etapa:'3', etapaLabel:etiquetaEtapa(a.tipoTramite,'3'), desde:desde||'', diasEnEtapa:dias,
           createdAt:a.createdAt||''
         });
@@ -199,8 +201,8 @@ async function computeInforme(){
       generatedAt:new Date().toISOString(),
       padronTotal,
       dependientesPadron,
-      dependientesRegistrados,
-      titularesNuevosAlta,
+      dependientesRegistrados, dependientesTele, dependientesFed,
+      titularesNuevosAlta, titularesNuevosTele, titularesNuevosFed,
       cuota, contrato, periodo,
       padronActualizado: padronTotal + titularesNuevosAlta,
       padronPersonas: padronTotal + dependientesPadron,
