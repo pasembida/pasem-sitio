@@ -29,3 +29,9 @@
   to = "/altafederalizados/index.html"
   status = 200
   force = true
+
+[[redirects]]
+  from = "/enlaces-federalizados"
+  to = "/enlaces-federalizados/index.html"
+  status = 200
+  force = true
