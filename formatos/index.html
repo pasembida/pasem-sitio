@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PASEM · Descarga de formatos</title>
+<meta name="description" content="Descarga de formatos de la Carta de Consentimiento — PASEM, Sección 26 del SNTE, San Luis Potosí.">
+<style>
+  :root{ --orange:#DD6B20; --teal:#14B4B6; --teal-soft:#0E9A9C; --ink:#333333; --muted:#767676; --cream:#E9F7F7; --border:#D9E9E9; --bg:#EAF6F6; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);}
+  .topbar{height:8px;background:var(--orange);}
+  .wrap{max-width:1000px;margin:0 auto;padding:22px 16px 40px;}
+  .brand{background:#fff;border:1px solid var(--border);border-radius:16px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;}
+  .brand img{height:46px}
+  .brand .center{text-align:center;flex:1}
+  .brand .pasem{font-size:26px;font-weight:900;color:var(--orange);letter-spacing:1px;line-height:1}
+  .brand .sub{font-size:12px;color:var(--muted);margin-top:2px}
+  .overline{color:var(--teal);font-weight:800;letter-spacing:2px;font-size:13px;text-transform:uppercase;}
+  h1{font-size:34px;line-height:1.1;margin:6px 0 8px;color:var(--ink);font-weight:900;}
+  .lead{color:var(--muted);font-size:16px;margin:0 0 20px}
+  .lead b{color:var(--orange)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:760px){ .grid{grid-template-columns:1fr} h1{font-size:27px} }
+  .card{background:#fff;border:1px solid var(--border);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;}
+  .card .accent{height:6px}
+  .card.prestamo .accent{background:var(--teal-soft)}
+  .card.pago .accent{background:var(--orange)}
+  .card .body{padding:20px;display:flex;flex-direction:column;gap:10px;flex:1}
+  .card .head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
+  .card h2{font-size:24px;margin:0;color:var(--ink);font-weight:900}
+  .card .desc{color:var(--muted);font-size:15px;margin:2px 0 6px}
+  .qr{width:120px;min-width:120px;text-align:center}
+  .qr img{width:120px;height:120px;border:1px solid var(--border);border-radius:10px;background:#fff;padding:6px}
+  .qr .cap{font-size:11px;color:var(--muted);margin-top:4px}
+  .label{font-weight:800;font-size:12px;letter-spacing:.5px;text-transform:uppercase;margin-top:4px}
+  .prestamo .label{color:var(--teal-soft)}
+  .pago .label{color:var(--teal-soft)}
+  .chip{border-radius:10px;padding:10px 12px;font-weight:800;font-size:15px}
+  .prestamo .chip{background:#E7F6F6;color:#0b7e80}
+  .pago .chip{background:#FFF3EA;color:#b9560e}
+  .anexa{list-style:none;padding:0;margin:4px 0 0}
+  .anexa li{display:flex;gap:8px;align-items:flex-start;color:var(--ink);font-size:15px;padding:4px 0}
+  .anexa li::before{content:"✓";color:var(--teal-soft);font-weight:900}
+  .btn{display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;color:#fff;font-weight:800;font-size:16px;border-radius:12px;padding:14px 16px;margin-top:auto}
+  .card.prestamo .btn{background:var(--teal-soft)}
+  .card.pago .btn{background:var(--orange)}
+  .btn:active{transform:translateY(1px)}
+  .foot{color:var(--muted);font-size:12px;text-align:center;margin-top:24px;line-height:1.6}
+  .pagebar{display:flex;align-items:center;gap:16px;background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px 18px;margin:0 0 20px}
+  .pagebar img{width:92px;height:92px;border:1px solid var(--border);border-radius:10px;padding:5px;background:#fff}
+  .pagebar .t{font-weight:800;color:var(--ink)}
+  .pagebar .s{color:var(--muted);font-size:13px}
+  /* Envía tu comprobante */
+  .comp{display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start;margin-top:26px;background:#fff;border:1px solid var(--border);border-radius:16px;padding:22px;}
+  @media(max-width:760px){ .comp{grid-template-columns:1fr} }
+  .pill{display:inline-block;border:1.5px solid var(--orange);color:var(--orange);font-weight:800;letter-spacing:1px;text-transform:uppercase;font-size:12px;border-radius:999px;padding:5px 14px;}
+  .comp-title{font-size:26px;font-weight:900;color:var(--ink);margin:10px 0 6px}
+  .comp-lead{color:var(--muted);font-size:15px;margin:0 0 14px}
+  .comp-lead b{color:var(--ink)}
+  .data-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:520px){ .data-grid{grid-template-columns:1fr} }
+  .data{border:1px solid var(--border);border-radius:12px;padding:12px 14px;font-size:16px;color:var(--ink);display:flex;align-items:center;gap:8px}
+  .data::before{content:"✓";color:var(--teal-soft);font-weight:900}
+  .wa{display:flex;flex-direction:column;align-items:center;text-decoration:none;border:1px solid var(--border);border-radius:16px;padding:16px;color:var(--ink)}
+  .wa-flag{background:#25D366;color:#063d20;font-weight:800;font-size:13px;border-radius:999px;padding:5px 12px;margin-bottom:8px;text-align:center;line-height:1.2}
+  .wa-title{font-weight:900;font-size:18px;margin-bottom:10px}
+  .wa img{width:210px;height:210px;max-width:100%}
+  .wa-cap{color:var(--muted);font-size:13px;margin-top:10px;text-align:center}
+  .wa-num{font-weight:900;font-size:24px;letter-spacing:1px;margin-top:2px}
+</style>
+</head>
+<body>
+  <div class="topbar"></div>
+  <div class="wrap">
+    <div class="brand">
+      <img class="logo-snte" src="/img/snte26.jpg" alt="SNTE Sección 26">
+      <div class="center">
+        <div class="pasem">PASEM</div>
+        <div class="sub">Programa de Apoyo de Servicios Médicos · Sección 26 del SNTE · San Luis Potosí</div>
+      </div>
+      <img class="logo-bida" src="/img/bida.png" alt="BIDA Seguros">
+    </div>
+
+    <div class="overline">Carta de Consentimiento</div>
+    <h1>Elige cómo cubrir tu aportación</h1>
+    <p class="lead"><b>Descarga el formato</b> de acuerdo a cómo deseas cubrir tu aportación.</p>
+
+    <div class="grid">
+      <!-- Préstamo FERPTTE -->
+      <div class="card prestamo">
+        <div class="accent"></div>
+        <div class="body">
+          <div class="head">
+            <div>
+              <h2>Préstamo FERPTTE</h2>
+              <p class="desc">El Fondo FERPTTE de la Sección 26 cubre tu cuota.</p>
+            </div>
+            <div class="qr">
+              <img src="/img/qr-formato-prestamo.png" alt="QR formato Préstamo FERPTTE">
+              <div class="cap">Escanea para descargar</div>
+            </div>
+          </div>
+          <div class="label">Forma de pago</div>
+          <div class="chip">Lo pagas con descuentos quincenales</div>
+          <div class="label">Se anexa a la carta</div>
+          <ul class="anexa">
+            <li>Copia de INE por ambos lados</li>
+            <li>Solicitud de préstamo FERPTTE firmada</li>
+          </ul>
+          <a class="btn" href="/formatos/CC_y_Prestamo_PASEM.pdf" download>⬇ Descargar formato</a>
+        </div>
+      </div>
+
+      <!-- Pago directo -->
+      <div class="card pago">
+        <div class="accent"></div>
+        <div class="body">
+          <div class="head">
+            <div>
+              <h2>Pago directo</h2>
+              <p class="desc">Pagas tu aportación directamente.</p>
+            </div>
+            <div class="qr">
+              <img src="/img/qr-formato-pago.png" alt="QR formato Pago directo">
+              <div class="cap">Escanea para descargar</div>
+            </div>
+          </div>
+          <div class="label">Métodos de pago</div>
+          <div class="chip">Transferencia o depósito</div>
+          <div class="chip">Cargo a tarjeta</div>
+          <div class="chip">3, 6 o 12 meses sin intereses con tarjeta</div>
+          <div class="label">Se anexa a la carta</div>
+          <ul class="anexa">
+            <li>Copia de INE por ambos lados</li>
+            <li>Comprobante de pago del Programa</li>
+          </ul>
+          <a class="btn" href="/formatos/CC_Pago_Directo_PASEM.pdf" download>⬇ Descargar formato</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Envía tu comprobante -->
+    <div class="comp">
+      <div class="comp-left">
+        <span class="pill">Todas las opciones</span>
+        <h2 class="comp-title">Envía tu comprobante con tus datos</h2>
+        <p class="comp-lead">Si ya realizaste el pago, <b>envíanos tu comprobante</b>. Tu pago queda registrado cuando lo recibimos junto con estos datos:</p>
+        <div class="data-grid">
+          <div class="data">Nombre completo</div>
+          <div class="data">CURP</div>
+          <div class="data">Teléfono</div>
+          <div class="data">Correo electrónico</div>
+        </div>
+      </div>
+      <a class="wa" href="https://wa.me/528135879524?text=Hola,%20env%C3%ADo%20mi%20comprobante%20de%20pago%20del%20Programa%20PASEM">
+        <div class="wa-flag">Si ya realizaste tu pago, envíalo aquí</div>
+        <div class="wa-title">Envíalo por WhatsApp</div>
+        <img src="/img/qr-whatsapp-comprobante.png" alt="QR WhatsApp comprobante">
+        <div class="wa-cap">Escanea el código o escribe al:</div>
+        <div class="wa-num">81 3587 9524</div>
+      </a>
+    </div>
+
+    <div class="foot">
+      PASEM · Sección 26 del SNTE · Administrado por MULTICATERIN, S.A. de C.V. con respaldo de BIDA Seguros.
+    </div>
+  </div>
+</body>
+</html>

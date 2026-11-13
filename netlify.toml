@@ -35,3 +35,9 @@
   to = "/enlaces-federalizados/index.html"
   status = 200
   force = true
+
+[[redirects]]
+  from = "/formatos"
+  to = "/formatos/index.html"
+  status = 200
+  force = true

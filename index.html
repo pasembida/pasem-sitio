@@ -390,28 +390,65 @@
   </div>
 </section>
 
-<!-- ===================== FORMATOS ===================== -->
+<!-- ===================== FORMATOS / TRÁMITE GUIADO ===================== -->
 <section id="formatos">
   <div class="wrap">
     <div class="sec-head reveal">
       <div class="eyebrow">Trámites</div>
-      <h2>Formatos y descargas</h2>
-      <p>Descarga, imprime y entrega los formatos en el área de administración del PASEM.</p>
+      <h2>Incorpórate al PASEM en 3 pasos</h2>
+      <p>Sigue estos pasos para completar tu incorporación al Programa.</p>
     </div>
-    <div class="dl-grid" style="grid-template-columns:1fr;">
-      <a class="dl reveal" href="https://drive.google.com/uc?export=download&id=1jrT-f7CqP-nBrWoj8yB7Y_I5tYUQ94YW" target="_blank" rel="noopener">
-        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16"/></svg></span>
-        <span class="meta"><b>Formato de Alta de Beneficiarios</b><span>Registro del titular y dependientes · PDF</span></span>
-        <span class="go">Descargar</span>
-      </a>
-    </div>
-    <p class="reveal" style="margin-top:26px; margin-bottom:14px; font-family:var(--serif); font-size:20px; color:var(--brown-deep);">¿Prefieres registrarte en línea?</p>
-    <div class="dl-grid" style="grid-template-columns:1fr;">
-      <a class="dl reveal" href="/alta">
-        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M8 9h5M8 13h5"/><path d="M17.5 3.5a1.5 1.5 0 0 1 2 2L14 11l-3 1 1-3z"/></svg></span>
-        <span class="meta"><b>Alta de beneficiarios en línea</b><span>Registro rápido, sin cuenta</span></span>
-        <span class="go">Abrir</span>
-      </a>
+
+    <style>
+      .steps{display:flex;flex-direction:column;gap:18px;margin-top:10px}
+      .step{display:grid;grid-template-columns:52px 1fr;gap:16px;background:#fff;border:1px solid var(--border,#D9E9E9);border-radius:16px;padding:20px}
+      .step .num{width:44px;height:44px;border-radius:50%;background:var(--brown,#DD6B20);color:#fff;font-weight:900;font-size:20px;display:flex;align-items:center;justify-content:center}
+      .step h3{margin:0 0 4px;font-family:var(--serif);color:var(--brown-deep,#333);font-size:21px}
+      .step p{margin:0 0 12px;color:var(--ink,#767676);font-size:15px}
+      .step .opts{display:flex;gap:10px;flex-wrap:wrap}
+      .step .b{display:inline-flex;align-items:center;gap:8px;text-decoration:none;color:#fff;font-weight:800;font-size:15px;border-radius:12px;padding:12px 18px}
+      .step .b.teal{background:#0E9A9C}.step .b.orange{background:#DD6B20}.step .b.ghost{background:#fff;color:#0E9A9C;border:1.5px solid #0E9A9C}
+      .step .link{display:inline-block;margin-top:8px;color:#0E9A9C;font-weight:700;text-decoration:none;font-size:14px}
+      .step .note{margin-top:12px;background:#FFF7EF;border:1px solid #f1cba6;border-radius:12px;padding:12px 14px;color:#8a4b12;font-size:14px;font-weight:600}
+      @media(max-width:560px){ .step{grid-template-columns:1fr} .step .num{margin-bottom:-6px} }
+    </style>
+
+    <div class="steps">
+      <!-- Paso 1 -->
+      <div class="step reveal">
+        <div class="num">1</div>
+        <div>
+          <h3>Autoriza tu incorporación y elige cómo cubrir tu aportación</h3>
+          <p>Descarga la Carta de Consentimiento según cómo quieras cubrir tu aportación al PASEM, y fírmala.</p>
+          <div class="opts">
+            <a class="b teal" href="/formatos/CC_y_Prestamo_PASEM.pdf" download>⬇ Préstamo FERPTTE</a>
+            <a class="b orange" href="/formatos/CC_Pago_Directo_PASEM.pdf" download>⬇ Pago directo</a>
+          </div>
+          <a class="link" href="/formatos">Ver detalles de cada opción →</a>
+        </div>
+      </div>
+
+      <!-- Paso 2 -->
+      <div class="step reveal">
+        <div class="num">2</div>
+        <div>
+          <h3>Da tu alta en línea</h3>
+          <p>Llena el formulario de alta de beneficiarios (rápido, sin cuenta). Dentro del formulario adjuntas tu Carta de Consentimiento firmada y los documentos de la opción que elegiste.</p>
+          <div class="opts">
+            <a class="b orange" href="/alta">Abrir alta de beneficiarios</a>
+          </div>
+          <div class="note">En ambos casos (Préstamo o Pago directo), además debes hacer llegar la Carta de Consentimiento firmada <b>en físico</b> a la oficina del PASEM de la Sección 26.</div>
+        </div>
+      </div>
+
+      <!-- Paso 3 -->
+      <div class="step reveal">
+        <div class="num">3</div>
+        <div>
+          <h3>Confirmación de tu alta</h3>
+          <p>Una vez validado tu formato, recibirás un <b>correo electrónico</b> confirmando tu alta al PASEM.</p>
+        </div>
+      </div>
     </div>
   </div>
 </section>

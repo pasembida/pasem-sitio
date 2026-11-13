@@ -2689,6 +2689,7 @@
       // Si el titular YA está en el padrón, permitir registrar solo sus dependientes
       var regDeps = (a.enPadron===true && isAdmin()) ? ' <button class="btn btn-mini" data-regdeps="'+idx+'" type="button" style="color:#0E9A9C" title="Registrar los dependientes de esta alta bajo el titular del padrón">Registrar dependientes</button>' : '';
       var toExp = (docs.length>0) ? ' <button class="btn btn-mini" data-toexp="'+idx+'" type="button" style="color:#1e7e3e" title="Copiar sus documentos al expediente del titular">→ Expediente</button>' : '';
+      var confirmar = isAdmin() ? ' <button class="btn btn-mini" data-confirmar="'+idx+'" type="button" style="color:#0E9A9C" title="Enviar correo de confirmación de alta al beneficiario">✉ Confirmar</button>' : '';
       tr.innerHTML='<td>'+esc(fmtDate(a.createdAt))+'</td>'+
         '<td>'+esc(f['Contacto - Nombre']||'—')+'</td>'+
         '<td>'+esc(f['Contacto - Telefono']||'—')+'</td>'+
@@ -2696,7 +2697,7 @@
         '<td>'+esc(f['Titular - CURP']||f['Contacto - CURP']||'—')+'</td>'+
         '<td>'+padBadge+'</td>'+
         '<td>'+docs.length+'</td>'+
-        '<td style="white-space:nowrap">'+(a.incorporada?'<span style="background:#E8F8EE;color:#1e7e3e;border:1px solid #bfe6cc;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:800;">✓ Incorporada</span> ':'')+'<button class="btn btn-mini" data-ver="'+idx+'" type="button">Ver</button>'+darAlta+regDeps+toExp+
+        '<td style="white-space:nowrap">'+(a.incorporada?'<span style="background:#E8F8EE;color:#1e7e3e;border:1px solid #bfe6cc;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:800;">✓ Incorporada</span> ':'')+'<button class="btn btn-mini" data-ver="'+idx+'" type="button">Ver</button>'+darAlta+regDeps+toExp+confirmar+
           (isAdmin()?' <button class="btn btn-mini btn-del" data-del="'+idx+'" type="button" style="color:#b23b3b">Eliminar</button>':'')+
         '</td>';
       tb.appendChild(tr);
@@ -2706,7 +2707,25 @@
     tb.querySelectorAll('[data-alta]').forEach(function(b){ b.addEventListener('click', function(){ darDeAltaDesdeAlta(Number(b.getAttribute('data-alta')), b); }); });
     tb.querySelectorAll('[data-toexp]').forEach(function(b){ b.addEventListener('click', function(){ pasarDocsAExpediente(Number(b.getAttribute('data-toexp')), b); }); });
     tb.querySelectorAll('[data-regdeps]').forEach(function(b){ b.addEventListener('click', function(){ registrarDepsDeAlta(Number(b.getAttribute('data-regdeps')), b); }); });
+    tb.querySelectorAll('[data-confirmar]').forEach(function(b){ b.addEventListener('click', function(){ confirmarAlta(Number(b.getAttribute('data-confirmar')), b); }); });
     renderPager(document.getElementById('altas-pager'), ALTAS_PAGE, pages, function(p){ ALTAS_PAGE=p; renderAltas(); window.scrollTo({top:0,behavior:'smooth'}); });
+  }
+  async function confirmarAlta(idx, btn){
+    var a=ALTAS_CACHE[idx]; if(!a) return; var f=a.fields||{};
+    var correo=(f['Titular - Correo']||f['Contacto - Correo']||'').trim();
+    if(!correo){ alert('Esta alta no tiene correo del beneficiario, no se puede enviar la confirmación.'); return; }
+    var reenvio=!!a.confirmadoAt;
+    if(!confirm((reenvio?'Esta alta ya tenía confirmación enviada.\n\n':'')+'¿Enviar correo de confirmación de alta a '+correo+'?')) return;
+    if(btn){ btn.disabled=true; btn.textContent='Enviando…'; }
+    try{
+      var r=await api(ALTAS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'send-confirmation', id:a.id, force:true})});
+      var d=await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
+      if(d.ok) alert('✉ Confirmación enviada a '+(d.to||correo)+'.');
+      else if(d.reason==='sin-correo') alert('No se envió: el alta no tiene correo válido.');
+      else if(d.reason==='sin-resend') alert('No se envió: falta configurar el correo (RESEND_API_KEY).');
+      else alert('No se pudo enviar: '+(d.detail||d.reason||'error'));
+      loadAltas();
+    }catch(e){ alert('No se pudo enviar: '+e.message); if(btn){ btn.disabled=false; btn.textContent='✉ Confirmar'; } }
   }
   async function registrarDepsDeAlta(idx, btn){
     var a=ALTAS_CACHE[idx]; if(!a) return; var f=a.fields||{};
@@ -2773,6 +2792,12 @@
       if(deps.length) resumen+='\nDependientes registrados: '+okDeps+' de '+deps.length+'.';
       if((a.docs||[]).length) resumen+='\nDocumentos pasados al expediente: '+docsCopiados+'.';
       if(failDeps.length) resumen+='\n\nNo se pudieron registrar:\n- '+failDeps.join('\n- ');
+      // Enviar correo de confirmación al beneficiario
+      try{ if(btn) btn.textContent='Enviando confirmación…'; var rc=await api(ALTAS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'send-confirmation', id:a.id})}); var dc=await rc.json().catch(function(){return {};});
+        if(dc.ok && dc.to && !dc.already) resumen+='\n\n✉ Correo de confirmación enviado a '+dc.to+'.';
+        else if(dc.already) resumen+='\n\n(La confirmación ya se había enviado antes.)';
+        else if(dc.reason==='sin-correo') resumen+='\n\n⚠ No se envió confirmación: el alta no tiene correo del beneficiario.';
+      }catch(e){}
       alert(resumen);
       if(btn){ btn.textContent='Dado de alta ✓'; }
     }catch(e){ alert('No se pudo dar de alta: '+e.message); if(btn){ btn.disabled=false; btn.textContent='Dar de alta'; } }
@@ -2789,7 +2814,7 @@
     var nuevos=altasDelPrograma().filter(function(a){return a.enPadron===false;});
     if(!nuevos.length){ alert('No hay titulares nuevos por dar de alta.'); return; }
     if(!confirm('¿Dar de alta a '+nuevos.length+' titular(es) nuevo(s), con sus dependientes y documentos?')) return;
-    var st=document.getElementById('bulk-status'); var okT=0, dupT=0, okD=0, errs=[]; bulkBtns(true);
+    var st=document.getElementById('bulk-status'); var okT=0, dupT=0, okD=0, okC=0, errs=[]; bulkBtns(true);
     for(var i=0;i<nuevos.length;i++){ var a=nuevos[i];
       st.textContent='Dando de alta titulares… '+(i+1)+' de '+nuevos.length;
       try{
@@ -2797,9 +2822,10 @@
         var d=await r.json();
         if(r.status===409) dupT++; else if(!r.ok) throw new Error(d.error||('HTTP '+r.status)); else okT++;
         try{ var rd=await api(ALTAS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'register-deps', id:a.id})}); var dd=await rd.json(); if(rd.ok) okD+=(dd.creados||0); }catch(e){}
+        try{ var rc=await api(ALTAS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'send-confirmation', id:a.id})}); var dc=await rc.json(); if(dc&&dc.ok&&dc.to&&!dc.already) okC++; }catch(e){}
       }catch(e){ errs.push((titularName(a.fields||{})||a.id)+': '+e.message); }
     }
-    st.innerHTML='<b style="color:#1e9e52">Listo.</b> Titulares nuevos: '+okT+(dupT?(' · ya existían: '+dupT):'')+' · Dependientes registrados: '+okD+(errs.length?(' · <span style="color:#b23b3b">errores: '+errs.length+'</span>'):''); bulkBtns(false); loadAltas();
+    st.innerHTML='<b style="color:#1e9e52">Listo.</b> Titulares nuevos: '+okT+(dupT?(' · ya existían: '+dupT):'')+' · Dependientes registrados: '+okD+' · Correos de confirmación: '+okC+(errs.length?(' · <span style="color:#b23b3b">errores: '+errs.length+'</span>'):''); bulkBtns(false); loadAltas();
   }
   async function bulkRegistrarDeps(){
     if(!confirm('¿Registrar los dependientes de TODAS las altas cuyo titular ya exista (padrón o dado de alta)?\nLos que ya estén registrados no se duplican.')) return;

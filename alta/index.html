@@ -129,6 +129,12 @@
         <div class="intro">Completa los datos. Favor de no dejar espacios sin contestar en lo que aplique.</div>
 
         <div class="sec"><div class="sec-h">1. Datos de afiliación</div><div class="sec-b">
+          <div style="margin-bottom:12px"><label>Tipo de personal de Telesecundaria <span style="color:#c0392b">*</span></label>
+            <div class="opts">
+              <label class="opt"><input type="radio" name="Afiliación - Personal Telesecundaria" value="Federal" required>Federal</label>
+              <label class="opt"><input type="radio" name="Afiliación - Personal Telesecundaria" value="Estatal">Estatal</label>
+            </div>
+          </div>
           <div class="grid two">
             <div><label>Municipio</label><input type="text" name="Afiliación - Municipio"></div>
             <div><label>Nombre del centro de trabajo</label><input type="text" name="Afiliación - Centro de trabajo"></div>
@@ -225,7 +231,31 @@
           </div>
         </div></div>
 
-        <div class="sec"><div class="sec-h">7. Documentación entregada</div><div class="sec-b">
+        <div class="sec"><div class="sec-h">7. Forma de cubrir tu aportación</div><div class="sec-b">
+          <div class="note">Elige cómo cubres tu aportación y adjunta los documentos correspondientes (firmados). Recuerda entregar también la Carta de Consentimiento firmada <b>en físico</b> en la oficina del PASEM de la Sección 26.</div>
+          <div style="margin-top:10px"><label>¿Cómo cubres tu aportación? <span style="color:#c0392b">*</span></label>
+            <div class="opts">
+              <label class="opt"><input type="radio" name="Aportación - Modalidad" value="Préstamo FERPTTE" id="modPrestamo" required>Préstamo FERPTTE</label>
+              <label class="opt"><input type="radio" name="Aportación - Modalidad" value="Pago directo" id="modDirecto">Pago directo</label>
+            </div>
+          </div>
+          <!-- Préstamo -->
+          <div id="pay-prestamo" style="display:none;margin-top:12px">
+            <div class="grid two">
+              <div><label>Carta de Consentimiento firmada</label><input type="file" id="filePrestCarta" accept="image/*,application/pdf" style="width:100%;font-size:15px;padding:11px;border:1px solid #CFDADD;border-radius:11px;background:#fff"></div>
+              <div><label>Solicitud de préstamo FERPTTE firmada</label><input type="file" id="fileSolicitud" accept="image/*,application/pdf" style="width:100%;font-size:15px;padding:11px;border:1px solid #CFDADD;border-radius:11px;background:#fff"></div>
+            </div>
+          </div>
+          <!-- Pago directo -->
+          <div id="pay-directo" style="display:none;margin-top:12px">
+            <div class="grid two">
+              <div><label>Carta de Consentimiento firmada</label><input type="file" id="fileDirCarta" accept="image/*,application/pdf" style="width:100%;font-size:15px;padding:11px;border:1px solid #CFDADD;border-radius:11px;background:#fff"></div>
+              <div><label>Comprobante de pago</label><input type="file" id="fileComprobante" accept="image/*,application/pdf" style="width:100%;font-size:15px;padding:11px;border:1px solid #CFDADD;border-radius:11px;background:#fff"></div>
+            </div>
+          </div>
+        </div></div>
+
+        <div class="sec"><div class="sec-h">8. Documentación entregada</div><div class="sec-b">
           <div class="note">Marca los documentos que adjuntas (original y copia).</div>
           <div class="checks">
             <label class="chk"><input type="checkbox" name="Docs - Acta nacimiento" value="Sí"> Acta de nacimiento del titular y beneficiarios</label>
@@ -310,6 +340,13 @@
   });
 
   var FN='/.netlify/functions/';
+  // Mostrar documentos según la modalidad de pago
+  (function(){
+    var mp=document.getElementById('modPrestamo'), md=document.getElementById('modDirecto');
+    var bp=document.getElementById('pay-prestamo'), bd=document.getElementById('pay-directo');
+    function upd(){ if(bp) bp.style.display=(mp&&mp.checked)?'':'none'; if(bd) bd.style.display=(md&&md.checked)?'':'none'; }
+    if(mp) mp.addEventListener('change', upd); if(md) md.addEventListener('change', upd);
+  })();
   var CHUNK=2500000;
 
   function fileToB64(file){ return new Promise(function(res,rej){ var r=new FileReader(); r.onload=function(){ res(String(r.result).split(',')[1]||''); }; r.onerror=rej; r.readAsDataURL(file); }); }
@@ -351,6 +388,16 @@
     files.forEach(function(file,i){ chain=chain.then(function(){
       btn.textContent='Subiendo documento '+(i+1)+' de '+files.length+'…';
       return processFile(file).then(uploadDoc).then(function(meta){ docs.push(meta); });
+    }); });
+    // Archivos etiquetados según la modalidad de pago elegida
+    var etiquetados=[];
+    var mp=document.getElementById('modPrestamo'), md=document.getElementById('modDirecto');
+    function pick(id){ var el=document.getElementById(id); return (el&&el.files&&el.files[0])?el.files[0]:null; }
+    if(mp&&mp.checked){ etiquetados.push({f:pick('filePrestCarta'),lbl:'Carta de Consentimiento firmada'}); etiquetados.push({f:pick('fileSolicitud'),lbl:'Solicitud de préstamo FERPTTE firmada'}); }
+    if(md&&md.checked){ etiquetados.push({f:pick('fileDirCarta'),lbl:'Carta de Consentimiento firmada'}); etiquetados.push({f:pick('fileComprobante'),lbl:'Comprobante de pago'}); }
+    etiquetados.forEach(function(it){ if(!it.f) return; chain=chain.then(function(){
+      btn.textContent='Subiendo '+it.lbl+'…';
+      return processFile(it.f).then(function(doc){ doc.filename=it.lbl+' — '+(doc.filename||'archivo'); return uploadDoc(doc); }).then(function(meta){ docs.push(meta); });
     }); });
     chain.then(function(){
       btn.textContent='Enviando…';

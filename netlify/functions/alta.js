@@ -157,6 +157,51 @@ export const handler = async (event) => {
     }catch(e){ return {statusCode:500,headers,body:JSON.stringify({error:String(e&&e.message?e.message:e)})}; }
   }
 
+  // Enviar correo de CONFIRMACIÓN de alta al beneficiario
+  if(event.httpMethod==='POST' && (()=>{try{return JSON.parse(event.body||'{}').action==='send-confirmation';}catch(e){return false;}})()){
+    const p=verify((event.headers.authorization||event.headers.Authorization||'').replace('Bearer ',''));
+    if(!p || !(p.role==='administracion'||p.role==='operacion')) return {statusCode:401,headers,body:JSON.stringify({error:'No autorizado'})};
+    try{
+      const body=JSON.parse(event.body||'{}');
+      if(!body.id) return {statusCode:400,headers,body:JSON.stringify({error:'Falta id del alta'})};
+      const rs=makeStore('pasem-altas'); const rec=await rs.get('alta:'+body.id,{type:'json'});
+      if(!rec) return {statusCode:404,headers,body:JSON.stringify({error:'Alta no encontrada'})};
+      const f=rec.fields||{};
+      const email=String(f['Titular - Correo']||f['Contacto - Correo']||'').trim();
+      const nom=(a,b,c)=>[a,b,c].filter(Boolean).join(' ').trim();
+      const nombre=nom(f['Titular - Primer apellido'],f['Titular - Segundo apellido'],f['Titular - Nombres'])||f['Contacto - Nombre']||'';
+      if(!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return {statusCode:200,headers,body:JSON.stringify({ok:false, reason:'sin-correo'})};
+      if(rec.confirmadoAt && !body.force) return {statusCode:200,headers,body:JSON.stringify({ok:true, already:true, to:email})};
+      const key=process.env.RESEND_API_KEY;
+      if(!key) return {statusCode:200,headers,body:JSON.stringify({ok:false, reason:'sin-resend'})};
+      const esFed = (rec.programa==='federalizados');
+      const base=(process.env.SITE_URL||'https://pasem.com').replace(/\/$/,'');
+      const snte=base+'/img/snte26.jpg', bida=base+'/img/bida.png';
+      const html='<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;background:#EAF6F6;font-family:Arial,Helvetica,sans-serif;color:#1f3442;">'+
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EAF6F6;padding:20px 10px;"><tr><td align="center">'+
+        '<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border:1px solid #D9E9E9;border-radius:12px;overflow:hidden;">'+
+          '<tr><td style="padding:14px 18px;"><table role="presentation" width="100%"><tr><td align="left"><img src="'+snte+'" height="42" style="height:42px;"></td><td align="right"><img src="'+bida+'" height="42" style="height:42px;"></td></tr></table></td></tr>'+
+          '<tr><td style="background:#0E9A9C;padding:16px 18px;text-align:center;color:#fff;font-size:20px;font-weight:800;">✓ ¡Tu alta fue confirmada!</td></tr>'+
+          '<tr><td style="height:4px;background:#14B4B6;font-size:0;line-height:0;">&nbsp;</td></tr>'+
+          '<tr><td style="padding:20px 22px;font-size:15px;line-height:1.7;color:#1f3442;">'+
+            (nombre?('Estimado(a) <b>'+esc(nombre)+'</b>,<br><br>'):'¡Hola!<br><br>')+
+            'Nos complace confirmarte que tu <b>alta al PASEM</b> (Programa de Apoyo de Servicios Médicos) '+(esFed?'<b>— Federalizados</b> ':'')+'ha sido <b>validada y registrada</b> correctamente.<br><br>'+
+            'A partir de ahora, tú y tus dependientes registrados cuentan con el beneficio del Programa.<br><br>'+
+            'Recuerda que, si aún no lo has hecho, debes hacer llegar tu <b>Carta de Consentimiento firmada en físico</b> a la oficina del PASEM de la Sección 26.<br><br>'+
+            'Cualquier duda, estamos para apoyarte.<br><br>Atentamente,<br><b>Equipo PASEM · Sección 26 del SNTE</b>'+
+          '</td></tr>'+
+          '<tr><td style="padding:0 22px 20px;color:#767676;font-size:11px;">PASEM · Sección 26 del SNTE · San Luis Potosí · Administrado por MULTICATERIN, S.A. de C.V. con respaldo de BIDA Seguros.</td></tr>'+
+        '</table></td></tr></table></body></html>';
+      const from=process.env.CONFIRM_FROM||process.env.MAIL_FROM||'PASEM <asistenciaseccion26@pasem.com>';
+      const payload={ from, to:[email], subject:'PASEM — Confirmación de tu alta al Programa', html, text:'Tu alta al PASEM ha sido validada y registrada. Recuerda entregar tu Carta de Consentimiento firmada en físico en la oficina del PASEM de la Sección 26.' };
+      const r=await fetch('https://api.resend.com/emails',{ method:'POST', headers:{ 'Authorization':'Bearer '+key, 'Content-Type':'application/json' }, body:JSON.stringify(payload) });
+      const rd=await r.json().catch(()=>({}));
+      if(!r.ok) return {statusCode:200,headers,body:JSON.stringify({ok:false, reason:'resend-error', detail:(rd&&(rd.message||rd.name))||('HTTP '+r.status)})};
+      rec.confirmadoAt=new Date().toISOString(); rec.confirmadoPor=p.email||'usuario'; try{ await rs.setJSON('alta:'+rec.id, rec); }catch(e){}
+      return {statusCode:200,headers,body:JSON.stringify({ok:true, to:email, id:rd.id})};
+    }catch(e){ return {statusCode:500,headers,body:JSON.stringify({error:String(e&&e.message?e.message:e)})}; }
+  }
+
   // Registrar los DEPENDIENTES de un alta bajo el titular (aunque el titular ya exista en el padrón)
   if(event.httpMethod==='POST' && (()=>{try{return JSON.parse(event.body||'{}').action==='register-deps';}catch(e){return false;}})()){
     const p=verify((event.headers.authorization||event.headers.Authorization||'').replace('Bearer ',''));
