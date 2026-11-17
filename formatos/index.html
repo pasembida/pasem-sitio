@@ -42,7 +42,8 @@
   .anexa{list-style:none;padding:0;margin:4px 0 0}
   .anexa li{display:flex;gap:8px;align-items:flex-start;color:var(--ink);font-size:15px;padding:4px 0}
   .anexa li::before{content:"✓";color:var(--teal-soft);font-weight:900}
-  .btn{display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;color:#fff;font-weight:800;font-size:16px;border-radius:12px;padding:14px 16px;margin-top:auto}
+  .legend{background:#E7F6F6;border:1px solid #bfe6e6;color:#0b7e80;font-weight:700;font-size:13.5px;border-radius:10px;padding:9px 12px;margin-top:4px}
+  .btn{display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;color:#fff;font-weight:800;font-size:16px;border-radius:12px;padding:14px 16px;margin-top:12px}
   .card.prestamo .btn{background:var(--teal-soft)}
   .card.pago .btn{background:var(--orange)}
   .btn:active{transform:translateY(1px)}
@@ -95,7 +96,7 @@
           <div class="head">
             <div>
               <h2>Préstamo FERPTTE</h2>
-              <p class="desc">El Fondo FERPTTE de la Sección 26 cubre tu cuota.</p>
+              <p class="desc">Solicita préstamo FERPTTE para el pago de PASEM.</p>
             </div>
             <div class="qr">
               <img src="/img/qr-formato-prestamo.png" alt="QR formato Préstamo FERPTTE">
@@ -109,6 +110,7 @@
             <li>Copia de INE por ambos lados</li>
             <li>Solicitud de préstamo FERPTTE firmada</li>
           </ul>
+          <div class="legend">✓ No aplican periodos de espera.</div>
           <a class="btn" href="/formatos/CC_y_Prestamo_PASEM.pdf" download>⬇ Descargar formato</a>
         </div>
       </div>
@@ -128,14 +130,14 @@
             </div>
           </div>
           <div class="label">Métodos de pago</div>
-          <div class="chip">Transferencia o depósito</div>
+          <div class="chip">Transferencia o depósito bancario</div>
           <div class="chip">Cargo a tarjeta</div>
-          <div class="chip">3, 6 o 12 meses sin intereses con tarjeta</div>
           <div class="label">Se anexa a la carta</div>
           <ul class="anexa">
             <li>Copia de INE por ambos lados</li>
             <li>Comprobante de pago del Programa</li>
           </ul>
+          <div class="legend">✓ En caso de pago anual no aplican periodos de espera.</div>
           <a class="btn" href="/formatos/CC_Pago_Directo_PASEM.pdf" download>⬇ Descargar formato</a>
         </div>
       </div>
