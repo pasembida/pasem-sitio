@@ -46,7 +46,6 @@ function buildHtml(fields, docNames, programa){
       '<div style="color:#fff;font-size:12px;">Programa de Apoyo de Servicios Médicos</div>'+
       '<div style="color:#fff;font-size:22px;font-weight:800;letter-spacing:1px;">PASEM</div>'+
       '<div style="color:#fff;font-size:11px;opacity:.9;">Nueva alta de beneficiario</div>'+
-      (esFed?'<div style="display:inline-block;margin-top:6px;background:#fff;color:#DD6B20;font-weight:800;font-size:12px;letter-spacing:1px;border-radius:999px;padding:3px 12px;">FEDERALIZADOS</div>':'')+
     '</td></tr>'+
     '<tr><td style="height:4px;background:#14B4B6;font-size:0;line-height:0;">&nbsp;</td></tr>'+
     '<tr><td style="padding:16px 18px 4px;"><div style="color:#333;font-size:16px;font-weight:700;">Datos de contacto (a quién responder)</div></td></tr>'+
@@ -185,7 +184,7 @@ export const handler = async (event) => {
           '<tr><td style="height:4px;background:#14B4B6;font-size:0;line-height:0;">&nbsp;</td></tr>'+
           '<tr><td style="padding:20px 22px;font-size:15px;line-height:1.7;color:#1f3442;">'+
             (nombre?('Estimado(a) <b>'+esc(nombre)+'</b>,<br><br>'):'¡Hola!<br><br>')+
-            'Nos complace confirmarte que tu <b>alta al PASEM</b> (Programa de Apoyo de Servicios Médicos) '+(esFed?'<b>— Federalizados</b> ':'')+'ha sido <b>validada y registrada</b> correctamente.<br><br>'+
+            'Nos complace confirmarte que tu <b>alta al PASEM</b> (Programa de Apoyo de Servicios Médicos) ha sido <b>validada y registrada</b> correctamente.<br><br>'+
             'A partir de ahora, tú y tus dependientes registrados cuentan con el beneficio del Programa.<br><br>'+
             'Recuerda que, si aún no lo has hecho, debes hacer llegar tu <b>Carta de Consentimiento firmada en físico</b> a la oficina del PASEM de la Sección 26.<br><br>'+
             'Cualquier duda, estamos para apoyarte.<br><br>Atentamente,<br><b>Equipo PASEM · Sección 26 del SNTE</b>'+
@@ -298,7 +297,7 @@ export const handler = async (event) => {
     const payload={
       from,
       to:[to],
-      subject:(esFed?'PASEM (FEDERALIZADOS) — Nueva alta de beneficiario':'PASEM — Nueva alta de beneficiario')+(nombreContacto?(': '+nombreContacto):''),
+      subject:'PASEM — Nueva alta de beneficiario'+(nombreContacto?(': '+nombreContacto):''),
       html: buildHtml(fields, docNames, programa),
       attachments: attachments.length?attachments:undefined
     };
