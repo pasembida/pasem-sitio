@@ -43,6 +43,12 @@
   .anexa li{display:flex;gap:8px;align-items:flex-start;color:var(--ink);font-size:15px;padding:4px 0}
   .anexa li::before{content:"✓";color:var(--teal-soft);font-weight:900}
   .legend{background:#E7F6F6;border:1px solid #bfe6e6;color:#0b7e80;font-weight:700;font-size:13.5px;border-radius:10px;padding:9px 12px;margin-top:4px}
+  .monto{display:flex;align-items:baseline;gap:8px;margin-top:2px}
+  .monto .lbl{font-size:13px;color:var(--muted)}
+  .monto .val{font-size:26px;font-weight:900;color:var(--ink);line-height:1}
+  .prestamo .monto .val{color:#0b7e80}
+  .pago .monto .val{color:var(--orange)}
+  .monto .cents{font-size:14px;font-weight:800}
   .btn{display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;color:#fff;font-weight:800;font-size:16px;border-radius:12px;padding:14px 16px;margin-top:12px}
   .card.prestamo .btn{background:var(--teal-soft)}
   .card.pago .btn{background:var(--orange)}
@@ -103,6 +109,8 @@
               <div class="cap">Escanea para descargar</div>
             </div>
           </div>
+          <div class="label">Monto a cubrir</div>
+          <div class="monto"><span class="val">$3,600<span class="cents">.00</span></span><span class="lbl">(tres mil seiscientos pesos)</span></div>
           <div class="label">Forma de pago</div>
           <div class="chip">Lo pagas con descuentos quincenales</div>
           <div class="label">Se anexa a la carta</div>
@@ -129,6 +137,8 @@
               <div class="cap">Escanea para descargar</div>
             </div>
           </div>
+          <div class="label">Monto a pagar</div>
+          <div class="monto"><span class="val">$3,600<span class="cents">.00</span></span><span class="lbl">(tres mil seiscientos pesos)</span></div>
           <div class="label">Métodos de pago</div>
           <div class="chip">Transferencia o depósito bancario</div>
           <div class="chip">Cargo a tarjeta</div>
