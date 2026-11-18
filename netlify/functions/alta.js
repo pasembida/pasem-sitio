@@ -201,6 +201,69 @@ export const handler = async (event) => {
     }catch(e){ return {statusCode:500,headers,body:JSON.stringify({error:String(e&&e.message?e.message:e)})}; }
   }
 
+  // Conciliar / validar el pago de un alta y enviar correo según la modalidad
+  if(event.httpMethod==='POST' && (()=>{try{return JSON.parse(event.body||'{}').action==='conciliar-pago';}catch(e){return false;}})()){
+    const p=verify((event.headers.authorization||event.headers.Authorization||'').replace('Bearer ',''));
+    if(!p || p.role!=='administracion') return {statusCode:401,headers,body:JSON.stringify({error:'Solo administración puede conciliar pagos'})};
+    try{
+      const body=JSON.parse(event.body||'{}');
+      if(!body.id) return {statusCode:400,headers,body:JSON.stringify({error:'Falta id del alta'})};
+      const accion=body.accion; // 'ingresada' | 'confirmar'
+      const rs=makeStore('pasem-altas'); const rec=await rs.get('alta:'+body.id,{type:'json'});
+      if(!rec) return {statusCode:404,headers,body:JSON.stringify({error:'Alta no encontrada'})};
+      const f=rec.fields||{};
+      const email=String(f['Titular - Correo']||f['Contacto - Correo']||'').trim();
+      const nom=(a,b,c)=>[a,b,c].filter(Boolean).join(' ').trim();
+      const nombre=nom(f['Titular - Primer apellido'],f['Titular - Segundo apellido'],f['Titular - Nombres'])||f['Contacto - Nombre']||'';
+      const modalidad=String(f['Aportación - Modalidad']||'').trim();
+      const esFerptte=/ferptte|préstamo|prestamo/i.test(modalidad);
+      // Formatear fecha dd/mm/aaaa
+      const fmtV=(s)=>{ if(!s) return ''; try{ const d=new Date(s+'T00:00:00'); return d.toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'}); }catch(e){ return s; } };
+      const key=process.env.RESEND_API_KEY;
+      const base=(process.env.SITE_URL||'https://pasem.com').replace(/\/$/,'');
+      const snte=base+'/img/snte26.jpg', bida=base+'/img/bida.png';
+      const from=process.env.CONFIRM_FROM||process.env.MAIL_FROM||'PASEM <asistenciaseccion26@pasem.com>';
+      const wrap=(barColor,titulo,cuerpo)=> '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;background:#EAF6F6;font-family:Arial,Helvetica,sans-serif;color:#1f3442;">'+
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EAF6F6;padding:20px 10px;"><tr><td align="center">'+
+        '<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border:1px solid #D9E9E9;border-radius:12px;overflow:hidden;">'+
+          '<tr><td style="padding:14px 18px;"><table role="presentation" width="100%"><tr><td align="left"><img src="'+snte+'" height="42" style="height:42px;"></td><td align="right"><img src="'+bida+'" height="42" style="height:42px;"></td></tr></table></td></tr>'+
+          '<tr><td style="background:'+barColor+';padding:16px 18px;text-align:center;color:#fff;font-size:19px;font-weight:800;">'+titulo+'</td></tr>'+
+          '<tr><td style="height:4px;background:#14B4B6;font-size:0;line-height:0;">&nbsp;</td></tr>'+
+          '<tr><td style="padding:20px 22px;font-size:15px;line-height:1.7;color:#1f3442;">'+cuerpo+'</td></tr>'+
+          '<tr><td style="padding:0 22px 20px;color:#767676;font-size:11px;">PASEM · Sección 26 del SNTE · San Luis Potosí · Administrado por MULTICATERIN, S.A. de C.V. con respaldo de BIDA Seguros.</td></tr>'+
+        '</table></td></tr></table></body></html>';
+      const saludo=(nombre?('Estimado(a) <b>'+esc(nombre)+'</b>,<br><br>'):'¡Hola!<br><br>');
+      let subject='', html='', text='';
+      if(accion==='ingresada'){
+        rec.pagoEstado='ingresada'; rec.solicitudIngresadaAt=new Date().toISOString();
+        subject='PASEM — Tu solicitud de préstamo FERPTTE fue ingresada';
+        html=wrap('#0E9A9C','Solicitud ingresada', saludo+'Te confirmamos que tu <b>solicitud de incorporación al PASEM mediante Préstamo FERPTTE</b> ha sido <b>ingresada</b> correctamente.<br><br>Posteriormente te notificaremos la <b>confirmación de tu pago</b> y el inicio de tu vigencia en el Programa.<br><br>Atentamente,<br><b>Equipo PASEM · Sección 26 del SNTE</b>');
+        text='Tu solicitud de préstamo FERPTTE para el PASEM ha sido ingresada. Posteriormente se confirmará el pago.';
+      } else if(accion==='confirmar'){
+        if(!body.inicioVigencia) return {statusCode:400,headers,body:JSON.stringify({error:'Falta la fecha de inicio de vigencia'})};
+        rec.pagoEstado='confirmado'; rec.inicioVigencia=body.inicioVigencia; rec.pagoConfirmadoAt=new Date().toISOString();
+        subject='PASEM — Tu pago ha sido confirmado';
+        const via=esFerptte?'mediante Préstamo FERPTTE':'por transferencia / pago directo';
+        html=wrap('#1e9e52','✓ Pago confirmado', saludo+'Nos complace confirmarte que tu <b>pago al PASEM</b> ('+via+') ha sido <b>confirmado</b>.<br><br>Tu <b>vigencia en el PASEM inicia el '+esc(fmtV(body.inicioVigencia))+'</b>. A partir de esa fecha, tú y tus dependientes registrados cuentan con el beneficio del Programa.<br><br>Recuerda hacer llegar tu Carta de Consentimiento firmada en físico a la oficina del PASEM de la Sección 26, si aún no lo has hecho.<br><br>Atentamente,<br><b>Equipo PASEM · Sección 26 del SNTE</b>');
+        text='Tu pago al PASEM ha sido confirmado. Tu vigencia inicia el '+fmtV(body.inicioVigencia)+'.';
+      } else {
+        return {statusCode:400,headers,body:JSON.stringify({error:'Acción no válida'})};
+      }
+      rec.conciliadoAt=new Date().toISOString(); rec.conciliadoPor=p.email||'usuario';
+      try{ await rs.setJSON('alta:'+rec.id, rec); }catch(e){}
+      // Enviar correo si hay correo y Resend
+      let correoEnviado=false, reason='';
+      if(email && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) && key){
+        try{
+          const r=await fetch('https://api.resend.com/emails',{ method:'POST', headers:{ 'Authorization':'Bearer '+key, 'Content-Type':'application/json' }, body:JSON.stringify({from,to:[email],subject,html,text}) });
+          const rd=await r.json().catch(()=>({}));
+          correoEnviado=r.ok; if(!r.ok) reason=(rd&&(rd.message||rd.name))||('HTTP '+r.status);
+        }catch(e){ reason=String(e&&e.message?e.message:e); }
+      } else { reason = !email?'sin-correo':(!key?'sin-resend':''); }
+      return {statusCode:200,headers,body:JSON.stringify({ ok:true, estado:rec.pagoEstado, inicioVigencia:rec.inicioVigencia||'', correoEnviado, to:email, reason })};
+    }catch(e){ return {statusCode:500,headers,body:JSON.stringify({error:String(e&&e.message?e.message:e)})}; }
+  }
+
   // Registrar los DEPENDIENTES de un alta bajo el titular (aunque el titular ya exista en el padrón)
   if(event.httpMethod==='POST' && (()=>{try{return JSON.parse(event.body||'{}').action==='register-deps';}catch(e){return false;}})()){
     const p=verify((event.headers.authorization||event.headers.Authorization||'').replace('Bearer ',''));
