@@ -201,6 +201,61 @@ export const handler = async (event) => {
     }catch(e){ return {statusCode:500,headers,body:JSON.stringify({error:String(e&&e.message?e.message:e)})}; }
   }
 
+  // Solicitar al titular el comprobante / documento de pago faltante
+  if(event.httpMethod==='POST' && (()=>{try{return JSON.parse(event.body||'{}').action==='solicitar-comprobante';}catch(e){return false;}})()){
+    const p=verify((event.headers.authorization||event.headers.Authorization||'').replace('Bearer ',''));
+    if(!p || p.role!=='administracion') return {statusCode:401,headers,body:JSON.stringify({error:'Solo administración puede solicitar documentos'})};
+    try{
+      const body=JSON.parse(event.body||'{}');
+      if(!body.id) return {statusCode:400,headers,body:JSON.stringify({error:'Falta id del alta'})};
+      const rs=makeStore('pasem-altas'); const rec=await rs.get('alta:'+body.id,{type:'json'});
+      if(!rec) return {statusCode:404,headers,body:JSON.stringify({error:'Alta no encontrada'})};
+      const f=rec.fields||{};
+      const email=String(f['Titular - Correo']||f['Contacto - Correo']||'').trim();
+      const nom=(a,b,c)=>[a,b,c].filter(Boolean).join(' ').trim();
+      const nombre=nom(f['Titular - Primer apellido'],f['Titular - Segundo apellido'],f['Titular - Nombres'])||f['Contacto - Nombre']||'';
+      const modalidad=String(f['Aportación - Modalidad']||'').trim();
+      const esFerptte=/ferptte|préstamo|prestamo/i.test(modalidad);
+      const docs=Array.isArray(rec.docs)?rec.docs:[];
+      const tiene=(re)=>docs.some(d=>re.test(String(d.filename||'')));
+      // Determinar faltantes según modalidad
+      const faltan=[];
+      if(esFerptte){ if(!tiene(/solicitud de préstamo|solicitud de prestamo|ferptte/i)) faltan.push('Solicitud de préstamo FERPTTE firmada'); if(!tiene(/carta de consentimiento/i)) faltan.push('Carta de Consentimiento firmada'); }
+      else { if(!tiene(/comprobante de pago/i)) faltan.push('Comprobante de pago'); if(!tiene(/carta de consentimiento/i)) faltan.push('Carta de Consentimiento firmada'); }
+      const lista=(body.faltantes&&Array.isArray(body.faltantes)&&body.faltantes.length)?body.faltantes:faltan;
+      if(!lista.length) return {statusCode:200,headers,body:JSON.stringify({ok:false, reason:'nada-falta'})};
+      if(!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return {statusCode:200,headers,body:JSON.stringify({ok:false, reason:'sin-correo', faltan:lista})};
+      const key=process.env.RESEND_API_KEY;
+      if(!key) return {statusCode:200,headers,body:JSON.stringify({ok:false, reason:'sin-resend', faltan:lista})};
+      const base=(process.env.SITE_URL||'https://pasem.com').replace(/\/$/,'');
+      const snte=base+'/img/snte26.jpg', bida=base+'/img/bida.png';
+      const items=lista.map(x=>'<li style="margin:4px 0;">'+esc(x)+'</li>').join('');
+      const html='<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;background:#EAF6F6;font-family:Arial,Helvetica,sans-serif;color:#1f3442;">'+
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EAF6F6;padding:20px 10px;"><tr><td align="center">'+
+        '<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border:1px solid #D9E9E9;border-radius:12px;overflow:hidden;">'+
+          '<tr><td style="padding:14px 18px;"><table role="presentation" width="100%"><tr><td align="left"><img src="'+snte+'" height="42" style="height:42px;"></td><td align="right"><img src="'+bida+'" height="42" style="height:42px;"></td></tr></table></td></tr>'+
+          '<tr><td style="background:#DD6B20;padding:16px 18px;text-align:center;color:#fff;font-size:19px;font-weight:800;">Nos falta un documento</td></tr>'+
+          '<tr><td style="height:4px;background:#14B4B6;font-size:0;line-height:0;">&nbsp;</td></tr>'+
+          '<tr><td style="padding:20px 22px;font-size:15px;line-height:1.7;color:#1f3442;">'+
+            (nombre?('Estimado(a) <b>'+esc(nombre)+'</b>,<br><br>'):'¡Hola!<br><br>')+
+            'Para poder <b>completar tu incorporación al PASEM</b>, aún nos falta recibir:<br>'+
+            '<ul style="margin:8px 0 10px 18px;padding:0;">'+items+'</ul>'+
+            'Por favor envíalo <b>por WhatsApp al 81 3587 9524</b> o respondiendo a este correo, indicando tu <b>nombre completo</b> y <b>CURP</b>.<br><br>'+
+            'En cuanto lo recibamos, validaremos tu pago y te confirmaremos el inicio de tu vigencia.<br><br>'+
+            'Gracias,<br><b>Equipo PASEM · Sección 26 del SNTE</b>'+
+          '</td></tr>'+
+          '<tr><td style="padding:0 22px 20px;color:#767676;font-size:11px;">PASEM · Sección 26 del SNTE · San Luis Potosí · Administrado por MULTICATERIN, S.A. de C.V. con respaldo de BIDA Seguros.</td></tr>'+
+        '</table></td></tr></table></body></html>';
+      const from=process.env.CONFIRM_FROM||process.env.MAIL_FROM||'PASEM <asistenciaseccion26@pasem.com>';
+      const payload={ from, to:[email], subject:'PASEM — Nos falta tu comprobante / documento para tu alta', html, text:'Para completar tu alta al PASEM nos falta: '+lista.join(', ')+'. Envíalo por WhatsApp al 81 3587 9524 o respondiendo a este correo, con tu nombre y CURP.' };
+      const r=await fetch('https://api.resend.com/emails',{ method:'POST', headers:{ 'Authorization':'Bearer '+key, 'Content-Type':'application/json' }, body:JSON.stringify(payload) });
+      const rd=await r.json().catch(()=>({}));
+      if(!r.ok) return {statusCode:200,headers,body:JSON.stringify({ok:false, reason:'resend-error', detail:(rd&&(rd.message||rd.name))||('HTTP '+r.status), faltan:lista})};
+      rec.comprobanteSolicitadoAt=new Date().toISOString(); rec.comprobanteSolicitadoPor=p.email||'usuario'; try{ await rs.setJSON('alta:'+rec.id, rec); }catch(e){}
+      return {statusCode:200,headers,body:JSON.stringify({ok:true, to:email, faltan:lista})};
+    }catch(e){ return {statusCode:500,headers,body:JSON.stringify({error:String(e&&e.message?e.message:e)})}; }
+  }
+
   // Conciliar / validar el pago de un alta y enviar correo según la modalidad
   if(event.httpMethod==='POST' && (()=>{try{return JSON.parse(event.body||'{}').action==='conciliar-pago';}catch(e){return false;}})()){
     const p=verify((event.headers.authorization||event.headers.Authorization||'').replace('Bearer ',''));

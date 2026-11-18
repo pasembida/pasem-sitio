@@ -2683,6 +2683,11 @@
     // documentos de pago (por etiqueta)
     var docsPago=(a.docs||[]).filter(function(d){ return /comprobante|carta de consentimiento|solicitud de préstamo|solicitud de prestamo/i.test(d.filename||''); });
     var docsHtml=docsPago.length? docsPago.map(function(d){ return '<button class="btn-mini" data-cdl="'+esc(d.docId)+'|'+esc(d.filename||'doc')+'">⬇ '+esc(d.filename||'documento')+'</button>'; }).join(' ') : '<span style="color:var(--ink)">Sin documentos de pago adjuntos.</span>';
+    // detectar documentos faltantes según modalidad
+    function tieneDoc(re){ return (a.docs||[]).some(function(d){ return re.test(String(d.filename||'')); }); }
+    var faltan=[];
+    if(esFerptte){ if(!tieneDoc(/solicitud de préstamo|solicitud de prestamo|ferptte/i)) faltan.push('Solicitud de préstamo FERPTTE firmada'); if(!tieneDoc(/carta de consentimiento/i)) faltan.push('Carta de Consentimiento firmada'); }
+    else { if(!tieneDoc(/comprobante de pago/i)) faltan.push('Comprobante de pago'); if(!tieneDoc(/carta de consentimiento/i)) faltan.push('Carta de Consentimiento firmada'); }
     var hoy=new Date().toISOString().slice(0,10);
     var fechaVal=a.inicioVigencia||hoy;
     var ov=document.createElement('div');
@@ -2698,6 +2703,7 @@
         '<b>Modalidad:</b> '+esc(modalidad)+'<br><b>Estado actual:</b> '+esc(estado)+(a.inicioVigencia?(' · Vigencia: '+esc(a.inicioVigencia)):'')+
       '</div>'+
       '<div style="margin:8px 0 12px;"><div style="font-weight:700;font-size:13px;margin-bottom:4px;">Documentos de pago</div>'+docsHtml+'</div>'+
+      (faltan.length? ('<div style="background:#FDECEA;border:1px solid #f1b8b0;border-radius:10px;padding:10px 12px;font-size:13px;color:#a3342a;margin-bottom:10px;"><b>Falta:</b> '+faltan.map(esc).join(', ')+'<br><button class="btn btn-mini" id="cc-solicitar" type="button" style="margin-top:6px;color:#b23b3b">✉ Solicitar al titular por correo</button></div>') : '')+
       (esFerptte?'<div style="background:#FFF7EF;border:1px solid #f1cba6;border-radius:10px;padding:10px 12px;font-size:13px;color:#8a4b12;margin-bottom:10px;">Préstamo FERPTTE: primero marca «Solicitud ingresada» (se avisa al titular). Cuando el pago quede aplicado, confirma el pago con la fecha de inicio de vigencia.</div>':'')+
       '<div class="field" style="margin-bottom:10px;"><label>Inicio de vigencia</label><input type="date" id="cc-vigencia" value="'+esc(fechaVal)+'"></div>'+
       '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'+botones+
@@ -2727,6 +2733,18 @@
     }
     if(esFerptte){ var bi=ov.querySelector('#cc-ingresada'); if(bi) bi.addEventListener('click', function(){ enviar('ingresada'); }); }
     ov.querySelector('#cc-confirmar').addEventListener('click', function(){ enviar('confirmar'); });
+    var bs=ov.querySelector('#cc-solicitar');
+    if(bs) bs.addEventListener('click', async function(){
+      if(!correo){ alert('Este alta no tiene correo del titular, no se puede enviar la solicitud.'); return; }
+      if(!confirm('¿Enviar correo a '+correo+' solicitando: '+faltan.join(', ')+'?')) return;
+      msg.textContent='Enviando…';
+      try{ var r=await api(ALTAS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'solicitar-comprobante', id:a.id, faltantes:faltan})}); var d=await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
+        if(d.ok) { alert('✉ Solicitud enviada a '+(d.to||correo)+'.'); close(); loadAltas(); }
+        else if(d.reason==='sin-correo') alert('No se envió: el alta no tiene correo válido.');
+        else if(d.reason==='nada-falta') alert('Este alta ya tiene todos los documentos.');
+        else alert('No se pudo enviar: '+(d.detail||d.reason||'error'));
+      }catch(e){ msg.textContent='Error: '+e.message; }
+    });
   }
   async function confirmarAlta(idx, btn){
     var a=ALTAS_CACHE[idx]; if(!a) return; var f=a.fields||{};
