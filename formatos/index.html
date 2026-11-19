@@ -23,7 +23,9 @@
   .lead{color:var(--muted);font-size:16px;margin:0 0 18px}
   .lead b{color:var(--orange)}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .grid-cubrir{display:grid;grid-template-columns:1.7fr 1fr;gap:18px;align-items:start}
   .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+  @media(max-width:900px){ .grid-cubrir{grid-template-columns:1fr} }
   @media(max-width:860px){ .grid2{grid-template-columns:1fr} .grid3{grid-template-columns:1fr} h1{font-size:26px} }
   .card{background:#fff;border:1px solid var(--border);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;}
   .card .accent{height:6px}
@@ -50,12 +52,13 @@
   .card.prestamo .btn{background:var(--teal-soft)}.card.pago .btn{background:var(--orange)}
   .subgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   @media(max-width:620px){ .subgrid{grid-template-columns:1fr} }
-  .sub{border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px}
+  .sub{border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;min-width:0}
   .sub.est{background:#F1FAFA}.sub.fed{background:#FFF7F0}
   .sub .st{display:flex;align-items:center;justify-content:space-between;gap:10px}
-  .sub .tt{font-weight:900;font-size:13px;letter-spacing:.5px}
+  .sub .tt{font-weight:900;font-size:13px;letter-spacing:.5px;min-width:0}
   .sub.est .tt{color:#0b7e80}.sub.fed .tt{color:#b9560e}
-  .sub img.qr{width:84px;height:84px;border:1px solid var(--border);border-radius:8px;background:#fff;padding:4px}
+  .sub img.qr{width:76px;height:76px;min-width:76px;border:1px solid var(--border);border-radius:8px;background:#fff;padding:4px}
+  .sub .anexa li{font-size:13.5px}
   .sub .bt{display:flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;color:#fff;font-weight:800;font-size:14px;border-radius:10px;padding:11px 12px;margin-top:4px}
   .sub.est .bt{background:#0E9A9C}.sub.fed .bt{background:#DD6B20}
   .bluebull{color:#b9560e;font-weight:800}
@@ -113,7 +116,7 @@
     <h1>Elige cómo cubrir tu aportación</h1>
     <p class="lead"><b>Descarga el formato</b> de acuerdo a cómo deseas cubrir tu aportación.</p>
 
-    <div class="grid2">
+    <div class="grid-cubrir">
       <div class="card prestamo">
         <div class="accent"></div>
         <div class="body">
