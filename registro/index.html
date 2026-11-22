@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PASEM · Registro de afiliación</title>
+<meta name="description" content="Registro de afiliación al PASEM — titular. Sección 26 del SNTE, San Luis Potosí.">
+<style>
+  :root{ --orange:#DD6B20; --teal:#14B4B6; --teal-soft:#0E9A9C; --ink:#333333; --muted:#767676; --border:#CFDADD; --soft:#E9F7F7; --bg:#EAF6F6; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);}
+  .topbar{height:8px;background:var(--orange);}
+  .wrap{max-width:860px;margin:0 auto;padding:22px 16px 56px;}
+  .brand{background:#fff;border:1px solid #D9E9E9;border-radius:16px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;}
+  .brand img{height:46px}.brand .center{text-align:center;flex:1}
+  .brand .pasem{font-size:26px;font-weight:900;color:var(--orange);letter-spacing:1px;line-height:1}
+  .brand .sub{font-size:12px;color:var(--muted);margin-top:2px}
+  h1{font-size:28px;line-height:1.15;margin:4px 0 6px;color:var(--ink);font-weight:900}
+  .lead{color:var(--muted);font-size:15px;margin:0 0 6px}
+  .pill-info{display:flex;gap:10px;align-items:flex-start;background:#EEF6FF;border:1px solid #bcd6f0;border-radius:12px;padding:12px 14px;color:#24557f;font-size:14px;margin:12px 0 18px}
+  .sec{background:#fff;border:1px solid #D9E9E9;border-radius:16px;padding:18px;margin-bottom:16px}
+  .sec-h{font-weight:900;color:var(--orange);font-size:16px;margin:0 0 12px}
+  label{display:block;font-weight:700;font-size:14px;margin:0 0 4px;color:var(--ink)}
+  .req{color:#c0392b}
+  input[type=text],input[type=tel],input[type=email],select,input[type=file]{width:100%;font-size:15px;padding:11px;border:1px solid var(--border);border-radius:11px;background:#fff}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:620px){ .grid2{grid-template-columns:1fr} }
+  .field{margin-bottom:12px}
+  .opts{display:flex;gap:14px;flex-wrap:wrap}
+  .opt{display:flex;align-items:center;gap:6px;font-weight:600;font-size:15px;color:var(--ink)}
+  .note{background:#FFF7EF;border:1px solid #f1cba6;border-radius:12px;padding:11px 13px;color:#8a4b12;font-size:14px;font-weight:600;margin:4px 0 12px}
+  .dl{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 14px}
+  .dl a{display:inline-flex;align-items:center;gap:6px;text-decoration:none;background:#E7F6F6;color:#0b7e80;border:1px solid #bfe6e6;border-radius:10px;padding:8px 12px;font-weight:700;font-size:13.5px}
+  .doc{border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px;background:#FBFDFD}
+  .doc .dl-h{font-weight:700;font-size:14px;margin-bottom:6px}
+  .doc .n{font-size:12px;color:var(--teal-soft);font-weight:800;margin-right:4px}
+  .ok{color:#1e9e52;font-weight:700;font-size:12px}
+  .hp{position:absolute;left:-9999px}
+  .btn{display:block;width:100%;background:var(--orange);color:#fff;border:0;border-radius:12px;padding:15px;font-size:17px;font-weight:800;cursor:pointer;margin-top:6px}
+  .btn:disabled{opacity:.6}
+  #msg{font-size:14px;margin-top:10px}
+  .hide{display:none}
+  .foot{color:var(--muted);font-size:12px;text-align:center;margin-top:18px;line-height:1.6}
+  .okbox{display:none;background:#E8F8EE;border:1px solid #bfe6cc;border-radius:14px;padding:20px;color:#1e5e37;font-size:16px;line-height:1.7}
+</style>
+</head>
+<body>
+  <div class="topbar"></div>
+  <div class="wrap">
+    <div class="brand">
+      <img class="logo-snte" src="/img/snte26.jpg" alt="SNTE Seccion 26">
+      <div class="center"><div class="pasem">PASEM</div><div class="sub">Programa de Apoyo de Servicios Médicos · Sección 26 del SNTE · San Luis Potosí</div></div>
+      <img class="logo-bida" src="/img/bida.png" alt="BIDA Seguros">
+    </div>
+
+    <div id="okbox" class="okbox"></div>
+
+    <div id="formwrap">
+      <h1>Registro de afiliación al PASEM</h1>
+      <p class="lead">Registro del <b>titular</b> (quien se afilia y cubre la aportación del Programa).</p>
+      <div class="pill-info"><span>ℹ️</span><div>Este registro <b>no sustituye el Alta de beneficiarios</b>. Una vez aprobado tu registro, te enviaremos la liga para dar de alta a tus beneficiarios.</div></div>
+
+      <form id="form" autocomplete="on">
+        <p class="hp"><label>No llenar: <input name="bot-field"></label></p>
+
+        <!-- 1. Datos generales -->
+        <div class="sec">
+          <div class="sec-h">1. Datos generales del titular</div>
+          <div class="field"><label>Nombre completo <span class="req">*</span></label><input type="text" name="Nombre completo" required></div>
+          <div class="grid2">
+            <div class="field"><label>Teléfono de contacto <span class="req">*</span></label><input type="tel" name="Teléfono de contacto" required></div>
+            <div class="field"><label>Correo electrónico <span class="req">*</span></label><input type="email" name="Correo electrónico" required></div>
+          </div>
+          <div class="grid2">
+            <div class="field"><label>CURP <span class="req">*</span></label><input type="text" name="CURP" maxlength="18" minlength="18" style="text-transform:uppercase" required></div>
+            <div class="field"><label>RFC</label><input type="text" name="RFC" style="text-transform:uppercase"></div>
+          </div>
+        </div>
+
+        <!-- 2. Modalidad -->
+        <div class="sec">
+          <div class="sec-h">2. ¿Cómo deseas cubrir tu aportación?</div>
+          <div class="field"><label>Modalidad de pago <span class="req">*</span></label>
+            <select name="Modalidad" id="modalidad" required>
+              <option value="">Selecciona…</option>
+              <option value="Préstamo FERPTTE">Préstamo FERPTTE</option>
+              <option value="Pago directo">Pago directo</option>
+            </select>
+          </div>
+          <div id="tipoWrap" class="field hide"><label>Tipo de plaza (Préstamo FERPTTE) <span class="req">*</span></label>
+            <div class="opts">
+              <label class="opt"><input type="radio" name="Tipo de plaza" value="Estatal">Telesecundaria Estatal</label>
+              <label class="opt"><input type="radio" name="Tipo de plaza" value="Federal">Telesecundaria Federal</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Documentos (condicional) -->
+        <div id="docsSec" class="sec hide">
+          <div class="sec-h">3. Documentos</div>
+          <div class="note">Los formatos oficiales deberán llenarse con <b>tinta azul</b> y firmarse de manera <b>autógrafa</b>.</div>
+          <div id="pagoExtra"></div>
+          <div id="dlBase" class="dl"></div>
+          <div id="docInputs"></div>
+        </div>
+
+        <button type="submit" class="btn" id="sendBtn">Enviar registro</button>
+        <div id="msg"></div>
+      </form>
+    </div>
+
+    <div class="foot">PASEM · Sección 26 del SNTE · Administrado por MULTICATERIN, S.A. de C.V. con respaldo de BIDA Seguros.</div>
+  </div>
+
+<script>
+  var FN='/.netlify/functions/';
+  var D='/registro/docs/';
+  // Documentos por modalidad. foto:true => input de cámara/galería
+  var DOCS_FERPTTE=[
+    {n:1,lbl:'Carta consentimiento y autorización (Préstamo FERPTTE)'},
+    {n:2,lbl:'Solicitud de Préstamo FERPTTE'},
+    {n:3,lbl:'Autorización domiciliación Banorte'},
+    {n:4,lbl:'INE vigente por ambos lados (copia legible)'},
+    {n:5,lbl:'Último estado de cuenta bancario Banorte (con CLABE)'},
+    {n:6,lbl:'Últimos dos talones de pago de nómina'},
+    {n:7,lbl:'Comprobante de domicilio (no mayor a 3 meses)'},
+    {n:8,lbl:'Fotografía mostrando la Carta de consentimiento firmada', foto:true}
+  ];
+  var DOCS_FEDERAL_EXTRA=[
+    {n:9,lbl:'Autorización consulta Blue Bull'},
+    {n:10,lbl:'Autorización reserva Blue Bull'}
+  ];
+  var DOCS_DIRECTO=[
+    {n:1,lbl:'Carta consentimiento y autorización (Pago directo)'},
+    {n:2,lbl:'INE vigente por ambos lados (copia legible)'},
+    {n:3,lbl:'Último talón de pago de nómina'},
+    {n:4,lbl:'Comprobante de domicilio (no mayor a 3 meses)'},
+    {n:5,lbl:'Comprobante de pago del programa PASEM'}
+  ];
+  var BASE_FERPTTE=[
+    {t:'Carta de Consentimiento (FERPTTE)', f:'CARTA_CONSENTIMIENTO_PASEM_y_FERPTTE.pdf'},
+    {t:'Solicitud de Préstamo FERPTTE', f:'FORMATO_PRESTAMO_FERPTTE.pdf'},
+    {t:'Domiciliación Banorte', f:'FORMATO_DOMICILIACION_BANORTE.pdf'}
+  ];
+  var BASE_FEDERAL_EXTRA=[
+    {t:'Blue Bull · Consulta', f:'AUTORIZACION_CONSULTA_BLUEBULL.pdf'},
+    {t:'Blue Bull · Reserva', f:'AUTORIZACION_RESERVA_BLUEBULL.pdf'}
+  ];
+  var BASE_DIRECTO=[
+    {t:'Carta de Consentimiento (Pago directo)', f:'CARTA_CONSENTIMIENTO_PASEM_PAGO_DIRECTO.pdf'}
+  ];
+
+  var modalidad=document.getElementById('modalidad');
+  var tipoWrap=document.getElementById('tipoWrap');
+  var docsSec=document.getElementById('docsSec');
+  var docInputs=document.getElementById('docInputs');
+  var dlBase=document.getElementById('dlBase');
+
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function render(){
+    var m=modalidad.value;
+    var esFerptte=(m==='Préstamo FERPTTE');
+    tipoWrap.classList.toggle('hide', !esFerptte);
+    var tipo=(document.querySelector('input[name="Tipo de plaza"]:checked')||{}).value||'';
+    // ¿mostramos documentos?
+    var lista=null, base=[];
+    if(m==='Pago directo'){ lista=DOCS_DIRECTO.slice(); base=BASE_DIRECTO.slice(); }
+    else if(esFerptte && tipo){ lista=DOCS_FERPTTE.slice(); base=BASE_FERPTTE.slice();
+      if(tipo==='Federal'){ lista=lista.concat(DOCS_FEDERAL_EXTRA); base=base.concat(BASE_FEDERAL_EXTRA); } }
+    var pagoExtra=document.getElementById('pagoExtra');
+    if(!lista){ docsSec.classList.add('hide'); docInputs.innerHTML=''; dlBase.innerHTML=''; if(pagoExtra) pagoExtra.innerHTML=''; return; }
+    docsSec.classList.remove('hide');
+    // Pago directo: forma de pago + cuentas
+    if(pagoExtra){
+      if(m==='Pago directo'){
+        pagoExtra.innerHTML=
+          '<div class="field"><label>Forma de pago PASEM <span class="req">*</span></label>'+
+            '<select name="Forma de pago PASEM" required>'+
+              '<option value="">Selecciona…</option>'+
+              '<option value="Anual (una sola exhibición)">Anual — una sola exhibición</option>'+
+              '<option value="Semestral (dos pagos)">Diferido · Semestral — dos pagos *</option>'+
+              '<option value="Trimestral (cuatro pagos)">Diferido · Trimestral — cuatro pagos *</option>'+
+            '</select>'+
+          '</div>'+
+          '<div class="note" style="background:#EEF6FF;border-color:#bcd6f0;color:#24557f;"><b>Pago anual:</b> no aplican periodos de espera. &nbsp; <b>* Semestral y trimestral:</b> aplican periodos de espera.</div>'+
+          '<div style="border:1px solid #D9E9E9;border-radius:12px;padding:12px 14px;background:#fff;margin:0 0 12px;">'+
+            '<div style="font-weight:800;color:#DD6B20;font-size:16px;margin-bottom:6px;">Transferencia o depósito · $3,600.00</div>'+
+            '<div style="font-size:14px;line-height:1.9;">'+
+              '<div><span style="color:#767676;display:inline-block;min-width:110px;">A nombre de</span> <b>MULTICATERIN SA DE CV</b></div>'+
+              '<div><span style="color:#767676;display:inline-block;min-width:110px;">Banco</span> <b>Banco Inbursa</b></div>'+
+              '<div><span style="color:#767676;display:inline-block;min-width:110px;">CLABE</span> <b>036 118 50079419310 0</b></div>'+
+              '<div><span style="color:#767676;display:inline-block;min-width:110px;">No. de cuenta</span> <b>50079419310</b></div>'+
+            '</div>'+
+            '<div style="color:#DD6B20;font-weight:800;font-size:13.5px;margin-top:6px;">Escribe tu nombre completo en el concepto.</div>'+
+            '<div style="color:#767676;font-size:13px;margin-top:4px;">Cargo a tarjeta: te enviamos la liga de pago por WhatsApp o correo, o paga con terminal con nuestro personal.</div>'+
+          '</div>';
+      } else pagoExtra.innerHTML='';
+    }
+    dlBase.innerHTML='<div style="width:100%;font-size:13px;color:#767676;margin-bottom:2px;">¿No tienes los formatos? Descárgalos aquí:</div>'+
+      base.map(function(b){ return '<a href="'+D+encodeURIComponent(b.f)+'" download>⬇ '+esc(b.t)+'</a>'; }).join('');
+    docInputs.innerHTML=lista.map(function(d){
+      var acc=d.foto?'accept="image/jpeg,image/png,.jpg,.jpeg,.png" capture="environment"':'accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png"';
+      var hint=d.foto?'<div style="font-size:12px;color:#767676;margin-bottom:4px;">Tómala con tu cámara o súbela desde tu galería/archivo. Imagen JPG/PNG, máx. 10 MB.</div>'
+                     :'<div style="font-size:12px;color:#767676;margin-bottom:4px;">PDF o imagen (JPG/PNG), máx. 10 MB.</div>';
+      return '<div class="doc"><div class="dl-h"><span class="n">'+d.n+'.</span>'+esc(d.lbl)+'</div>'+hint+'<input type="file" class="docfile" data-label="'+esc(d.lbl)+'" '+acc+'><div class="ferr" style="color:#b23b3b;font-size:12px;margin-top:4px;"></div></div>';
+    }).join('');
+    // validación por archivo al seleccionar
+    docInputs.querySelectorAll('.docfile').forEach(function(inp){ inp.addEventListener('change', function(){ validarInput(inp); }); });
+  }
+  var MAX_BYTES=10*1024*1024;
+  var ALLOWED=['pdf','jpg','jpeg','png'];
+  function fileErr(file){
+    if(!file) return '';
+    var ext=(file.name||'').split('.').pop().toLowerCase();
+    var okType = ALLOWED.indexOf(ext)>=0 || /^(image\/(jpeg|png)|application\/pdf)$/.test(file.type||'');
+    if(!okType) return 'Formato no permitido. Usa PDF, JPG o PNG.';
+    if(file.size>MAX_BYTES) return 'El archivo pesa '+(file.size/1048576).toFixed(1)+' MB. Máximo 10 MB.';
+    return '';
+  }
+  function validarInput(inp){
+    var err=inp.parentNode.querySelector('.ferr'); var f=inp.files&&inp.files[0];
+    var msg=fileErr(f);
+    if(msg){ err.textContent='⚠ '+msg; inp.value=''; } else { err.textContent=''; }
+    return !msg;
+  }
+  modalidad.addEventListener('change', function(){ // al cambiar modalidad, limpia tipo
+    document.querySelectorAll('input[name="Tipo de plaza"]').forEach(function(r){ r.checked=false; }); render(); });
+  document.querySelectorAll('input[name="Tipo de plaza"]').forEach(function(r){ r.addEventListener('change', render); });
+
+  // ---- Subida por partes ----
+  var CHUNK=700000;
+  function fileToDoc(file){ return new Promise(function(res,rej){ var r=new FileReader(); r.onload=function(){ res({ filename:file.name||'archivo', type:file.type||'application/octet-stream', b64:String(r.result).split(',')[1]||'' }); }; r.onerror=function(){ rej(new Error('No se pudo leer el archivo')); }; r.readAsDataURL(file); }); }
+  function uploadDoc(doc){
+    var total=Math.max(1,Math.ceil(doc.b64.length/CHUNK));
+    return fetch(FN+'registro-upload',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'init',filename:doc.filename,type:doc.type,size:doc.b64.length,chunks:total})})
+      .then(function(r){return r.json();}).then(function(init){
+        if(!init.docId) throw new Error('Error al iniciar la subida');
+        var chain=Promise.resolve();
+        for(var i=0;i<total;i++){(function(idx){ chain=chain.then(function(){
+          return fetch(FN+'registro-upload',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'chunk',docId:init.docId,index:idx,data:doc.b64.slice(idx*CHUNK,(idx+1)*CHUNK)})}).then(function(r){return r.json();});
+        }); })(i);}
+        return chain.then(function(){ return { docId:init.docId, filename:doc.filename }; });
+      });
+  }
+  function collectFields(){ var obj={}; var fd=new FormData(document.getElementById('form')); fd.forEach(function(v,k){ if(typeof v==='string' && k!=='bot-field'){ obj[k]=obj[k]?(obj[k]+', '+v):v; } }); return obj; }
+
+  document.getElementById('form').addEventListener('submit', function(e){
+    e.preventDefault();
+    var form=e.target; if(!form.reportValidity()) return;
+    var m=modalidad.value;
+    if(m==='Préstamo FERPTTE' && !(document.querySelector('input[name="Tipo de plaza"]:checked'))){ alert('Elige si tu plaza es Estatal o Federal.'); return; }
+    var btn=document.getElementById('sendBtn'); var msg=document.getElementById('msg');
+    var inputs=Array.prototype.slice.call(document.querySelectorAll('#docInputs .docfile'));
+    // validar tipo y tamaño
+    var badIdx=-1;
+    for(var k=0;k<inputs.length;k++){ var fe=fileErr(inputs[k].files&&inputs[k].files[0]); if(fe){ var er=inputs[k].parentNode.querySelector('.ferr'); if(er) er.textContent='⚠ '+fe; badIdx=k; } }
+    if(badIdx>=0){ inputs[badIdx].scrollIntoView({behavior:'smooth',block:'center'}); return; }
+    var pend=inputs.filter(function(i){ return i.files && i.files[0]; });
+    if(!pend.length){ if(!confirm('No adjuntaste documentos. ¿Enviar el registro sin documentos?')) return; }
+    btn.disabled=true; var fields=collectFields(); var docs=[];
+    var chain=Promise.resolve();
+    pend.forEach(function(inp,i){ chain=chain.then(function(){
+      btn.textContent='Subiendo documento '+(i+1)+' de '+pend.length+'…';
+      return fileToDoc(inp.files[0]).then(function(doc){ doc.filename=inp.getAttribute('data-label')+' — '+(doc.filename||'archivo'); return uploadDoc(doc); }).then(function(meta){ docs.push(meta); });
+    }); });
+    chain.then(function(){
+      btn.textContent='Enviando…';
+      return fetch(FN+'registro',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'create',fields:fields,docs:docs})}).then(function(r){return r.json();});
+    }).then(function(res){
+      if(!res.ok) throw new Error(res.error||'Error al enviar');
+      document.getElementById('formwrap').style.display='none';
+      var ok=document.getElementById('okbox'); ok.style.display='block';
+      ok.innerHTML='<div style="font-size:20px;font-weight:900;margin-bottom:8px;">✓ ¡Registro enviado!</div>'+
+        'Recibimos tu registro de afiliación al PASEM y tus documentos. Te enviamos un correo de confirmación.<br><br>'+
+        'A continuación revisaremos tu documentación. Una vez revisada, recibirás una notificación para <b>acudir a entregar los documentos en físico</b> a las oficinas del SNTE Sección 26.<br><br>Gracias por tu confianza.';
+      window.scrollTo({top:0,behavior:'smooth'});
+    }).catch(function(err){ msg.innerHTML='<span style="color:#b23b3b">Error: '+esc(err.message)+'</span>'; btn.disabled=false; btn.textContent='Enviar registro'; });
+  });
+</script>
+</body>
+</html>

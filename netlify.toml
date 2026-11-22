@@ -31,3 +31,9 @@
   to = "/formatos/index.html"
   status = 200
   force = true
+
+[[redirects]]
+  from = "/registro"
+  to = "/registro/index.html"
+  status = 200
+  force = true

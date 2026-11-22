@@ -5,7 +5,7 @@ const SECRET = process.env.SESSION_SECRET || 'pasem-secret-cambiar';
 function b64url(buf){ return Buffer.from(buf).toString('base64').replace(/=+$/,'').replace(/\+/g,'-').replace(/\//g,'_'); }
 function verify(token){ if(!token) return null; const parts=token.split('.'); if(parts.length!==3) return null; const data=parts[0]+'.'+parts[1]; const sig=b64url(crypto.createHmac('sha256',SECRET).update(data).digest()); if(sig!==parts[2]) return null; let p; try{ p=JSON.parse(Buffer.from(parts[1].replace(/-/g,'+').replace(/_/g,'/'),'base64').toString()); }catch(e){ return null; } if(p.exp&&Math.floor(Date.now()/1000)>p.exp) return null; return p; }
 
-const ALLOWED={ 'pasem-prov-docs':1, 'pasem-orden-docs':1 };
+const ALLOWED={ 'pasem-prov-docs':1, 'pasem-orden-docs':1, 'pasem-reg-docs':1, 'pasem-altas-docs':1 };
 
 // Subida/lectura autenticada de documentos (proveedores y órdenes), por partes, a Netlify Blobs.
 export const handler = async (event) => {

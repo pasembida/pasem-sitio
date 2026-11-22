@@ -1,0 +1,141 @@
+import { getStore } from '@netlify/blobs';
+import crypto from 'node:crypto';
+function makeStore(name){ const siteID=process.env.NETLIFY_SITE_ID||process.env.SITE_ID; const token=process.env.NETLIFY_API_TOKEN||process.env.NETLIFY_AUTH_TOKEN; if(siteID&&token) return getStore({name,siteID,token}); return getStore(name); }
+const SECRET = process.env.SESSION_SECRET || 'pasem-secret-cambiar';
+function b64url(buf){ return Buffer.from(buf).toString('base64').replace(/=+$/,'').replace(/\+/g,'-').replace(/\//g,'_'); }
+function verify(token){ if(!token) return null; const p=token.split('.'); if(p.length!==3) return null; const data=p[0]+'.'+p[1]; const sig=b64url(crypto.createHmac('sha256',SECRET).update(data).digest()); if(sig!==p[2]) return null; let o; try{ o=JSON.parse(Buffer.from(p[1].replace(/-/g,'+').replace(/_/g,'/'),'base64').toString()); }catch(e){ return null; } if(o.exp&&Math.floor(Date.now()/1000)>o.exp) return null; return o; }
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+export const handler = async (event) => {
+  const headers={'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
+  const store=makeStore('pasem-registros');
+
+  // ---- GET: lista para administración ----
+  if(event.httpMethod==='GET'){
+    const p=verify((event.headers.authorization||event.headers.Authorization||'').replace('Bearer ',''));
+    if(!p || !(p.role==='administracion'||p.role==='operacion')) return {statusCode:401,headers,body:JSON.stringify({error:'No autorizado'})};
+    try{
+      const {blobs}=await store.list();
+      const items=(await Promise.all(blobs.filter(b=>b.key.indexOf('reg:')===0).map(b=>store.get(b.key,{type:'json'})))).filter(Boolean);
+      items.sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+      return {statusCode:200,headers,body:JSON.stringify(items)};
+    }catch(e){ return {statusCode:500,headers,body:JSON.stringify({error:String(e&&e.message?e.message:e)})}; }
+  }
+
+  if(event.httpMethod!=='POST') return {statusCode:405,headers,body:JSON.stringify({error:'Método no permitido'})};
+
+  let body={}; try{ body=JSON.parse(event.body||'{}'); }catch(e){ return {statusCode:400,headers,body:JSON.stringify({error:'JSON inválido'})}; }
+
+  // ---- POST público: crear registro ----
+  if(!body.action || body.action==='create'){
+    if(body['bot-field']) return {statusCode:200,headers,body:JSON.stringify({ok:true})}; // honeypot
+    const f=body.fields||{};
+    const docs=Array.isArray(body.docs)?body.docs:[];
+    const nombre=String(f['Nombre completo']||'').trim();
+    const curp=String(f['CURP']||'').trim().toUpperCase();
+    const correo=String(f['Correo electrónico']||'').trim();
+    const modalidad=String(f['Modalidad']||'').trim();
+    if(!nombre || !curp) return {statusCode:400,headers,body:JSON.stringify({error:'Faltan datos del titular (nombre y CURP).'})};
+    const id=crypto.randomUUID();
+    const rec={ id, createdAt:new Date().toISOString(), estado:'recibido', fields:f, docs, modalidad, curp, programa:'telesecundaria' };
+    await store.setJSON('reg:'+id, rec);
+
+    // Correo de confirmación al maestro
+    const key=process.env.RESEND_API_KEY;
+    let correoEnviado=false;
+    if(key && correo && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)){
+      try{
+        const base=(process.env.SITE_URL||'https://pasem.com').replace(/\/$/,'');
+        const snte=base+'/img/snte26.jpg', bida=base+'/img/bida.png';
+        const html='<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;background:#EAF6F6;font-family:Arial,Helvetica,sans-serif;color:#1f3442;">'+
+          '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EAF6F6;padding:20px 10px;"><tr><td align="center">'+
+          '<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border:1px solid #D9E9E9;border-radius:12px;overflow:hidden;">'+
+            '<tr><td style="padding:14px 18px;"><table role="presentation" width="100%"><tr><td align="left"><img src="'+snte+'" height="42"></td><td align="right"><img src="'+bida+'" height="42"></td></tr></table></td></tr>'+
+            '<tr><td style="background:#0E9A9C;padding:16px 18px;text-align:center;color:#fff;font-size:19px;font-weight:800;">Recibimos tu registro al PASEM</td></tr>'+
+            '<tr><td style="height:4px;background:#14B4B6;font-size:0;line-height:0;">&nbsp;</td></tr>'+
+            '<tr><td style="padding:20px 22px;font-size:15px;line-height:1.7;color:#1f3442;">'+
+              (nombre?('Estimado(a) <b>'+esc(nombre)+'</b>,<br><br>'):'¡Hola!<br><br>')+
+              'Hemos recibido tu <b>registro de afiliación al PASEM</b> y los documentos que adjuntaste ('+docs.length+').<br><br>'+
+              'A continuación realizaremos la <b>revisión de tus documentos</b>. Una vez revisados, recibirás una nueva notificación indicándote que debes <b>acudir a entregarlos en físico</b> a las oficinas del SNTE Sección 26.<br><br>'+
+              'Modalidad elegida: <b>'+esc(modalidad||'(no indicada)')+'</b>.<br><br>'+
+              'Gracias por tu confianza.<br><br>Atentamente,<br><b>Equipo PASEM · Sección 26 del SNTE</b>'+
+            '</td></tr>'+
+            '<tr><td style="padding:0 22px 20px;color:#767676;font-size:11px;">PASEM · Sección 26 del SNTE · San Luis Potosí · Administrado por MULTICATERIN, S.A. de C.V. con respaldo de BIDA Seguros.</td></tr>'+
+          '</table></td></tr></table></body></html>';
+        const from=process.env.REGISTRO_FROM||process.env.MAIL_FROM||'PASEM <asistenciaseccion26@pasem.com>';
+        const r=await fetch('https://api.resend.com/emails',{ method:'POST', headers:{ 'Authorization':'Bearer '+key, 'Content-Type':'application/json' }, body:JSON.stringify({ from, to:[correo], subject:'PASEM — Recibimos tu registro de afiliación', html, text:'Recibimos tu registro al PASEM. Realizaremos la revisión de tus documentos y posteriormente te notificaremos para entregarlos en físico.' }) });
+        correoEnviado=r.ok;
+      }catch(e){}
+    }
+    // Aviso a la administración (opcional)
+    try{
+      const to=process.env.REGISTRO_TO||'asistenciaseccion26@pasem.com';
+      if(key){ const from=process.env.REGISTRO_FROM||process.env.MAIL_FROM||'PASEM <asistenciaseccion26@pasem.com>';
+        await fetch('https://api.resend.com/emails',{ method:'POST', headers:{ 'Authorization':'Bearer '+key, 'Content-Type':'application/json' }, body:JSON.stringify({ from, to:[to], subject:'PASEM — Nuevo registro de afiliación: '+(nombre||curp), html:'<p>Nuevo registro recibido.</p><p><b>Titular:</b> '+esc(nombre)+'<br><b>CURP:</b> '+esc(curp)+'<br><b>Modalidad:</b> '+esc(modalidad)+'<br><b>Documentos:</b> '+docs.length+'</p><p>Revísalo en el panel → Conciliación de registros.</p>', text:'Nuevo registro: '+nombre+' / '+curp+' / '+modalidad }) });
+      }
+    }catch(e){}
+    return {statusCode:200,headers,body:JSON.stringify({ ok:true, id, correoEnviado })};
+  }
+
+  // ---- Acciones de administración (requieren sesión) ----
+  const p=verify((event.headers.authorization||event.headers.Authorization||'').replace('Bearer ',''));
+  if(!p || !(p.role==='administracion'||p.role==='operacion')) return {statusCode:401,headers,body:JSON.stringify({error:'No autorizado'})};
+
+  // Marcar / desmarcar un documento como revisado
+  if(body.action==='check-doc'){
+    if(!body.id || !body.docId) return {statusCode:400,headers,body:JSON.stringify({error:'Faltan datos'})};
+    const rec=await store.get('reg:'+body.id,{type:'json'}); if(!rec) return {statusCode:404,headers,body:JSON.stringify({error:'Registro no encontrado'})};
+    rec.checks=rec.checks||{}; rec.checks[body.docId]=!!body.checked;
+    if(rec.estado==='recibido') rec.estado='en-revision';
+    await store.setJSON('reg:'+rec.id, rec);
+    return {statusCode:200,headers,body:JSON.stringify({ok:true, checks:rec.checks, estado:rec.estado})};
+  }
+
+  // Aprobar registro: notifica al maestro (entrega física + liga de alta de beneficiarios)
+  if(body.action==='aprobar'){
+    if(p.role!=='administracion') return {statusCode:401,headers,body:JSON.stringify({error:'Solo administración puede aprobar'})};
+    if(!body.id) return {statusCode:400,headers,body:JSON.stringify({error:'Falta id'})};
+    const rec=await store.get('reg:'+body.id,{type:'json'}); if(!rec) return {statusCode:404,headers,body:JSON.stringify({error:'Registro no encontrado'})};
+    const f=rec.fields||{};
+    const correo=String(f['Correo electrónico']||'').trim();
+    const nombre=String(f['Nombre completo']||'').trim();
+    rec.estado='aprobado'; rec.aprobadoAt=new Date().toISOString(); rec.aprobadoPor=p.email||'usuario';
+    await store.setJSON('reg:'+rec.id, rec);
+    const key=process.env.RESEND_API_KEY; let correoEnviado=false, reason='';
+    if(key && correo && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)){
+      try{
+        const base=(process.env.SITE_URL||'https://pasem.com').replace(/\/$/,'');
+        const snte=base+'/img/snte26.jpg', bida=base+'/img/bida.png'; const altaUrl=base+'/alta';
+        const html='<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;background:#EAF6F6;font-family:Arial,Helvetica,sans-serif;color:#1f3442;">'+
+          '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EAF6F6;padding:20px 10px;"><tr><td align="center">'+
+          '<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border:1px solid #D9E9E9;border-radius:12px;overflow:hidden;">'+
+            '<tr><td style="padding:14px 18px;"><table role="presentation" width="100%"><tr><td align="left"><img src="'+snte+'" height="42"></td><td align="right"><img src="'+bida+'" height="42"></td></tr></table></td></tr>'+
+            '<tr><td style="background:#1e9e52;padding:16px 18px;text-align:center;color:#fff;font-size:19px;font-weight:800;">✓ ¡Tu registro fue exitoso!</td></tr>'+
+            '<tr><td style="height:4px;background:#14B4B6;font-size:0;line-height:0;">&nbsp;</td></tr>'+
+            '<tr><td style="padding:20px 22px;font-size:15px;line-height:1.7;color:#1f3442;">'+
+              (nombre?('Estimado(a) <b>'+esc(nombre)+'</b>,<br><br>'):'¡Hola!<br><br>')+
+              'Revisamos tu documentación y tu <b>registro de afiliación al PASEM fue aprobado</b>. ¡Felicidades!<br><br>'+
+              '<b>1) Entrega tus documentos en físico</b><br>'+
+              'Debes acudir a entregar tus documentos firmados en las oficinas de <b>BIDA Seguros</b>, dentro del SNTE Sección 26:<br>'+
+              '<div style="background:#F4FAFA;border:1px solid #D9E9E9;border-radius:10px;padding:12px 14px;margin:8px 0;">'+
+                '📍 <b>Av. Himno Nacional No. 1800, Col. Burócrata, C.P. 78270, San Luis Potosí.</b><br>'+
+                '🕘 <b>Horario:</b> Lunes a viernes de 9:00 a 15:00 h y de 19:00 a 21:00 h.'+
+              '</div>'+
+              '<b>2) Da de alta a tus beneficiarios</b><br>'+
+              'Ya puedes registrar a tus beneficiarios en la siguiente liga. <b>En este paso ya no necesitas anexar la documentación de afiliación</b>, solo la de tus beneficiarios:<br>'+
+              '<div style="margin:10px 0;"><a href="'+altaUrl+'" style="display:inline-block;background:#DD6B20;color:#fff;text-decoration:none;font-weight:800;border-radius:10px;padding:12px 20px;">Alta de beneficiarios →</a></div>'+
+              '<div style="color:#767676;font-size:13px;">O copia esta liga: '+altaUrl+'</div><br>'+
+              'Atentamente,<br><b>Equipo PASEM · Sección 26 del SNTE</b>'+
+            '</td></tr>'+
+            '<tr><td style="padding:0 22px 20px;color:#767676;font-size:11px;">PASEM · Sección 26 del SNTE · San Luis Potosí · Administrado por MULTICATERIN, S.A. de C.V. con respaldo de BIDA Seguros.</td></tr>'+
+          '</table></td></tr></table></body></html>';
+        const from=process.env.REGISTRO_FROM||process.env.MAIL_FROM||'PASEM <asistenciaseccion26@pasem.com>';
+        const r=await fetch('https://api.resend.com/emails',{ method:'POST', headers:{ 'Authorization':'Bearer '+key, 'Content-Type':'application/json' }, body:JSON.stringify({ from, to:[correo], subject:'PASEM — Tu registro fue aprobado · siguientes pasos', html, text:'Tu registro al PASEM fue aprobado. Entrega tus documentos en físico en BIDA Seguros (Av. Himno Nacional 1800, Col. Burócrata, SLP), L-V 9-15h y 19-21h. Da de alta a tus beneficiarios en: '+altaUrl }) });
+        const rd=await r.json().catch(()=>({})); correoEnviado=r.ok; if(!r.ok) reason=(rd&&(rd.message||rd.name))||('HTTP '+r.status);
+      }catch(e){ reason=String(e&&e.message?e.message:e); }
+    } else { reason = !correo?'sin-correo':(!key?'sin-resend':''); }
+    return {statusCode:200,headers,body:JSON.stringify({ok:true, estado:'aprobado', correoEnviado, to:correo, reason})};
+  }
+
+  return {statusCode:400,headers,body:JSON.stringify({error:'Acción no válida'})};
+};

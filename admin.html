@@ -391,6 +391,7 @@
             <button class="tab" type="button" data-pane="altatitular">Alta titular</button>
             <button class="tab" type="button" data-pane="dependientes">Dependientes</button>
             <button class="tab" type="button" data-pane="altas">Altas recibidas</button>
+            <button class="tab" type="button" data-pane="registros" id="tab-registros-btn" style="display:none;">Conciliación de registros</button>
             <div class="nav-group">Documentos</div>
             <button class="tab" type="button" data-pane="expediente">Expediente</button>
             <button class="tab" type="button" data-pane="descargas">Descargas</button>
@@ -917,6 +918,27 @@
         <div class="table-wrap"><table class="dtable" id="alta-detail"><thead><tr><th>Campo</th><th>Valor</th></tr></thead><tbody></tbody></table></div>
       </div></div>
 
+      <!-- Conciliación de registros -->
+      <div class="tabpane" id="pane-registros">
+        <h2 class="pane-title">Conciliación de registros</h2>
+        <p style="color:var(--ink); font-size:14px; margin:0 0 14px;">Registros de afiliación recibidos desde <strong>pasem.com/registro</strong>. Revisa y marca cada documento; al aprobar se notifica al maestro para la entrega en físico y se le envía la liga de alta de beneficiarios.</p>
+        <div class="toolbar" style="margin-bottom:10px;">
+          <input type="text" id="reg-q" placeholder="Buscar por nombre, CURP o correo…" style="flex:1;min-width:180px;">
+          <select id="reg-filtro" style="min-width:160px;">
+            <option value="">Todos los estados</option>
+            <option value="recibido">Recibido</option>
+            <option value="en-revision">En revisión</option>
+            <option value="aprobado">Aprobado</option>
+          </select>
+          <button class="btn btn-ghost" id="reg-refresh" type="button">Actualizar</button>
+        </div>
+        <div id="reg-count" style="font-size:13px;color:var(--ink);margin-bottom:8px;"></div>
+        <div class="table-wrap"><table class="dtable" id="reg-table">
+          <thead><tr><th>Fecha</th><th>Titular</th><th>CURP</th><th>Modalidad</th><th>Docs</th><th>Estado</th><th>Acciones</th></tr></thead>
+          <tbody><tr><td colspan="7">Cargando…</td></tr></tbody>
+        </table></div>
+      </div>
+
       <!-- Reporte Comercial -->
       <div class="tabpane" id="pane-informe">
         <h3 style="font-family:var(--serif); color:var(--brown-deep); margin:0 0 6px;">Reporte Comercial</h3>
@@ -1125,7 +1147,7 @@
 </script>
 <script>
 (function(){
-  var AUTH='/.netlify/functions/auth', RECORDS='/.netlify/functions/records', USERS='/.netlify/functions/usuarios', BEN='/.netlify/functions/beneficiarios', EXPED='/.netlify/functions/expediente', ALTAS='/.netlify/functions/alta', INFORME='/.netlify/functions/informe', PROV='/.netlify/functions/proveedores', ORDENES='/.netlify/functions/ordenes', DOCUP='/.netlify/functions/docs-upload', CONFIG='/.netlify/functions/config';
+  var AUTH='/.netlify/functions/auth', RECORDS='/.netlify/functions/records', USERS='/.netlify/functions/usuarios', BEN='/.netlify/functions/beneficiarios', EXPED='/.netlify/functions/expediente', ALTAS='/.netlify/functions/alta', INFORME='/.netlify/functions/informe', PROV='/.netlify/functions/proveedores', ORDENES='/.netlify/functions/ordenes', DOCUP='/.netlify/functions/docs-upload', CONFIG='/.netlify/functions/config', REGISTROS='/.netlify/functions/registro';
   var SOLIC='/.netlify/functions/solicitudes', DEPS='/.netlify/functions/dependientes', TITU='/.netlify/functions/titulares';
   var STAGE_MAIL='telesecundariaseccion26@pasem.com';
   var MAIL='/.netlify/functions/enviar-correo', MAIL_TO='telesecundariaseccion26@pasem.com', MAIL_CC='bidaseguros@bidaseguros.org';
@@ -1205,6 +1227,7 @@
     document.querySelectorAll('.tabpane').forEach(function(p){ p.classList.toggle('active', p.id==='pane-'+name); });
     if(name==='usuarios' && isAdmin()) loadUsers();
     if(name==='altas'){ ALTAS_PAGE=1; ALTAS_Q=''; ALTAS_FILTRO=''; loadAltas(); }
+    if(name==='registros' && isAdmin()){ loadRegistros(); }
     if(name==='expediente') loadExp();
     if(name==='proveedores' && isAdmin()) loadProv();
     if(name==='ordenpago') initOrdenPago();
@@ -1266,6 +1289,7 @@
     var ti=document.getElementById('tab-informe-btn'); if(ti) ti.style.display = isAdmin()?'':'none';
     var trd=document.getElementById('tab-repdir-btn'); if(trd) trd.style.display = isAdmin()?'':'none';
     var nr=document.getElementById('nav-reportes'); if(nr) nr.style.display = isAdmin()?'':'none';
+    var trg=document.getElementById('tab-registros-btn'); if(trg) trg.style.display = isAdmin()?'':'none';
     activate('solicitud');
   }
   async function doLogin(){
@@ -2746,6 +2770,93 @@
       }catch(e){ msg.textContent='Error: '+e.message; }
     });
   }
+  // ================= CONCILIACIÓN DE REGISTROS =================
+  var REG_CACHE=[];
+  function regEstadoBadge(e){
+    if(e==='aprobado') return '<span style="background:#E8F8EE;color:#1e7e3e;border:1px solid #bfe6cc;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:800;">Aprobado</span>';
+    if(e==='en-revision') return '<span style="background:#FFF7EF;color:#b9770e;border:1px solid #f1cba6;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:800;">En revisión</span>';
+    return '<span style="background:#EEF6FF;color:#2563a6;border:1px solid #bcd6f0;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:800;">Recibido</span>';
+  }
+  async function loadRegistros(){
+    var tb=document.querySelector('#reg-table tbody'); if(!tb) return;
+    tb.innerHTML='<tr><td colspan="7">Cargando…</td></tr>';
+    try{
+      var r=await api(REGISTROS); var items=await r.json();
+      if(!r.ok) throw new Error((items&&items.error)||('HTTP '+r.status));
+      REG_CACHE=Array.isArray(items)?items:[]; renderRegistros();
+    }catch(e){ tb.innerHTML='<tr><td colspan="7">Error: '+esc(e.message)+'</td></tr>'; }
+  }
+  function renderRegistros(){
+    var tb=document.querySelector('#reg-table tbody'); var cnt=document.getElementById('reg-count');
+    var q=(document.getElementById('reg-q')||{}).value||''; var fe=(document.getElementById('reg-filtro')||{}).value||'';
+    var lista=REG_CACHE.filter(function(x){ var f=x.fields||{}; return matchQ(q,[f['Nombre completo'],f['CURP'],f['Correo electrónico']]) && (!fe || (x.estado||'recibido')===fe); });
+    if(cnt) cnt.textContent='Mostrando '+lista.length+' de '+REG_CACHE.length+' registro(s).';
+    if(!lista.length){ tb.innerHTML='<tr><td colspan="7">No hay registros'+((q||fe)?' con ese criterio':'')+'.</td></tr>'; return; }
+    tb.innerHTML='';
+    lista.forEach(function(x){ var f=x.fields||{}; var idx=REG_CACHE.indexOf(x);
+      var docs=(x.docs||[]).length; var checks=x.checks||{}; var okN=(x.docs||[]).filter(function(d){return checks[d.docId];}).length;
+      var fecha=(x.createdAt||'').slice(0,10);
+      var modal=esc(f['Modalidad']||'')+(f['Tipo de plaza']?(' · '+esc(f['Tipo de plaza'])):'')+(f['Forma de pago PASEM']?(' · '+esc(f['Forma de pago PASEM'])):'');
+      var tr=document.createElement('tr');
+      tr.innerHTML='<td>'+esc(fecha)+'</td><td><strong>'+esc(f['Nombre completo']||'')+'</strong><br><span style="color:#767676;font-size:12px">'+esc(f['Correo electrónico']||'')+'</span></td>'+
+        '<td>'+esc(f['CURP']||'')+'</td><td style="font-size:13px">'+modal+'</td>'+
+        '<td>'+okN+'/'+docs+'</td><td>'+regEstadoBadge(x.estado)+'</td>'+
+        '<td style="white-space:nowrap"><button class="btn btn-mini" data-regver="'+idx+'" type="button" style="color:#0E9A9C">Conciliar</button></td>';
+      tb.appendChild(tr);
+    });
+    tb.querySelectorAll('[data-regver]').forEach(function(b){ b.addEventListener('click', function(){ abrirConciliarRegistro(Number(b.getAttribute('data-regver'))); }); });
+  }
+  function abrirConciliarRegistro(idx){
+    var x=REG_CACHE[idx]; if(!x) return; var f=x.fields||{}; var checks=x.checks||{};
+    var docs=x.docs||[];
+    var ov=document.createElement('div'); ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9999;padding:14px;';
+    var datos='<b>Titular:</b> '+esc(f['Nombre completo']||'')+'<br><b>CURP:</b> '+esc(f['CURP']||'')+' &nbsp; <b>RFC:</b> '+esc(f['RFC']||'')+'<br>'+
+      '<b>Teléfono:</b> '+esc(f['Teléfono de contacto']||'')+' &nbsp; <b>Correo:</b> '+esc(f['Correo electrónico']||'')+'<br>'+
+      '<b>Modalidad:</b> '+esc(f['Modalidad']||'')+(f['Tipo de plaza']?(' · '+esc(f['Tipo de plaza'])):'')+(f['Forma de pago PASEM']?('<br><b>Forma de pago:</b> '+esc(f['Forma de pago PASEM'])):'');
+    var docsHtml = docs.length ? docs.map(function(d){
+      var ck=checks[d.docId]?'checked':'';
+      return '<div style="display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:10px;padding:9px 11px;margin-bottom:7px;">'+
+        '<input type="checkbox" class="reg-ck" data-doc="'+esc(d.docId)+'" '+ck+' style="width:18px;height:18px;">'+
+        '<span style="flex:1;font-size:13.5px;">'+esc(d.filename||'documento')+'</span>'+
+        '<button class="btn-mini" type="button" data-rdl="'+esc(d.docId)+'|'+esc(d.filename||'doc')+'">⬇ Ver</button>'+
+      '</div>';
+    }).join('') : '<div style="color:var(--ink)">Este registro no trae documentos adjuntos.</div>';
+    var aprobado = x.estado==='aprobado';
+    ov.innerHTML='<div style="background:#fff;border-radius:14px;max-width:620px;width:100%;padding:20px;max-height:92vh;overflow:auto;">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><h3 style="margin:0;font-family:var(--serif);color:var(--brown-deep)">Conciliar registro</h3><button class="btn btn-ghost btn-mini" id="rc-close" type="button">Cerrar</button></div>'+
+      '<div style="font-size:14px;color:var(--ink);line-height:1.7;margin-bottom:12px;">'+datos+'<br><b>Estado:</b> '+regEstadoBadge(x.estado)+'</div>'+
+      '<div style="font-weight:800;font-size:13px;margin-bottom:6px;color:var(--brown-deep)">Documentos ('+docs.filter(function(d){return checks[d.docId];}).length+'/'+docs.length+' revisados)</div>'+
+      docsHtml+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px;">'+
+        (aprobado?'<span style="color:#1e7e3e;font-weight:800;">✓ Registro aprobado</span>':'<button class="btn btn-primary btn-mini" id="rc-aprobar" type="button">✓ Aprobar y notificar al maestro</button>')+
+        '<span id="rc-msg" style="font-size:13px;color:var(--ink)"></span>'+
+      '</div>'+
+      '<div style="font-size:12px;color:var(--ink);margin-top:8px;">Al aprobar se envía al maestro la confirmación con la dirección de entrega (BIDA Seguros · SNTE 26) y la liga de alta de beneficiarios.</div>'+
+    '</div>';
+    document.body.appendChild(ov);
+    function close(){ try{ document.body.removeChild(ov); }catch(e){} }
+    ov.addEventListener('click', function(e){ if(e.target===ov) close(); });
+    ov.querySelector('#rc-close').addEventListener('click', close);
+    ov.querySelectorAll('[data-rdl]').forEach(function(b){ b.addEventListener('click', function(){ var pr=b.getAttribute('data-rdl').split('|'); downloadDocFrom('pasem-reg-docs',pr[0],pr[1]); }); });
+    // checkboxes
+    ov.querySelectorAll('.reg-ck').forEach(function(cb){ cb.addEventListener('change', async function(){
+      try{ var r=await api(REGISTROS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'check-doc', id:x.id, docId:cb.getAttribute('data-doc'), checked:cb.checked})});
+        var d=await r.json(); if(r.ok){ x.checks=d.checks; x.estado=d.estado; } }catch(e){}
+    }); });
+    var ap=ov.querySelector('#rc-aprobar'); var msg=ov.querySelector('#rc-msg');
+    if(ap) ap.addEventListener('click', async function(){
+      var total=docs.length, okN=docs.filter(function(d){return (x.checks||{})[d.docId];}).length;
+      if(okN<total){ if(!confirm('Has revisado '+okN+' de '+total+' documentos. ¿Aprobar de todos modos?')) return; }
+      if(!confirm('¿Aprobar el registro y enviar la notificación al maestro?')) return;
+      ap.disabled=true; msg.textContent='Aprobando…';
+      try{ var r=await api(REGISTROS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'aprobar', id:x.id})}); var d=await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
+        var t='Registro aprobado.'; t+= d.correoEnviado?(' ✉ Notificación enviada a '+(d.to||'')+'.'):(d.reason==='sin-correo'?' (sin correo, no se notificó)':(d.reason==='sin-resend'?' (correo no configurado)':' (no se pudo enviar el correo)'));
+        alert(t); close(); loadRegistros();
+      }catch(e){ msg.textContent='Error: '+e.message; ap.disabled=false; }
+    });
+  }
+  (function(){ var q=document.getElementById('reg-q'); if(q) q.addEventListener('input', renderRegistros); var fl=document.getElementById('reg-filtro'); if(fl) fl.addEventListener('change', renderRegistros); var rf=document.getElementById('reg-refresh'); if(rf) rf.addEventListener('click', loadRegistros); })();
+
   async function confirmarAlta(idx, btn){
     var a=ALTAS_CACHE[idx]; if(!a) return; var f=a.fields||{};
     var correo=(f['Titular - Correo']||f['Contacto - Correo']||'').trim();
