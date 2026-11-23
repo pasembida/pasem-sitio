@@ -34,6 +34,8 @@
   .doc{border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px;background:#FBFDFD}
   .doc .dl-h{font-weight:700;font-size:14px;margin-bottom:6px}
   .doc .n{font-size:12px;color:var(--teal-soft);font-weight:800;margin-right:4px}
+  .help{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;border:0;background:var(--teal-soft);color:#fff;font-weight:900;font-size:13px;cursor:pointer;vertical-align:middle;margin-left:2px}
+  .help:hover{background:#0b7e80}
   .ok{color:#1e9e52;font-weight:700;font-size:12px}
   .hp{position:absolute;left:-9999px}
   .btn{display:block;width:100%;background:var(--orange);color:#fff;border:0;border-radius:12px;padding:15px;font-size:17px;font-weight:800;cursor:pointer;margin-top:6px}
@@ -116,26 +118,27 @@
   var FN='/.netlify/functions/';
   var D='/registro/docs/';
   // Documentos por modalidad. foto:true => input de cámara/galería
+  var EJ='/registro/ej/';
   var DOCS_FERPTTE=[
-    {n:1,lbl:'Carta consentimiento y autorización (Préstamo FERPTTE)'},
-    {n:2,lbl:'Solicitud de Préstamo FERPTTE'},
-    {n:3,lbl:'Autorización domiciliación Banorte'},
-    {n:4,lbl:'INE vigente por ambos lados (copia legible)'},
-    {n:5,lbl:'Último estado de cuenta bancario Banorte (con CLABE)'},
-    {n:6,lbl:'Últimos dos talones de pago de nómina'},
-    {n:7,lbl:'Comprobante de domicilio (no mayor a 3 meses)'},
-    {n:8,lbl:'Fotografía mostrando la Carta de consentimiento firmada', foto:true}
+    {n:1,lbl:'Carta consentimiento y autorización (Préstamo FERPTTE)', ej:EJ+'carta-ferptte.png'},
+    {n:2,lbl:'Solicitud de Préstamo FERPTTE', ej:EJ+'solicitud-ferptte.png'},
+    {n:3,lbl:'Autorización domiciliación Banorte', ej:EJ+'domiciliacion.png'},
+    {n:4,lbl:'INE vigente por ambos lados (copia legible)', ej:EJ+'ine.svg'},
+    {n:5,lbl:'Último estado de cuenta bancario Banorte (con CLABE)', ej:EJ+'estado-cuenta.svg'},
+    {n:6,lbl:'Últimos dos talones de pago de nómina', ej:EJ+'talon.svg', count:2},
+    {n:7,lbl:'Comprobante de domicilio (no mayor a 3 meses)', ej:EJ+'domicilio.svg'},
+    {n:8,lbl:'Fotografía mostrando la Carta de consentimiento firmada', foto:true, ej:EJ+'foto.jpg'}
   ];
   var DOCS_FEDERAL_EXTRA=[
-    {n:9,lbl:'Autorización consulta Blue Bull'},
-    {n:10,lbl:'Autorización reserva Blue Bull'}
+    {n:9,lbl:'Autorización consulta Blue Bull', ej:EJ+'bluebull-consulta.png'},
+    {n:10,lbl:'Autorización reserva Blue Bull', ej:EJ+'bluebull-reserva.png'}
   ];
   var DOCS_DIRECTO=[
-    {n:1,lbl:'Carta consentimiento y autorización (Pago directo)'},
-    {n:2,lbl:'INE vigente por ambos lados (copia legible)'},
-    {n:3,lbl:'Último talón de pago de nómina'},
-    {n:4,lbl:'Comprobante de domicilio (no mayor a 3 meses)'},
-    {n:5,lbl:'Comprobante de pago del programa PASEM'}
+    {n:1,lbl:'Carta consentimiento y autorización (Pago directo)', ej:EJ+'carta-directo.png'},
+    {n:2,lbl:'INE vigente por ambos lados (copia legible)', ej:EJ+'ine.svg'},
+    {n:3,lbl:'Último talón de pago de nómina', ej:EJ+'talon.svg'},
+    {n:4,lbl:'Comprobante de domicilio (no mayor a 3 meses)', ej:EJ+'domicilio.svg'},
+    {n:5,lbl:'Comprobante de pago del programa PASEM', ej:EJ+'comprobante-pago.svg'}
   ];
   var BASE_FERPTTE=[
     {t:'Carta de Consentimiento (FERPTTE)', f:'CARTA_CONSENTIMIENTO_PASEM_y_FERPTTE.pdf'},
@@ -203,10 +206,39 @@
       var acc=d.foto?'accept="image/jpeg,image/png,.jpg,.jpeg,.png" capture="environment"':'accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png"';
       var hint=d.foto?'<div style="font-size:12px;color:#767676;margin-bottom:4px;">Tómala con tu cámara o súbela desde tu galería/archivo. Imagen JPG/PNG, máx. 10 MB.</div>'
                      :'<div style="font-size:12px;color:#767676;margin-bottom:4px;">PDF o imagen (JPG/PNG), máx. 10 MB.</div>';
-      return '<div class="doc"><div class="dl-h"><span class="n">'+d.n+'.</span>'+esc(d.lbl)+'</div>'+hint+'<input type="file" class="docfile" data-label="'+esc(d.lbl)+'" '+acc+'><div class="ferr" style="color:#b23b3b;font-size:12px;margin-top:4px;"></div></div>';
+      // icono de ayuda con ejemplo
+      var help = d.ej ? '<button type="button" class="help" data-ej="'+esc(d.ej)+'" data-ejt="'+esc(d.lbl)+'" title="Ver ejemplo">?</button>' : '';
+      // uno o dos campos (talones)
+      var count=d.count||1; var campos='';
+      for(var c=1;c<=count;c++){
+        var sufijo=count>1?(' '+c):'';
+        var lblFull=d.lbl+(count>1?(' — Talón '+c):'');
+        campos+='<input type="file" class="docfile" data-label="'+esc(lblFull)+'" '+acc+'>'+
+                '<div class="ferr" style="color:#b23b3b;font-size:12px;margin:4px 0 '+(c<count?'10px':'0')+';"></div>'+
+                (count>1 && c<count?'':'');
+      }
+      return '<div class="doc"><div class="dl-h"><span class="n">'+d.n+'.</span>'+esc(d.lbl)+' '+help+'</div>'+hint+campos+'</div>';
     }).join('');
     // validación por archivo al seleccionar
     docInputs.querySelectorAll('.docfile').forEach(function(inp){ inp.addEventListener('change', function(){ validarInput(inp); }); });
+    // icono de ayuda -> modal de ejemplo
+    docInputs.querySelectorAll('.help').forEach(function(h){ h.addEventListener('click', function(){ verEjemplo(h.getAttribute('data-ej'), h.getAttribute('data-ejt')); }); });
+  }
+  function verEjemplo(src, titulo){
+    var ov=document.createElement('div');
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px;';
+    ov.innerHTML='<div style="background:#fff;border-radius:14px;max-width:560px;width:100%;max-height:92vh;overflow:auto;">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid #eee;">'+
+        '<strong style="font-size:15px;color:#333;">Ejemplo: '+esc(titulo)+'</strong>'+
+        '<button type="button" id="ej-x" style="border:0;background:#f0f0f0;border-radius:8px;width:30px;height:30px;font-size:16px;cursor:pointer;">×</button>'+
+      '</div>'+
+      '<div style="padding:14px;text-align:center;"><img src="'+esc(src)+'" alt="Ejemplo" style="max-width:100%;border:1px solid #e3e3e3;border-radius:8px;"></div>'+
+      '<div style="padding:0 16px 14px;color:#767676;font-size:12.5px;text-align:center;">Imagen de referencia. Sube tu documento real (PDF o imagen).</div>'+
+    '</div>';
+    document.body.appendChild(ov);
+    function close(){ try{ document.body.removeChild(ov); }catch(e){} }
+    ov.addEventListener('click', function(e){ if(e.target===ov) close(); });
+    ov.querySelector('#ej-x').addEventListener('click', close);
   }
   var MAX_BYTES=10*1024*1024;
   var ALLOWED=['pdf','jpg','jpeg','png'];
