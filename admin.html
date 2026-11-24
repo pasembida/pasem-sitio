@@ -1147,7 +1147,7 @@
 </script>
 <script>
 (function(){
-  var AUTH='/.netlify/functions/auth', RECORDS='/.netlify/functions/records', USERS='/.netlify/functions/usuarios', BEN='/.netlify/functions/beneficiarios', EXPED='/.netlify/functions/expediente', ALTAS='/.netlify/functions/alta', INFORME='/.netlify/functions/informe', PROV='/.netlify/functions/proveedores', ORDENES='/.netlify/functions/ordenes', DOCUP='/.netlify/functions/docs-upload', CONFIG='/.netlify/functions/config', REGISTROS='/.netlify/functions/registro';
+  var AUTH='/.netlify/functions/auth', RECORDS='/.netlify/functions/records', USERS='/.netlify/functions/usuarios', BEN='/.netlify/functions/beneficiarios', EXPED='/.netlify/functions/expediente', ALTAS='/.netlify/functions/alta', INFORME='/.netlify/functions/informe', PROV='/.netlify/functions/proveedores', ORDENES='/.netlify/functions/ordenes', DOCUP='/.netlify/functions/docs-upload', CONFIG='/.netlify/functions/config', REGISTROS='/.netlify/functions/registro', EXPTIT='/.netlify/functions/expediente-titular';
   var SOLIC='/.netlify/functions/solicitudes', DEPS='/.netlify/functions/dependientes', TITU='/.netlify/functions/titulares';
   var STAGE_MAIL='telesecundariaseccion26@pasem.com';
   var MAIL='/.netlify/functions/enviar-correo', MAIL_TO='telesecundariaseccion26@pasem.com', MAIL_CC='bidaseguros@bidaseguros.org';
@@ -2801,10 +2801,20 @@
       tr.innerHTML='<td>'+esc(fecha)+'</td><td><strong>'+esc(f['Nombre completo']||'')+'</strong><br><span style="color:#767676;font-size:12px">'+esc(f['Correo electrónico']||'')+'</span></td>'+
         '<td>'+esc(f['CURP']||'')+'</td><td style="font-size:13px">'+modal+'</td>'+
         '<td>'+okN+'/'+docs+'</td><td>'+regEstadoBadge(x.estado)+'</td>'+
-        '<td style="white-space:nowrap"><button class="btn btn-mini" data-regver="'+idx+'" type="button" style="color:#0E9A9C">Conciliar</button></td>';
+        '<td style="white-space:nowrap"><button class="btn btn-mini" data-regver="'+idx+'" type="button" style="color:#0E9A9C">Conciliar</button> <button class="btn btn-mini" data-regdel="'+idx+'" type="button" style="color:#b23b3b">Eliminar</button></td>';
       tb.appendChild(tr);
     });
     tb.querySelectorAll('[data-regver]').forEach(function(b){ b.addEventListener('click', function(){ abrirConciliarRegistro(Number(b.getAttribute('data-regver'))); }); });
+    tb.querySelectorAll('[data-regdel]').forEach(function(b){ b.addEventListener('click', function(){ eliminarRegistro(Number(b.getAttribute('data-regdel'))); }); });
+  }
+  async function eliminarRegistro(idx){
+    var x=REG_CACHE[idx]; if(!x) return; var f=x.fields||{};
+    if(!confirm('¿Eliminar el registro de '+(f['Nombre completo']||x.id)+'?\n\nEsto NO elimina al titular si ya fue aprobado e incorporado al padrón; solo borra este registro de la lista de conciliación.\n\nEsta acción no se puede deshacer.')) return;
+    try{
+      var r=await api(REGISTROS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete', id:x.id})});
+      var d=await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
+      loadRegistros();
+    }catch(e){ alert('No se pudo eliminar: '+e.message); }
   }
   function abrirConciliarRegistro(idx){
     var x=REG_CACHE[idx]; if(!x) return; var f=x.fields||{}; var checks=x.checks||{};
@@ -2818,19 +2828,25 @@
       return '<div style="display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:10px;padding:9px 11px;margin-bottom:7px;">'+
         '<input type="checkbox" class="reg-ck" data-doc="'+esc(d.docId)+'" '+ck+' style="width:18px;height:18px;">'+
         '<span style="flex:1;font-size:13.5px;">'+esc(d.filename||'documento')+'</span>'+
+        '<span class="ck-fb" style="font-size:11px;color:#1e7e3e;min-width:58px;text-align:right;">'+(checks[d.docId]?'revisado':'')+'</span>'+
         '<button class="btn-mini" type="button" data-rdl="'+esc(d.docId)+'|'+esc(d.filename||'doc')+'">⬇ Ver</button>'+
       '</div>';
     }).join('') : '<div style="color:var(--ink)">Este registro no trae documentos adjuntos.</div>';
+    var editNote = '<div style="font-size:12px;color:#767676;margin:2px 0 8px;">Puedes marcar o desmarcar los documentos en cualquier momento, incluso después de aprobado.</div>';
     var aprobado = x.estado==='aprobado';
     ov.innerHTML='<div style="background:#fff;border-radius:14px;max-width:620px;width:100%;padding:20px;max-height:92vh;overflow:auto;">'+
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><h3 style="margin:0;font-family:var(--serif);color:var(--brown-deep)">Conciliar registro</h3><button class="btn btn-ghost btn-mini" id="rc-close" type="button">Cerrar</button></div>'+
       '<div style="font-size:14px;color:var(--ink);line-height:1.7;margin-bottom:12px;">'+datos+'<br><b>Estado:</b> '+regEstadoBadge(x.estado)+'</div>'+
       '<div style="font-weight:800;font-size:13px;margin-bottom:6px;color:var(--brown-deep)">Documentos ('+docs.filter(function(d){return checks[d.docId];}).length+'/'+docs.length+' revisados)</div>'+
+      editNote+
       docsHtml+
       '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px;">'+
         (aprobado?'<span style="color:#1e7e3e;font-weight:800;">✓ Registro aprobado</span>':'<button class="btn btn-primary btn-mini" id="rc-aprobar" type="button">✓ Aprobar y notificar al maestro</button>')+
+        (aprobado?' <button class="btn btn-mini" id="rc-benlink" type="button" style="color:#0E9A9C">🔗 Liga de beneficiarios</button>':'')+
+        ' <button class="btn btn-mini" id="rc-exppw" type="button" style="color:#6b4ba3">🔑 Contraseña de expediente</button>'+
         '<span id="rc-msg" style="font-size:13px;color:var(--ink)"></span>'+
       '</div>'+
+      '<div id="rc-benbox" style="display:none;margin-top:10px;background:#F4FAFA;border:1px solid #D9E9E9;border-radius:10px;padding:10px 12px;"></div>'+
       '<div style="font-size:12px;color:var(--ink);margin-top:8px;">Al aprobar se envía al maestro la confirmación con la dirección de entrega (BIDA Seguros · SNTE 26) y la liga de alta de beneficiarios.</div>'+
     '</div>';
     document.body.appendChild(ov);
@@ -2840,9 +2856,39 @@
     ov.querySelectorAll('[data-rdl]').forEach(function(b){ b.addEventListener('click', function(){ var pr=b.getAttribute('data-rdl').split('|'); downloadDocFrom('pasem-reg-docs',pr[0],pr[1]); }); });
     // checkboxes
     ov.querySelectorAll('.reg-ck').forEach(function(cb){ cb.addEventListener('change', async function(){
+      var fb=cb.parentNode.querySelector('.ck-fb'); if(fb) fb.textContent='guardando…';
       try{ var r=await api(REGISTROS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'check-doc', id:x.id, docId:cb.getAttribute('data-doc'), checked:cb.checked})});
-        var d=await r.json(); if(r.ok){ x.checks=d.checks; x.estado=d.estado; } }catch(e){}
+        var d=await r.json(); if(r.ok){ x.checks=d.checks; x.estado=d.estado; if(fb) fb.textContent=cb.checked?'✓ revisado':''; }
+        else { if(fb) fb.textContent='error'; }
+      }catch(e){ if(fb) fb.textContent='error'; }
     }); });
+    var bl=ov.querySelector('#rc-benlink');
+    if(bl) bl.addEventListener('click', async function(){
+      var box=ov.querySelector('#rc-benbox'); box.style.display='block'; box.innerHTML='Generando liga…';
+      try{ var r=await api(REGISTROS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'gen-benlink', id:x.id})}); var d=await r.json();
+        if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
+        if(!d.ok && d.reason==='no-aprobado'){ box.innerHTML='Primero aprueba el registro para generar la liga.'; return; }
+        box.innerHTML='<div style="font-weight:800;color:#0b7e80;margin-bottom:6px;">Liga de registro de beneficiarios para este titular</div>'+
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'+
+            '<input type="text" id="bl-url" readonly value="'+esc(d.url)+'" style="flex:1;min-width:220px;font-size:13px;padding:8px;border:1px solid var(--border);border-radius:8px;background:#fff;">'+
+            '<button class="btn btn-mini" id="bl-copy" type="button" style="color:#0E9A9C">Copiar</button>'+
+            '<a class="btn btn-mini" href="'+esc(d.url)+'" target="_blank" rel="noopener" style="color:#0E9A9C;text-decoration:none;">Abrir</a>'+
+          '</div>'+
+          '<div style="font-size:12px;color:#767676;margin-top:6px;">Comparte esta liga con el titular (WhatsApp o correo). Es reutilizable: puede volver a entrar para agregar o quitar beneficiarios.</div>';
+        var cp=box.querySelector('#bl-copy'); cp.addEventListener('click', function(){ var i=box.querySelector('#bl-url'); i.select(); try{ document.execCommand('copy'); cp.textContent='¡Copiado!'; setTimeout(function(){cp.textContent='Copiar';},1500); }catch(e){} });
+      }catch(e){ box.innerHTML='Error: '+esc(e.message); }
+    });
+    var pw=ov.querySelector('#rc-exppw');
+    if(pw) pw.addEventListener('click', async function(){
+      var curp=(f['CURP']||'').trim().toUpperCase();
+      if(!curp){ alert('Este registro no tiene CURP.'); return; }
+      var nueva=prompt('Asignar/restablecer contraseña de expediente.\n\nUsuario del titular (no cambia): su CURP\n'+curp+'\n\nEscribe la contraseña (mínimo 4 caracteres):');
+      if(nueva==null) return; if(String(nueva).length<4){ alert('La contraseña debe tener al menos 4 caracteres.'); return; }
+      try{ var r=await api(EXPTIT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'set-password', curp:curp, password:nueva, nombre:(f['Nombre completo']||''), cert:(x.cert||'')})});
+        var d=await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
+        alert('✓ Contraseña asignada.\n\nUsuario: '+curp+'\nContraseña: '+nueva+'\n\nComparte estos datos con el titular para que entre a pasem.com/mi-expediente');
+      }catch(e){ alert('No se pudo asignar: '+e.message); }
+    });
     var ap=ov.querySelector('#rc-aprobar'); var msg=ov.querySelector('#rc-msg');
     if(ap) ap.addEventListener('click', async function(){
       var total=docs.length, okN=docs.filter(function(d){return (x.checks||{})[d.docId];}).length;

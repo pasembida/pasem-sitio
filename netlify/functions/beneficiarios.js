@@ -44,7 +44,7 @@ export const handler = async (event) => {
     for(const t of tits){
       if(results.length>=200) break;
       const hay=norm([t.cert,t.nombre,t.curp,t.rfc,t.cct,t.ct].join(' '));
-      if(matchAll(hay)){ results.push({cert:t.cert,tipo:'Titular',nombre:t.nombre,rfc:t.rfc,curp:t.curp,funcion:t.funcion||'',cct:t.cct||'',ct:t.ct||'',nivel:t.nivel||'',origen:'alta',programa:(t.programa||'telesecundaria')}); }
+      if(matchAll(hay)){ results.push({cert:t.cert,tipo:'Titular',nombre:t.nombre,rfc:t.rfc,curp:t.curp,funcion:t.funcion||'',cct:t.cct||'',ct:t.ct||'',nivel:t.nivel||'',origen:(t.origen||'alta'),programa:(t.programa||'telesecundaria')}); }
     }
   }catch(e){}
   // dependientes dados de alta

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PASEM · Mi expediente</title>
+<style>
+  :root{ --orange:#DD6B20; --teal:#14B4B6; --teal-soft:#0E9A9C; --ink:#333333; --muted:#767676; --border:#CFDADD; --bg:#EAF6F6; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);}
+  .topbar{height:8px;background:var(--orange);}
+  .wrap{max-width:720px;margin:0 auto;padding:22px 16px 56px;}
+  .brand{background:#fff;border:1px solid #D9E9E9;border-radius:16px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;}
+  .brand img{height:46px}.brand .center{text-align:center;flex:1}
+  .brand .pasem{font-size:26px;font-weight:900;color:var(--orange);letter-spacing:1px;line-height:1}
+  .brand .sub{font-size:12px;color:var(--muted);margin-top:2px}
+  h1{font-size:26px;margin:4px 0 6px;color:var(--ink);font-weight:900}
+  .lead{color:var(--muted);font-size:15px;margin:0 0 14px}
+  .sec{background:#fff;border:1px solid #D9E9E9;border-radius:16px;padding:18px;margin-bottom:16px}
+  .sec-h{font-weight:900;color:var(--orange);font-size:16px;margin:0 0 12px}
+  label{display:block;font-weight:700;font-size:14px;margin:0 0 4px;color:var(--ink)}
+  input{width:100%;font-size:15px;padding:12px;border:1px solid var(--border);border-radius:11px;background:#fff}
+  .field{margin-bottom:12px}
+  .btn{display:block;width:100%;background:var(--orange);color:#fff;border:0;border-radius:12px;padding:14px;font-size:16px;font-weight:800;cursor:pointer}
+  .btn:disabled{opacity:.6}
+  .btn-ghost{background:#fff;color:var(--teal-soft);border:1.5px solid var(--teal-soft)}
+  .doc{display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:8px;background:#F7FBFB}
+  .doc .nm{flex:1;font-size:13.5px}
+  .doc a{background:#E7F6F6;color:#0b7e80;border:1px solid #bfe6e6;border-radius:8px;padding:8px 12px;font-weight:700;font-size:13px;text-decoration:none}
+  .ben{border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px}
+  .ben .bt{font-weight:800;font-size:14px;margin-bottom:6px}
+  .ben .bt .pa{color:#0b7e80;font-weight:800;font-size:12px}
+  #msg{font-size:14px;margin-top:8px}
+  .hide{display:none}
+  .foot{color:var(--muted);font-size:12px;text-align:center;margin-top:18px;line-height:1.6}
+  .top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
+  .muted{color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+  <div class="topbar"></div>
+  <div class="wrap">
+    <div class="brand">
+      <img src="/img/snte26.jpg" alt="SNTE Seccion 26">
+      <div class="center"><div class="pasem">PASEM</div><div class="sub">Programa de Apoyo de Servicios Médicos · Sección 26 del SNTE · San Luis Potosí</div></div>
+      <img src="/img/bida.png" alt="BIDA Seguros">
+    </div>
+
+    <!-- Login -->
+    <div id="login">
+      <h1>Mi expediente</h1>
+      <p class="lead">Consulta los documentos de tu expediente PASEM. <b>Tu usuario es tu CURP</b> y la contraseña te la proporciona la oficina del PASEM.</p>
+      <div class="sec">
+        <form id="loginForm">
+          <div class="field"><label>CURP (usuario)</label><input type="text" id="curp" maxlength="18" style="text-transform:uppercase" autocomplete="username" required></div>
+          <div class="field"><label>Contraseña</label><input type="password" id="pass" autocomplete="current-password" required></div>
+          <button type="submit" class="btn" id="loginBtn">Entrar</button>
+          <div id="msg"></div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Expediente -->
+    <div id="exp" class="hide">
+      <div class="top">
+        <div><h1 style="margin:0">Mi expediente</h1><div class="muted" id="exp-sub"></div></div>
+        <button class="btn btn-ghost" id="logout" type="button" style="width:auto;padding:10px 14px;">Salir</button>
+      </div>
+
+      <div class="sec">
+        <div class="sec-h">Mis documentos (titular)</div>
+        <div id="docsTitular"><div class="muted">Sin documentos.</div></div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-h">Beneficiarios</div>
+        <div id="benef"><div class="muted">Sin beneficiarios registrados.</div></div>
+      </div>
+    </div>
+
+    <div class="foot">PASEM · Sección 26 del SNTE · Administrado por MULTICATERIN, S.A. de C.V. con respaldo de BIDA Seguros.</div>
+  </div>
+
+<script>
+  var FN='/.netlify/functions/';
+  var TK=sessionStorage.getItem('exp_tk')||'';
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function dlUrl(d){ return FN+'docs-upload?store='+encodeURIComponent(d.store||'pasem-reg-docs')+'&doc='+encodeURIComponent(d.docId); }
+
+  function show(view){ document.getElementById('login').classList.toggle('hide', view!=='login'); document.getElementById('exp').classList.toggle('hide', view!=='exp'); }
+
+  document.getElementById('loginForm').addEventListener('submit', function(e){
+    e.preventDefault(); var btn=document.getElementById('loginBtn'); var msg=document.getElementById('msg');
+    var curp=(document.getElementById('curp').value||'').trim().toUpperCase(); var pass=document.getElementById('pass').value||'';
+    btn.disabled=true; btn.textContent='Entrando…'; msg.textContent='';
+    fetch(FN+'expediente-titular',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'login',curp:curp,password:pass})})
+      .then(function(r){return r.json().then(function(d){return {ok:r.ok,d:d};});})
+      .then(function(x){ if(!x.ok||!x.d.ok) throw new Error(x.d.error||'No se pudo entrar'); TK=x.d.token; sessionStorage.setItem('exp_tk',TK); cargar(); })
+      .catch(function(err){ msg.innerHTML='<span style="color:#b23b3b">'+esc(err.message)+'</span>'; btn.disabled=false; btn.textContent='Entrar'; });
+  });
+
+  document.getElementById('logout').addEventListener('click', function(){ sessionStorage.removeItem('exp_tk'); TK=''; show('login'); document.getElementById('loginBtn').disabled=false; document.getElementById('loginBtn').textContent='Entrar'; });
+
+  function docRow(d){ return '<div class="doc"><span class="nm">'+esc(d.filename||'documento')+'</span><a href="'+dlUrl(d)+'" target="_blank" rel="noopener">⬇ Ver</a></div>'; }
+
+  function cargar(){
+    fetch(FN+'expediente-titular',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+TK},body:JSON.stringify({action:'expediente'})})
+      .then(function(r){ if(!r.ok) throw new Error('sesion'); return r.json(); })
+      .then(function(d){
+        show('exp');
+        document.getElementById('exp-sub').textContent=(d.nombre||'')+(d.cert?(' · '+d.cert):'');
+        var dt=document.getElementById('docsTitular');
+        dt.innerHTML=(d.docsTitular&&d.docsTitular.length)? d.docsTitular.map(docRow).join('') : '<div class="muted">Sin documentos.</div>';
+        var bf=document.getElementById('benef');
+        if(d.beneficiarios&&d.beneficiarios.length){
+          bf.innerHTML=d.beneficiarios.map(function(b){
+            return '<div class="ben"><div class="bt">'+esc(b.nombre||'')+' <span class="pa">· '+esc(b.parentesco||'')+'</span></div>'+
+              ((b.docs&&b.docs.length)? b.docs.map(docRow).join('') : '<div class="muted">Sin documentos.</div>')+'</div>';
+          }).join('');
+        } else bf.innerHTML='<div class="muted">Sin beneficiarios registrados.</div>';
+      })
+      .catch(function(){ sessionStorage.removeItem('exp_tk'); TK=''; show('login'); });
+  }
+
+  if(TK){ cargar(); } else { show('login'); }
+</script>
+</body>
+</html>

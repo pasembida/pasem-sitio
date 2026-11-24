@@ -37,3 +37,15 @@
   to = "/registro/index.html"
   status = 200
   force = true
+
+[[redirects]]
+  from = "/beneficiarios"
+  to = "/beneficiarios/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/mi-expediente"
+  to = "/mi-expediente/index.html"
+  status = 200
+  force = true

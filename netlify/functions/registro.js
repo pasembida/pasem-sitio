@@ -81,6 +81,28 @@ export const handler = async (event) => {
   const p=verify((event.headers.authorization||event.headers.Authorization||'').replace('Bearer ',''));
   if(!p || !(p.role==='administracion'||p.role==='operacion')) return {statusCode:401,headers,body:JSON.stringify({error:'No autorizado'})};
 
+  // Generar (o recuperar) la liga de registro de beneficiarios para un titular aprobado
+  if(body.action==='gen-benlink'){
+    if(!body.id) return {statusCode:400,headers,body:JSON.stringify({error:'Falta id'})};
+    const rec=await store.get('reg:'+body.id,{type:'json'}); if(!rec) return {statusCode:404,headers,body:JSON.stringify({error:'Registro no encontrado'})};
+    if(!rec.cert) return {statusCode:200,headers,body:JSON.stringify({ok:false, reason:'no-aprobado'})};
+    let token=rec.benToken;
+    if(!token){
+      token=crypto.randomBytes(12).toString('hex'); rec.benToken=token; await store.setJSON('reg:'+rec.id, rec);
+      try{ const bl=makeStore('pasem-benlinks'); await bl.setJSON('tok:'+token, { token, cert:rec.cert, titularNombre:(rec.fields||{})['Nombre completo']||'', curp:rec.curp||'', registroId:rec.id, createdAt:new Date().toISOString() }); }catch(e){}
+    }
+    const base=(process.env.SITE_URL||'https://pasem.com').replace(/\/$/,'');
+    return {statusCode:200,headers,body:JSON.stringify({ ok:true, token, url:base+'/beneficiarios?t='+token, cert:rec.cert })};
+  }
+
+  // Eliminar un registro (solo administración) — para duplicados
+  if(body.action==='delete'){
+    if(p.role!=='administracion') return {statusCode:401,headers,body:JSON.stringify({error:'Solo administración puede eliminar'})};
+    if(!body.id) return {statusCode:400,headers,body:JSON.stringify({error:'Falta id'})};
+    try{ await store.delete('reg:'+body.id); }catch(e){}
+    return {statusCode:200,headers,body:JSON.stringify({ok:true, deleted:body.id})};
+  }
+
   // Marcar / desmarcar un documento como revisado
   if(body.action==='check-doc'){
     if(!body.id || !body.docId) return {statusCode:400,headers,body:JSON.stringify({error:'Faltan datos'})};
@@ -100,6 +122,24 @@ export const handler = async (event) => {
     const correo=String(f['Correo electrónico']||'').trim();
     const nombre=String(f['Nombre completo']||'').trim();
     rec.estado='aprobado'; rec.aprobadoAt=new Date().toISOString(); rec.aprobadoPor=p.email||'usuario';
+    // Incorporar al padrón como titular (origen: registro-voluntario), si no existe por CURP
+    try{
+      const ts=makeStore('pasem-titulares');
+      const {blobs}=await ts.list();
+      const all=(await Promise.all(blobs.map(b=>ts.get(b.key,{type:'json'})))).filter(Boolean);
+      const curpU=String(f['CURP']||'').trim().toUpperCase();
+      let tit = curpU ? all.find(t=>String(t.curp||'').trim().toUpperCase()===curpU) : null;
+      if(!tit){
+        let maxN=0; all.forEach(t=>{ const m=/PASEM-(\d+)/.exec(String(t.cert||'')); if(m){ const n=parseInt(m[1],10); if(!isNaN(n)) maxN=Math.max(maxN,n); } });
+        const cert='PASEM-'+String(maxN+1).padStart(5,'0'); const tid=crypto.randomUUID();
+        tit={ id:tid, cert, nombre:f['Nombre completo']||'', curp:curpU, rfc:f['RFC']||'', telefono:f['Teléfono de contacto']||'', correo:f['Correo electrónico']||'',
+              funcion:'', cct:'', ct:'', nivel:'', programa:'telesecundaria', origen:'registro-voluntario',
+              modalidadPago:f['Modalidad']||'', personalTelesecundaria:f['Tipo de plaza']||'', formaPago:f['Forma de pago PASEM']||'',
+              inicioVigencia:rec.inicioVigencia||'', registroId:rec.id, createdAt:new Date().toISOString(), capturadoPor:p.email||'registro' };
+        await ts.setJSON(tid, tit);
+      }
+      rec.cert=tit.cert; rec.titularId=tit.id;
+    }catch(e){ rec.titularError=String(e&&e.message?e.message:e); }
     await store.setJSON('reg:'+rec.id, rec);
     const key=process.env.RESEND_API_KEY; let correoEnviado=false, reason='';
     if(key && correo && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)){
