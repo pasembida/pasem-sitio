@@ -392,6 +392,7 @@
             <button class="tab" type="button" data-pane="dependientes">Dependientes</button>
             <button class="tab" type="button" data-pane="altas">Altas recibidas</button>
             <button class="tab" type="button" data-pane="registros" id="tab-registros-btn" style="display:none;">Conciliación de registros</button>
+            <button class="tab" type="button" data-pane="expedientes" id="tab-expedientes-btn" style="display:none;">Expedientes</button>
             <div class="nav-group">Documentos</div>
             <button class="tab" type="button" data-pane="expediente">Expediente</button>
             <button class="tab" type="button" data-pane="descargas">Descargas</button>
@@ -939,6 +940,21 @@
         </table></div>
       </div>
 
+      <!-- Expedientes (buscador general) -->
+      <div class="tabpane" id="pane-expedientes">
+        <h2 class="pane-title">Expedientes</h2>
+        <p style="color:var(--ink); font-size:14px; margin:0 0 14px;">Busca cualquier titular (padrón base, registro voluntario o dado de alta) y consulta su expediente: documentos del titular y de sus beneficiarios, con opción de ver, descargar o bajar todo en ZIP.</p>
+        <div class="search-row" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+          <input id="exped-q" type="text" placeholder="Nombre, RFC o CURP del titular…" style="flex:1;min-width:200px;">
+          <button class="btn btn-primary" id="exped-btn" type="button">Buscar</button>
+        </div>
+        <div id="exped-count" style="font-size:13px;color:var(--ink);margin-bottom:8px;"></div>
+        <div class="table-wrap"><table class="dtable" id="exped-table">
+          <thead><tr><th>Certificado</th><th>Nombre</th><th>CURP</th><th>Origen</th><th></th></tr></thead>
+          <tbody><tr><td colspan="5">Escribe un nombre o CURP y presiona Buscar.</td></tr></tbody>
+        </table></div>
+      </div>
+
       <!-- Reporte Comercial -->
       <div class="tabpane" id="pane-informe">
         <h3 style="font-family:var(--serif); color:var(--brown-deep); margin:0 0 6px;">Reporte Comercial</h3>
@@ -1290,6 +1306,7 @@
     var trd=document.getElementById('tab-repdir-btn'); if(trd) trd.style.display = isAdmin()?'':'none';
     var nr=document.getElementById('nav-reportes'); if(nr) nr.style.display = isAdmin()?'':'none';
     var trg=document.getElementById('tab-registros-btn'); if(trg) trg.style.display = isAdmin()?'':'none';
+    var tex=document.getElementById('tab-expedientes-btn'); if(tex) tex.style.display = isAdmin()?'':'none';
     activate('solicitud');
   }
   async function doLogin(){
@@ -1629,6 +1646,7 @@
     for(var i=0;i<total;i++){ var part=b64.slice(i*CH,(i+1)*CH); var r=await api(DOCUP,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'chunk',store:store,docId:docId,index:i,data:part})}); if(!r.ok) throw new Error('Error al subir la parte '+(i+1)); }
     return { docId:docId, filename:file.name };
   }
+  function docLabel(fn){ fn=String(fn||'documento'); var parts=fn.split(' — '); if(parts.length>1 && /\.(pdf|jpe?g|png|docx?|xlsx?|heic)$/i.test(parts[parts.length-1].trim())){ parts.pop(); return parts.join(' — '); } return fn; }
   async function fetchDocBlob(store, docId){
     var r=await api(DOCUP+'?store='+encodeURIComponent(store)+'&doc='+encodeURIComponent(docId)); var d=await r.json(); if(!r.ok) throw new Error(d.error||'No se pudo obtener');
     var bin=atob(d.data); var bytes=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
@@ -2828,11 +2846,61 @@
       tr.innerHTML='<td>'+esc(fecha)+'</td><td><strong>'+esc(f['Nombre completo']||'')+'</strong><br><span style="color:#767676;font-size:12px">'+esc(f['Correo electrónico']||'')+'</span></td>'+
         '<td>'+esc(f['CURP']||'')+'</td><td style="font-size:13px">'+modal+'</td>'+
         '<td>'+okN+'/'+docs+'</td><td>'+regEstadoBadge(x.estado)+'</td>'+
-        '<td style="white-space:nowrap"><button class="btn btn-mini" data-regver="'+idx+'" type="button" style="color:#0E9A9C">Conciliar</button> <button class="btn btn-mini" data-regdel="'+idx+'" type="button" style="color:#b23b3b">Eliminar</button></td>';
+        '<td style="white-space:nowrap"><button class="btn btn-mini" data-regver="'+idx+'" type="button" style="color:#0E9A9C">Conciliar</button> <button class="btn btn-mini" data-regexp="'+idx+'" type="button" style="color:#6b4ba3">📁 Expediente</button> <button class="btn btn-mini" data-regdel="'+idx+'" type="button" style="color:#b23b3b">Eliminar</button></td>';
       tb.appendChild(tr);
     });
     tb.querySelectorAll('[data-regver]').forEach(function(b){ b.addEventListener('click', function(){ abrirConciliarRegistro(Number(b.getAttribute('data-regver'))); }); });
     tb.querySelectorAll('[data-regdel]').forEach(function(b){ b.addEventListener('click', function(){ eliminarRegistro(Number(b.getAttribute('data-regdel'))); }); });
+    tb.querySelectorAll('[data-regexp]').forEach(function(b){ b.addEventListener('click', function(){ abrirExpedienteAdmin(Number(b.getAttribute('data-regexp'))); }); });
+  }
+  function abrirExpedienteAdmin(idx){ var x=REG_CACHE[idx]; if(!x) return; var f=x.fields||{}; mostrarExpediente((f['CURP']||'').trim().toUpperCase(), (x.cert||'')); }
+  // Buscador general de expedientes
+  async function searchExped(){
+    var q=(document.getElementById('exped-q').value||'').trim();
+    var tb=document.querySelector('#exped-table tbody'); var cnt=document.getElementById('exped-count');
+    if(!q){ tb.innerHTML='<tr><td colspan="5">Escribe un nombre o CURP y presiona Buscar.</td></tr>'; cnt.textContent=''; return; }
+    tb.innerHTML='<tr><td colspan="5">Buscando…</td></tr>';
+    try{
+      var r=await api(BEN+'?q='+encodeURIComponent(q)); var d=await r.json(); if(!r.ok) throw new Error((d&&d.error)||('HTTP '+r.status));
+      var tits=(Array.isArray(d.results)?d.results:[]).filter(function(x){ return x.tipo==='Titular'; });
+      cnt.textContent='Titulares encontrados: '+tits.length;
+      if(!tits.length){ tb.innerHTML='<tr><td colspan="5">Sin titulares con ese criterio.</td></tr>'; return; }
+      tb.innerHTML='';
+      tits.forEach(function(t,i){
+        var orig = t.origen==='base'?'Padrón base':(t.origen==='registro-voluntario'?'Registro voluntario':'Dado de alta');
+        var tr=document.createElement('tr');
+        tr.innerHTML='<td><strong>'+esc(t.cert||'')+'</strong></td><td>'+esc(t.nombre||'')+'</td><td>'+esc(t.curp||'')+'</td><td>'+esc(orig)+'</td>'+
+          '<td style="white-space:nowrap"><button class="btn btn-mini" data-expv="'+i+'" type="button" style="color:#6b4ba3">📁 Ver expediente</button></td>';
+        tb.appendChild(tr);
+      });
+      tb.querySelectorAll('[data-expv]').forEach(function(b){ b.addEventListener('click', function(){ var t=tits[Number(b.getAttribute('data-expv'))]; mostrarExpediente((t.curp||'').toUpperCase(), (t.cert||'')); }); });
+    }catch(e){ tb.innerHTML='<tr><td colspan="5">Error: '+esc(e.message)+'</td></tr>'; }
+  }
+  (function(){ var bb=document.getElementById('exped-btn'); if(bb) bb.addEventListener('click', searchExped); var qq=document.getElementById('exped-q'); if(qq) qq.addEventListener('keydown', function(e){ if(e.key==='Enter') searchExped(); }); })();
+  async function mostrarExpediente(curp, cert){
+    var ov=document.createElement('div'); ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9999;padding:14px;';
+    ov.innerHTML='<div style="background:#fff;border-radius:14px;max-width:640px;width:100%;padding:20px;max-height:92vh;overflow:auto;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><h3 style="margin:0;font-family:var(--serif);color:var(--brown-deep)">Expediente</h3><button class="btn btn-ghost btn-mini" id="ea-close" type="button">Cerrar</button></div><div id="ea-body">Cargando…</div></div>';
+    document.body.appendChild(ov);
+    function close(){ try{ document.body.removeChild(ov); }catch(e){} }
+    ov.addEventListener('click', function(e){ if(e.target===ov) close(); });
+    ov.querySelector('#ea-close').addEventListener('click', close);
+    try{
+      var r=await api(EXPTIT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'expediente-admin', curp:(curp||''), cert:(cert||'')})});
+      var d=await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
+      var REGD=[]; // para consultar/descargar por índice
+      function row(doc){ var i=REGD.push(doc)-1; return '<div style="display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin-bottom:6px;flex-wrap:wrap;"><span style="flex:1;min-width:120px;font-size:13px;word-break:break-word;" title="'+esc(doc.filename||'')+'">'+esc(docLabel(doc.filename))+'</span><button class="btn-mini" data-eav="'+i+'" type="button" style="flex-shrink:0;">👁 Consultar</button><button class="btn-mini" data-ead="'+i+'" type="button" style="flex-shrink:0;">⬇ Descargar</button></div>'; }
+      var html='<div style="font-size:14px;color:var(--ink);margin-bottom:10px;"><b>'+esc(d.nombre||'')+'</b>'+(d.cert?(' · '+esc(d.cert)):'')+(d.curp?('<br><span style="color:#767676;font-size:12px">'+esc(d.curp)+'</span>'):'')+'</div>';
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;"><div style="font-weight:800;color:var(--brown-deep);font-size:13px;">Documentos del titular</div>'+((d.docsTitular&&d.docsTitular.length)?'<button class="btn btn-mini" id="ea-zt" type="button" style="color:#0b7e80">⬇ Descargar todo</button>':'')+'</div>';
+      html+=(d.docsTitular&&d.docsTitular.length? d.docsTitular.map(row).join('') : '<div style="color:var(--ink);font-size:13px;margin-bottom:8px;">Sin documentos.</div>');
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;"><div style="font-weight:800;color:var(--brown-deep);font-size:13px;">Beneficiarios</div>'+((d.beneficiarios&&d.beneficiarios.some(function(b){return (b.docs||[]).length;}))?'<button class="btn btn-mini" id="ea-zb" type="button" style="color:#0b7e80">⬇ Descargar todo</button>':'')+'</div>';
+      if(d.beneficiarios&&d.beneficiarios.length){ d.beneficiarios.forEach(function(b){ html+='<div style="border:1px solid var(--border);border-radius:10px;padding:10px;margin:6px 0;"><div style="font-weight:800;font-size:13px;margin-bottom:4px;">'+esc(b.nombre||'')+' <span style="color:#0b7e80;font-size:12px">· '+esc(b.parentesco||'')+'</span></div>'+((b.docs&&b.docs.length)? b.docs.map(row).join('') : '<div style="color:#767676;font-size:12px">Sin documentos.</div>')+'</div>'; }); }
+      else html+='<div style="color:var(--ink);font-size:13px;">Sin beneficiarios registrados.</div>';
+      ov.querySelector('#ea-body').innerHTML=html;
+      ov.querySelectorAll('[data-eav]').forEach(function(bt){ bt.addEventListener('click', function(){ var w=window.open('','_blank'); var dc=REGD[Number(bt.getAttribute('data-eav'))]; viewDocFrom(dc.store||'pasem-reg-docs', dc.docId, w); }); });
+      ov.querySelectorAll('[data-ead]').forEach(function(bt){ bt.addEventListener('click', function(){ var dc=REGD[Number(bt.getAttribute('data-ead'))]; downloadDocFrom(dc.store||'pasem-reg-docs', dc.docId, dc.filename); }); });
+      var zt=ov.querySelector('#ea-zt'); if(zt) zt.addEventListener('click', function(){ downloadZip(d.docsTitular||[], 'Expediente-'+(d.cert||curp||'titular')+'-titular.zip', zt); });
+      var zb=ov.querySelector('#ea-zb'); if(zb) zb.addEventListener('click', function(){ var all=[]; (d.beneficiarios||[]).forEach(function(b){ (b.docs||[]).forEach(function(x){ all.push(x); }); }); downloadZip(all, 'Expediente-'+(d.cert||curp||'titular')+'-beneficiarios.zip', zb); });
+    }catch(e){ ov.querySelector('#ea-body').innerHTML='Error: '+esc(e.message); }
   }
   async function eliminarRegistro(idx){
     var x=REG_CACHE[idx]; if(!x) return; var f=x.fields||{};
@@ -2852,9 +2920,9 @@
       '<b>Modalidad:</b> '+esc(f['Modalidad']||'')+(f['Tipo de plaza']?(' · '+esc(f['Tipo de plaza'])):'')+(f['Forma de pago PASEM']?('<br><b>Forma de pago:</b> '+esc(f['Forma de pago PASEM'])):'');
     var docsHtml = docs.length ? docs.map(function(d){
       var ck=checks[d.docId]?'checked':'';
-      return '<div style="display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:10px;padding:9px 11px;margin-bottom:7px;">'+
-        '<input type="checkbox" class="reg-ck" data-doc="'+esc(d.docId)+'" '+ck+' style="width:18px;height:18px;">'+
-        '<span style="flex:1;font-size:13.5px;">'+esc(d.filename||'documento')+'</span>'+
+      return '<div style="display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:10px;padding:9px 11px;margin-bottom:7px;flex-wrap:wrap;">'+
+        '<input type="checkbox" class="reg-ck" data-doc="'+esc(d.docId)+'" '+ck+' style="width:18px;height:18px;flex-shrink:0;">'+
+        '<span style="flex:1;min-width:120px;font-size:13.5px;word-break:break-word;" title="'+esc(d.filename||'')+'">'+esc(docLabel(d.filename))+'</span>'+
         '<span class="ck-fb" style="font-size:11px;color:#1e7e3e;min-width:58px;text-align:right;">'+(checks[d.docId]?'revisado':'')+'</span>'+
         '<button class="btn-mini" type="button" data-rview="'+esc(d.docId)+'" title="Abrir en una pestaña">👁 Consultar</button> '+
         '<button class="btn-mini" type="button" data-rdl="'+esc(d.docId)+'|'+esc(d.filename||'doc')+'">⬇ Descargar</button>'+

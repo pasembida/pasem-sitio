@@ -40,26 +40,40 @@ export const handler = async (event) => {
   if(body.action==='expediente'){
     const p=verify((event.headers.authorization||event.headers.Authorization||'').replace('Bearer ',''));
     if(!p || p.role!=='titular') return {statusCode:401,headers,body:JSON.stringify({error:'Sesión no válida'})};
-    const curp=String(p.curp||'').toUpperCase();
-    let nombre='', cert='', docsTitular=[], benef=[];
-    // Registro del titular (documentos de afiliación)
-    try{
-      const rs=makeStore('pasem-registros'); const {blobs}=await rs.list();
-      const regs=(await Promise.all(blobs.filter(b=>b.key.indexOf('reg:')===0).map(b=>rs.get(b.key,{type:'json'})))).filter(Boolean);
-      const rec=regs.find(r=>String((r.fields||{})['CURP']||'').trim().toUpperCase()===curp);
-      if(rec){ nombre=(rec.fields||{})['Nombre completo']||''; cert=rec.cert||''; docsTitular=(rec.docs||[]).map(d=>({docId:d.docId, filename:d.filename, store:'pasem-reg-docs'})); }
-    }catch(e){}
-    // Titular en padrón (para cert/nombre si no vino del registro)
-    if(!cert){ try{ const ts=makeStore('pasem-titulares'); const {blobs}=await ts.list(); const all=(await Promise.all(blobs.map(b=>ts.get(b.key,{type:'json'})))).filter(Boolean); const t=all.find(x=>String(x.curp||'').toUpperCase()===curp); if(t){ nombre=nombre||t.nombre||''; cert=t.cert||''; } }catch(e){} }
-    // Beneficiarios (dependientes) y sus documentos
-    if(cert){ try{
-      const ds=makeStore('pasem-dependientes'); const {blobs}=await ds.list();
-      const all=(await Promise.all(blobs.map(b=>ds.get(b.key,{type:'json'})))).filter(Boolean);
-      benef=all.filter(d=>String(d.titularCert||'').toUpperCase()===String(cert).toUpperCase())
-               .map(d=>({ nombre:d.nombre, parentesco:d.parentesco, curp:d.curp, docs:(d.docs||[]).map(x=>({docId:x.docId, filename:x.filename, store:'pasem-reg-docs'})) }));
-    }catch(e){} }
-    return {statusCode:200,headers,body:JSON.stringify({ ok:true, nombre, cert, curp, docsTitular, beneficiarios:benef })};
+    const exp=await buildExpediente(String(p.curp||'').toUpperCase(), '');
+    return {statusCode:200,headers,body:JSON.stringify(Object.assign({ok:true}, exp))};
+  }
+
+  // --- Administración: ver expediente de cualquier titular (sin contraseña) ---
+  if(body.action==='expediente-admin'){
+    const p=verify((event.headers.authorization||event.headers.Authorization||'').replace('Bearer ',''));
+    if(!p || !(p.role==='administracion'||p.role==='operacion')) return {statusCode:401,headers,body:JSON.stringify({error:'No autorizado'})};
+    const exp=await buildExpediente(String(body.curp||'').toUpperCase(), String(body.cert||'').toUpperCase());
+    return {statusCode:200,headers,body:JSON.stringify(Object.assign({ok:true}, exp))};
   }
 
   return {statusCode:400,headers,body:JSON.stringify({error:'Acción no válida'})};
 };
+
+// Arma el expediente (documentos del titular + beneficiarios) por CURP y/o certificado
+async function buildExpediente(curp, cert){
+  let nombre='', c=cert||'', docsTitular=[], benef=[];
+  // Registro del titular (documentos de afiliación)
+  try{
+    const rs=makeStore('pasem-registros'); const {blobs}=await rs.list();
+    const regs=(await Promise.all(blobs.filter(b=>b.key.indexOf('reg:')===0).map(b=>rs.get(b.key,{type:'json'})))).filter(Boolean);
+    const rec=regs.find(r=> (curp && String((r.fields||{})['CURP']||'').trim().toUpperCase()===curp) || (cert && String(r.cert||'').toUpperCase()===cert));
+    if(rec){ nombre=(rec.fields||{})['Nombre completo']||''; c=c||rec.cert||''; if(!curp) curp=String((rec.fields||{})['CURP']||'').toUpperCase(); docsTitular=(rec.docs||[]).map(d=>({docId:d.docId, filename:d.filename, store:'pasem-reg-docs'})); }
+  }catch(e){}
+  // Titular en padrón (para cert/nombre si falta)
+  if(!c || !nombre){ try{ const ts=makeStore('pasem-titulares'); const {blobs}=await ts.list(); const all=(await Promise.all(blobs.map(b=>ts.get(b.key,{type:'json'})))).filter(Boolean);
+    const t=all.find(x=> (curp && String(x.curp||'').toUpperCase()===curp) || (cert && String(x.cert||'').toUpperCase()===cert)); if(t){ nombre=nombre||t.nombre||''; c=c||t.cert||''; } }catch(e){} }
+  // Beneficiarios (dependientes) y sus documentos
+  if(c){ try{
+    const ds=makeStore('pasem-dependientes'); const {blobs}=await ds.list();
+    const all=(await Promise.all(blobs.map(b=>ds.get(b.key,{type:'json'})))).filter(Boolean);
+    benef=all.filter(d=>String(d.titularCert||'').toUpperCase()===String(c).toUpperCase())
+             .map(d=>({ nombre:d.nombre, parentesco:d.parentesco, curp:d.curp, docs:(d.docs||[]).map(x=>({docId:x.docId, filename:x.filename, store:'pasem-reg-docs'})) }));
+  }catch(e){} }
+  return { nombre, cert:c, curp, docsTitular, beneficiarios:benef };
+}

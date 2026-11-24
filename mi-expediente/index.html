@@ -24,8 +24,9 @@
   .btn{display:block;width:100%;background:var(--orange);color:#fff;border:0;border-radius:12px;padding:14px;font-size:16px;font-weight:800;cursor:pointer}
   .btn:disabled{opacity:.6}
   .btn-ghost{background:#fff;color:var(--teal-soft);border:1.5px solid var(--teal-soft)}
-  .doc{display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:8px;background:#F7FBFB}
-  .doc .nm{flex:1;font-size:13.5px}
+  .doc{display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:8px;background:#F7FBFB;flex-wrap:wrap}
+  .doc .nm{flex:1;min-width:120px;font-size:13.5px;word-break:break-word}
+  .doc .mini-v,.doc .mini-d{flex-shrink:0}
   .doc a{background:#E7F6F6;color:#0b7e80;border:1px solid #bfe6e6;border-radius:8px;padding:8px 12px;font-weight:700;font-size:13px;text-decoration:none}
   .ben{border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px}
   .ben .bt{font-weight:800;font-size:14px;margin-bottom:6px}
@@ -120,7 +121,8 @@
   document.getElementById('logout').addEventListener('click', function(){ sessionStorage.removeItem('exp_tk'); TK=''; show('login'); document.getElementById('loginBtn').disabled=false; document.getElementById('loginBtn').textContent='Entrar'; });
 
   var DOC_IDX=[];
-  function docRow(d){ var i=DOC_IDX.push(d)-1; return '<div class="doc"><span class="nm">'+esc(d.filename||'documento')+'</span><button class="mini-v" data-v="'+i+'" type="button">👁 Consultar</button><button class="mini-d" data-d="'+i+'" type="button">⬇ Descargar</button></div>'; }
+  function docLabel(fn){ fn=String(fn||'documento'); var parts=fn.split(' — '); if(parts.length>1 && /\.(pdf|jpe?g|png|docx?|xlsx?|heic)$/i.test(parts[parts.length-1].trim())){ parts.pop(); return parts.join(' — '); } return fn; }
+  function docRow(d){ var i=DOC_IDX.push(d)-1; return '<div class="doc"><span class="nm" title="'+esc(d.filename||'')+'">'+esc(docLabel(d.filename))+'</span><button class="mini-v" data-v="'+i+'" type="button">👁 Consultar</button><button class="mini-d" data-d="'+i+'" type="button">⬇ Descargar</button></div>'; }
 
   function cargar(){
     fetch(FN+'expediente-titular',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+TK},body:JSON.stringify({action:'expediente'})})
