@@ -160,12 +160,22 @@ export const handler = async (event) => {
       }
       rec.cert=tit.cert; rec.titularId=tit.id;
     }catch(e){ rec.titularError=String(e&&e.message?e.message:e); }
+    // Generar la liga personalizada de beneficiarios (token) para incluirla en el correo
+    const baseUrl=(process.env.SITE_URL||'https://pasem.com').replace(/\/$/,'');
+    let benUrl='';
+    if(rec.cert){
+      if(!rec.benToken){
+        rec.benToken=crypto.randomBytes(12).toString('hex');
+        try{ const bl=makeStore('pasem-benlinks'); await bl.setJSON('tok:'+rec.benToken, { token:rec.benToken, cert:rec.cert, titularNombre:(rec.fields||{})['Nombre completo']||'', curp:rec.curp||'', registroId:rec.id, createdAt:new Date().toISOString() }); }catch(e){}
+      }
+      benUrl=baseUrl+'/beneficiarios?t='+rec.benToken;
+    }
     await store.setJSON('reg:'+rec.id, rec);
     const key=process.env.RESEND_API_KEY; let correoEnviado=false, reason='';
     if(key && correo && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)){
       try{
-        const base=(process.env.SITE_URL||'https://pasem.com').replace(/\/$/,'');
-        const snte=base+'/img/snte26.jpg', bida=base+'/img/bida.png'; const altaUrl=base+'/alta';
+        const base=baseUrl;
+        const snte=base+'/img/snte26.jpg', bida=base+'/img/bida.png'; const altaUrl=benUrl||(base+'/beneficiarios');
         const html='<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;background:#EAF6F6;font-family:Arial,Helvetica,sans-serif;color:#1f3442;">'+
           '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EAF6F6;padding:20px 10px;"><tr><td align="center">'+
           '<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border:1px solid #D9E9E9;border-radius:12px;overflow:hidden;">'+
@@ -181,9 +191,9 @@ export const handler = async (event) => {
                 '📍 <b>Av. Himno Nacional No. 1800, Col. Burócrata, C.P. 78270, San Luis Potosí.</b><br>'+
                 '🕘 <b>Horario:</b> Lunes a viernes de 9:00 a 15:00 h y de 19:00 a 21:00 h.'+
               '</div>'+
-              '<b>2) Da de alta a tus beneficiarios</b><br>'+
-              'Ya puedes registrar a tus beneficiarios en la siguiente liga. <b>En este paso ya no necesitas anexar la documentación de afiliación</b>, solo la de tus beneficiarios:<br>'+
-              '<div style="margin:10px 0;"><a href="'+altaUrl+'" style="display:inline-block;background:#DD6B20;color:#fff;text-decoration:none;font-weight:800;border-radius:10px;padding:12px 20px;">Alta de beneficiarios →</a></div>'+
+              '<b>2) Registra a tus beneficiarios</b><br>'+
+              'Ya puedes registrar a tus beneficiarios en tu <b>liga personalizada</b>. <b>En este paso ya no necesitas anexar la documentación de afiliación</b>, solo la de tus beneficiarios. Puedes volver a entrar cuando quieras para agregar o quitar beneficiarios:<br>'+
+              '<div style="margin:10px 0;"><a href="'+altaUrl+'" style="display:inline-block;background:#DD6B20;color:#fff;text-decoration:none;font-weight:800;border-radius:10px;padding:12px 20px;">Registrar mis beneficiarios →</a></div>'+
               '<div style="color:#767676;font-size:13px;">O copia esta liga: '+altaUrl+'</div><br>'+
               'Atentamente,<br><b>Equipo PASEM · Sección 26 del SNTE</b>'+
             '</td></tr>'+
