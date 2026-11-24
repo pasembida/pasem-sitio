@@ -68,12 +68,12 @@
       </div>
 
       <div class="sec">
-        <div class="sec-h">Mis documentos (titular)</div>
+        <div class="top"><div class="sec-h" style="margin:0">Mis documentos (titular)</div><button class="btn btn-ghost" id="zipTit" type="button" style="width:auto;padding:9px 12px;font-size:13px;">⬇ Descargar todo</button></div>
         <div id="docsTitular"><div class="muted">Sin documentos.</div></div>
       </div>
 
       <div class="sec">
-        <div class="sec-h">Beneficiarios</div>
+        <div class="top"><div class="sec-h" style="margin:0">Beneficiarios</div><button class="btn btn-ghost" id="zipBen" type="button" style="width:auto;padding:9px 12px;font-size:13px;">⬇ Descargar todo</button></div>
         <div id="benef"><div class="muted">Sin beneficiarios registrados.</div></div>
       </div>
     </div>
@@ -84,8 +84,26 @@
 <script>
   var FN='/.netlify/functions/';
   var TK=sessionStorage.getItem('exp_tk')||'';
+  var DATA=null;
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-  function dlUrl(d){ return FN+'docs-upload?store='+encodeURIComponent(d.store||'pasem-reg-docs')+'&doc='+encodeURIComponent(d.docId); }
+  async function fetchDocBlob(d){
+    var r=await fetch(FN+'docs-upload?store='+encodeURIComponent(d.store||'pasem-reg-docs')+'&doc='+encodeURIComponent(d.docId)); var j=await r.json(); if(!r.ok) throw new Error(j.error||'No disponible');
+    var bin=atob(j.data); var bytes=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+    return { blob:new Blob([bytes],{type:j.type||'application/octet-stream'}), filename:j.filename };
+  }
+  async function verDoc(d, w){ try{ var o=await fetchDocBlob(d); var u=URL.createObjectURL(o.blob); if(w&&!w.closed){ w.location=u; } else { w=window.open(u,'_blank'); } if(!w){ var a=document.createElement('a'); a.href=u; a.download=o.filename||'documento'; a.click(); } setTimeout(function(){URL.revokeObjectURL(u);},60000); }catch(e){ if(w&&!w.closed) w.close(); alert('No se pudo abrir: '+e.message); } }
+  async function bajarDoc(d){ try{ var o=await fetchDocBlob(d); var u=URL.createObjectURL(o.blob); var a=document.createElement('a'); a.href=u; a.download=o.filename||d.filename||'documento'; a.click(); setTimeout(function(){URL.revokeObjectURL(u);},5000); }catch(e){ alert('No se pudo descargar: '+e.message); } }
+  async function ensureJSZip(){ if(window.JSZip) return; await new Promise(function(res,rej){ var s=document.createElement('script'); s.src='/js/jszip.min.js'; s.onload=res; s.onerror=function(){rej(new Error('No se pudo cargar el compresor'));}; document.head.appendChild(s); }); }
+  async function bajarZip(docs, zipName, btn){
+    if(!docs||!docs.length){ alert('No hay documentos.'); return; }
+    var old=btn?btn.textContent:''; if(btn) btn.disabled=true;
+    try{ await ensureJSZip(); var zip=new JSZip(); var seen={};
+      for(var i=0;i<docs.length;i++){ if(btn) btn.textContent='Preparando '+(i+1)+'/'+docs.length+'…'; var o=await fetchDocBlob(docs[i]);
+        var nm=o.filename||docs[i].filename||('doc-'+(i+1)); if(seen[nm]){ seen[nm]++; var p=nm.lastIndexOf('.'); nm=p>0?nm.slice(0,p)+' ('+seen[nm]+')'+nm.slice(p):nm+' ('+seen[nm]+')'; } else seen[nm]=1; zip.file(nm,o.blob); }
+      if(btn) btn.textContent='Comprimiendo…'; var c=await zip.generateAsync({type:'blob'}); var u=URL.createObjectURL(c);
+      var a=document.createElement('a'); a.href=u; a.download=zipName; a.click(); setTimeout(function(){URL.revokeObjectURL(u);},6000);
+    }catch(e){ alert('No se pudo generar el ZIP: '+e.message); } finally{ if(btn){ btn.disabled=false; btn.textContent=old; } }
+  }
 
   function show(view){ document.getElementById('login').classList.toggle('hide', view!=='login'); document.getElementById('exp').classList.toggle('hide', view!=='exp'); }
 
@@ -101,13 +119,14 @@
 
   document.getElementById('logout').addEventListener('click', function(){ sessionStorage.removeItem('exp_tk'); TK=''; show('login'); document.getElementById('loginBtn').disabled=false; document.getElementById('loginBtn').textContent='Entrar'; });
 
-  function docRow(d){ return '<div class="doc"><span class="nm">'+esc(d.filename||'documento')+'</span><a href="'+dlUrl(d)+'" target="_blank" rel="noopener">⬇ Ver</a></div>'; }
+  var DOC_IDX=[];
+  function docRow(d){ var i=DOC_IDX.push(d)-1; return '<div class="doc"><span class="nm">'+esc(d.filename||'documento')+'</span><button class="mini-v" data-v="'+i+'" type="button">👁 Consultar</button><button class="mini-d" data-d="'+i+'" type="button">⬇ Descargar</button></div>'; }
 
   function cargar(){
     fetch(FN+'expediente-titular',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+TK},body:JSON.stringify({action:'expediente'})})
       .then(function(r){ if(!r.ok) throw new Error('sesion'); return r.json(); })
       .then(function(d){
-        show('exp');
+        show('exp'); DATA=d; DOC_IDX=[];
         document.getElementById('exp-sub').textContent=(d.nombre||'')+(d.cert?(' · '+d.cert):'');
         var dt=document.getElementById('docsTitular');
         dt.innerHTML=(d.docsTitular&&d.docsTitular.length)? d.docsTitular.map(docRow).join('') : '<div class="muted">Sin documentos.</div>';
@@ -118,6 +137,14 @@
               ((b.docs&&b.docs.length)? b.docs.map(docRow).join('') : '<div class="muted">Sin documentos.</div>')+'</div>';
           }).join('');
         } else bf.innerHTML='<div class="muted">Sin beneficiarios registrados.</div>';
+        // estilos mini-botones
+        document.querySelectorAll('.mini-v,.mini-d').forEach(function(bt){ bt.style.cssText='background:#E7F6F6;color:#0b7e80;border:1px solid #bfe6e6;border-radius:8px;padding:8px 10px;font-weight:700;font-size:12.5px;cursor:pointer;margin-left:6px;'; });
+        // enlazar consultar / descargar
+        document.querySelectorAll('[data-v]').forEach(function(bt){ bt.addEventListener('click', function(){ var w=window.open('','_blank'); verDoc(DOC_IDX[Number(bt.getAttribute('data-v'))], w); }); });
+        document.querySelectorAll('[data-d]').forEach(function(bt){ bt.addEventListener('click', function(){ bajarDoc(DOC_IDX[Number(bt.getAttribute('data-d'))]); }); });
+        // ZIP titular / beneficiarios
+        var zt=document.getElementById('zipTit'); zt.onclick=function(){ bajarZip(d.docsTitular||[], 'Expediente-'+(d.cert||d.curp||'titular')+'-titular.zip', zt); };
+        var zb=document.getElementById('zipBen'); zb.onclick=function(){ var all=[]; (d.beneficiarios||[]).forEach(function(b){ (b.docs||[]).forEach(function(x){ all.push(x); }); }); bajarZip(all, 'Expediente-'+(d.cert||d.curp||'titular')+'-beneficiarios.zip', zb); };
       })
       .catch(function(){ sessionStorage.removeItem('exp_tk'); TK=''; show('login'); });
   }

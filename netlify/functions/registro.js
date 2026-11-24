@@ -85,6 +85,26 @@ export const handler = async (event) => {
   if(body.action==='gen-benlink'){
     if(!body.id) return {statusCode:400,headers,body:JSON.stringify({error:'Falta id'})};
     const rec=await store.get('reg:'+body.id,{type:'json'}); if(!rec) return {statusCode:404,headers,body:JSON.stringify({error:'Registro no encontrado'})};
+    // Si ya está aprobado pero sin certificado (registros aprobados antes de los cambios), incorpóralo ahora
+    if(!rec.cert && rec.estado==='aprobado'){
+      try{
+        const f=rec.fields||{};
+        const ts=makeStore('pasem-titulares'); const {blobs}=await ts.list();
+        const all=(await Promise.all(blobs.map(b=>ts.get(b.key,{type:'json'})))).filter(Boolean);
+        const curpU=String(f['CURP']||'').trim().toUpperCase();
+        let tit = curpU ? all.find(t=>String(t.curp||'').trim().toUpperCase()===curpU) : null;
+        if(!tit){
+          let maxN=0; all.forEach(t=>{ const m=/PASEM-(\d+)/.exec(String(t.cert||'')); if(m){ const n=parseInt(m[1],10); if(!isNaN(n)) maxN=Math.max(maxN,n); } });
+          const cert='PASEM-'+String(maxN+1).padStart(5,'0'); const tid=crypto.randomUUID();
+          tit={ id:tid, cert, nombre:f['Nombre completo']||'', curp:curpU, rfc:f['RFC']||'', telefono:f['Teléfono de contacto']||'', correo:f['Correo electrónico']||'',
+                funcion:'', cct:'', ct:'', nivel:'', programa:'telesecundaria', origen:'registro-voluntario',
+                modalidadPago:f['Modalidad']||'', personalTelesecundaria:f['Tipo de plaza']||'', formaPago:f['Forma de pago PASEM']||'',
+                registroId:rec.id, createdAt:new Date().toISOString(), capturadoPor:p.email||'registro' };
+          await ts.setJSON(tid, tit);
+        }
+        rec.cert=tit.cert; rec.titularId=tit.id; await store.setJSON('reg:'+rec.id, rec);
+      }catch(e){}
+    }
     if(!rec.cert) return {statusCode:200,headers,body:JSON.stringify({ok:false, reason:'no-aprobado'})};
     let token=rec.benToken;
     if(!token){
