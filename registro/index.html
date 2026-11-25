@@ -101,6 +101,7 @@
         <div id="docsSec" class="sec hide">
           <div class="sec-h">3. Documentos</div>
           <div class="note">Los formatos oficiales deberán llenarse con <b>tinta azul</b> y firmarse de manera <b>autógrafa</b>.</div>
+          <div id="guia"></div>
           <div id="pagoExtra"></div>
           <div id="dlBase" class="dl"></div>
           <div id="docInputs"></div>
@@ -174,6 +175,16 @@
     var pagoExtra=document.getElementById('pagoExtra');
     if(!lista){ docsSec.classList.add('hide'); docInputs.innerHTML=''; dlBase.innerHTML=''; if(pagoExtra) pagoExtra.innerHTML=''; return; }
     docsSec.classList.remove('hide');
+    // Guía de llenado (Préstamo FERPTTE)
+    var guia=document.getElementById('guia');
+    if(guia){
+      if(esFerptte){
+        guia.innerHTML='<a href="/registro/docs/Guia_llenado_FERPTTE_PASEM.pdf" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:12px;text-decoration:none;background:#EEF6FF;border:1px solid #bcd6f0;border-radius:12px;padding:12px 14px;margin-bottom:12px;">'+
+          '<span style="font-size:24px;">📘</span>'+
+          '<span style="flex:1;color:#24557f;font-size:14px;line-height:1.4;"><b>Guía de llenado del Préstamo FERPTTE</b><br>Antes de subir tus documentos, revisa cómo llenar cada formato (tinta azul, qué va lleno y qué no).</span>'+
+          '<span style="background:#24557f;color:#fff;font-weight:800;font-size:13px;border-radius:8px;padding:9px 12px;white-space:nowrap;">Ver guía</span></a>';
+      } else guia.innerHTML='';
+    }
     // Pago directo: forma de pago + cuentas
     if(pagoExtra){
       if(m==='Pago directo'){
