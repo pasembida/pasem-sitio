@@ -923,7 +923,7 @@
       <div class="tabpane" id="pane-registros">
         <h2 class="pane-title">Conciliación de registros</h2>
         <p style="color:var(--ink); font-size:14px; margin:0 0 14px;">Registros de afiliación recibidos desde <strong>pasem.com/registro</strong>. Revisa y marca cada documento; al aprobar se notifica al maestro para la entrega en físico y se le envía la liga de alta de beneficiarios.</p>
-        <div class="toolbar" style="margin-bottom:10px;">
+        <div class="toolbar" style="margin-bottom:8px;">
           <input type="text" id="reg-q" placeholder="Buscar por nombre, CURP o correo…" style="flex:1;min-width:180px;">
           <select id="reg-filtro" style="min-width:160px;">
             <option value="">Todos los estados</option>
@@ -933,9 +933,19 @@
             <option value="aprobado">Aprobado</option>
           </select>
           <button class="btn btn-ghost" id="reg-refresh" type="button">Actualizar</button>
-          <select id="reg-alcance" style="min-width:160px;"><option value="acumulado">Reporte acumulado</option><option value="dia">Reporte del día</option></select>
-          <button class="btn btn-ghost" id="reg-xls" type="button">⬇ Excel</button>
-          <button class="btn btn-ghost" id="reg-pdf" type="button">⬇ PDF</button>
+        </div>
+        <div style="background:#F7FBFB;border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:10px;">
+          <div style="font-weight:800;color:var(--brown-deep);font-size:13px;margin-bottom:6px;">Reporte — filtra por los campos que necesites</div>
+          <div class="toolbar" style="gap:8px;">
+            <select id="reg-alcance" style="min-width:150px;"><option value="acumulado">Acumulado</option><option value="dia">Del día</option></select>
+            <select id="reg-modrep" style="min-width:160px;"><option value="">Toda modalidad</option><option value="Préstamo FERPTTE">Préstamo FERPTTE</option><option value="Pago directo">Pago directo</option></select>
+            <select id="reg-tiporep" style="min-width:140px;"><option value="">Todo tipo</option><option value="Estatal">Estatal</option><option value="Federal">Federal</option></select>
+            <select id="reg-formarep" style="min-width:150px;"><option value="">Toda forma de pago</option><option value="Anual (una sola exhibición)">Anual</option><option value="Semestral (dos pagos)">Semestral</option><option value="Trimestral (cuatro pagos)">Trimestral</option></select>
+            <select id="reg-fisicorep" style="min-width:140px;"><option value="">Físico: todos</option><option value="si">Físico: sí</option><option value="no">Físico: no</option></select>
+            <select id="reg-ferpterep" style="min-width:160px;"><option value="">FERPTTE: todos</option><option value="si">Entregado a FERPTTE</option><option value="no">No entregado a FERPTTE</option></select>
+            <button class="btn btn-ghost" id="reg-xls" type="button">⬇ Excel</button>
+            <button class="btn btn-ghost" id="reg-pdf" type="button">⬇ PDF</button>
+          </div>
         </div>
         <div id="reg-count" style="font-size:13px;color:var(--ink);margin-bottom:8px;"></div>
         <div class="table-wrap"><table class="dtable" id="reg-table">
@@ -2837,6 +2847,7 @@
     return '<span style="background:#EEF6FF;color:#2563a6;border:1px solid #bcd6f0;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:800;">Recibido</span>';
   }
   function fisicoBadge(x){ return x.entregadoFisico?'<span style="background:#E8F8EE;color:#1e7e3e;border:1px solid #bfe6cc;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:800;margin-left:4px;">📦 Físico ✓</span>':''; }
+  function ferptteBadge(x){ return x.entregadoFerptte?'<span style="background:#EDEBFA;color:#5b3fb0;border:1px solid #cfc7f0;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:800;margin-left:4px;">📤 FERPTTE ✓'+(x.entregadoFerptteAt?(' '+esc(x.entregadoFerptteAt)):'')+'</span>':''; }
   async function loadRegistros(){
     var tb=document.querySelector('#reg-table tbody'); if(!tb) return;
     tb.innerHTML='<tr><td colspan="7">Cargando…</td></tr>';
@@ -2851,17 +2862,24 @@
     return REG_CACHE.filter(function(x){ var f=x.fields||{}; return matchQ(q,[f['Nombre completo'],f['CURP'],f['Correo electrónico']]) && (!fe || (x.estado||'recibido')===fe); });
   }
   function ymd(iso){ return String(iso||'').slice(0,10); }
+  function loadImgData(src){ return new Promise(function(res){ var img=new Image(); img.crossOrigin='anonymous'; img.onload=function(){ try{ var c=document.createElement('canvas'); c.width=img.naturalWidth; c.height=img.naturalHeight; c.getContext('2d').drawImage(img,0,0); res({data:c.toDataURL('image/jpeg',0.92), w:img.naturalWidth, h:img.naturalHeight}); }catch(e){ res(null); } }; img.onerror=function(){ res(null); }; img.src=src; }); }
   function reporteData(){
     function estLabel(e){ return e==='aprobado'?'Aprobado':(e==='devuelto'?'Devuelto':(e==='en-revision'?'En revisión':'Recibido')); }
-    var scope=(document.getElementById('reg-alcance')||{}).value||'acumulado';
+    var g=function(id){ return (document.getElementById(id)||{}).value||''; };
+    var scope=g('reg-alcance')||'acumulado', modRep=g('reg-modrep'), tipoRep=g('reg-tiporep'), formaRep=g('reg-formarep'), fisRep=g('reg-fisicorep'), ferRep=g('reg-ferpterep');
     var hoy=new Date().toISOString().slice(0,10);
     var list=filteredRegs();
     if(scope==='dia'){ list=list.filter(function(x){ return ymd(x.createdAt)===hoy || ymd(x.aprobadoAt||x.conciliadoAt)===hoy; }); }
+    if(modRep){ list=list.filter(function(x){ return ((x.fields||{})['Modalidad']||'')===modRep; }); }
+    if(tipoRep){ list=list.filter(function(x){ return ((x.fields||{})['Tipo de plaza']||'')===tipoRep; }); }
+    if(formaRep){ list=list.filter(function(x){ return ((x.fields||{})['Forma de pago PASEM']||'')===formaRep; }); }
+    if(fisRep){ list=list.filter(function(x){ return (fisRep==='si')?!!x.entregadoFisico:!x.entregadoFisico; }); }
+    if(ferRep){ list=list.filter(function(x){ return (ferRep==='si')?!!x.entregadoFerptte:!x.entregadoFerptte; }); }
     return list.map(function(x,i){ var f=x.fields||{}; return [
       String(i+1), f['Nombre completo']||'', f['CURP']||'', f['Tipo de plaza']||'', f['Modalidad']||'', f['Forma de pago PASEM']||'',
-      estLabel(x.estado||'recibido'), x.entregadoFisico?'Sí':'No', ymd(x.createdAt), ymd(x.aprobadoAt||x.conciliadoAt) ]; });
+      estLabel(x.estado||'recibido'), x.entregadoFisico?'Sí':'No', x.entregadoFerptte?'Sí':'No', (x.entregadoFerptteAt||''), ymd(x.createdAt), ymd(x.aprobadoAt||x.conciliadoAt) ]; });
   }
-  var REPORTE_COLS=['#','Nombre','CURP','Tipo Telesecundaria','Modalidad de pago','Forma de pago','Expediente digital','Entregado físico','Fecha recibido','Fecha conciliado'];
+  var REPORTE_COLS=['#','Nombre','CURP','Tipo Telesecundaria','Modalidad de pago','Forma de pago','Expediente digital','Entregado físico','Entregado FERPTTE','Fecha FERPTTE','Fecha recibido','Fecha conciliado'];
   function reporteResumen(rows){
     var cnt=function(idx,val){ return rows.filter(function(r){ return r[idx]===val; }).length; };
     return [
@@ -2874,10 +2892,11 @@
       ['En revisión', cnt(6,'En revisión')],
       ['Devueltos', cnt(6,'Devuelto')],
       ['Recibidos (sin revisar)', cnt(6,'Recibido')],
-      ['Entregaron en físico', cnt(7,'Sí')]
+      ['Entregaron en físico', cnt(7,'Sí')],
+      ['Entregados a FERPTTE', cnt(8,'Sí')]
     ];
   }
-  function alcanceLabel(){ return ((document.getElementById('reg-alcance')||{}).value==='dia')?'Del día ('+new Date().toLocaleDateString('es-MX')+')':'Acumulado'; }
+  function alcanceLabel(){ var a=((document.getElementById('reg-alcance')||{}).value==='dia')?'Del día ('+new Date().toLocaleDateString('es-MX')+')':'Acumulado'; var m=(document.getElementById('reg-modrep')||{}).value||''; return a+(m?(' · '+m):''); }
   function exportRegCSV(){
     var rows=reporteData(); if(!rows.length){ alert('No hay registros para exportar con ese alcance.'); return; }
     var esc=function(v){ v=String(v==null?'':v); return /[",\n]/.test(v)?('"'+v.replace(/"/g,'""')+'"'):v; };
@@ -2893,9 +2912,12 @@
     var rows=reporteData(); if(!rows.length){ alert('No hay registros para exportar con ese alcance.'); return; }
     var ok=await ensureJsPDF(); if(!ok){ alert('No se pudo cargar el generador de PDF.'); return; }
     var jsPDF=window.jspdf.jsPDF; var doc=new jsPDF({unit:'mm', format:'letter', orientation:'landscape'}); var M=12;
-    doc.setFontSize(14); doc.setTextColor('#DD6B20'); doc.text('PASEM · Reporte de maestros', M, 14);
-    doc.setFontSize(9); doc.setTextColor('#555'); doc.text('Sección 26 del SNTE · '+alcanceLabel()+' · Generado: '+new Date().toLocaleString('es-MX'), M, 20);
-    doc.autoTable({ startY:25, head:[REPORTE_COLS], body:rows, margin:{left:M,right:M}, styles:{fontSize:7.5, cellPadding:1.5}, headStyles:{fillColor:[221,107,32]}, alternateRowStyles:{fillColor:[245,249,249]} });
+    // Logo SNTE 26 (si carga)
+    var startY=25; try{ var logo=await loadImgData('/img/snte26.jpg'); if(logo){ var lw=26, lh=lw*logo.h/logo.w; doc.addImage(logo.data, 'JPEG', M, 8, lw, lh); } }catch(e){}
+    var tx=M+30;
+    doc.setFontSize(14); doc.setTextColor('#DD6B20'); doc.text('PASEM · Reporte de maestros', tx, 14);
+    doc.setFontSize(9); doc.setTextColor('#555'); doc.text('Sección 26 del SNTE · '+alcanceLabel()+' · Generado: '+new Date().toLocaleString('es-MX'), tx, 20);
+    doc.autoTable({ startY:startY, head:[REPORTE_COLS], body:rows, margin:{left:M,right:M}, styles:{fontSize:7, cellPadding:1.3}, headStyles:{fillColor:[221,107,32]}, alternateRowStyles:{fillColor:[245,249,249]} });
     var y=(doc.lastAutoTable?doc.lastAutoTable.finalY:30)+8;
     doc.setFontSize(11); doc.setTextColor('#0E9A9C'); doc.text('Resumen', M, y);
     doc.autoTable({ startY:y+2, body:reporteResumen(rows).map(function(s){ return [s[0], String(s[1])]; }), margin:{left:M, right:160}, styles:{fontSize:9, cellPadding:2}, theme:'plain', columnStyles:{0:{fontStyle:'bold', textColor:[80,80,80]}, 1:{halign:'right'}} });
@@ -2915,7 +2937,7 @@
       var tr=document.createElement('tr');
       tr.innerHTML='<td>'+esc(fecha)+'</td><td><strong>'+esc(f['Nombre completo']||'')+'</strong><br><span style="color:#767676;font-size:12px">'+esc(f['Correo electrónico']||'')+'</span></td>'+
         '<td>'+esc(f['CURP']||'')+'</td><td style="font-size:13px">'+modal+'</td>'+
-        '<td>'+okN+'/'+docs+'</td><td>'+regEstadoBadge(x.estado)+fisicoBadge(x)+'</td>'+
+        '<td>'+okN+'/'+docs+'</td><td>'+regEstadoBadge(x.estado)+fisicoBadge(x)+ferptteBadge(x)+'</td>'+
         '<td style="white-space:nowrap"><button class="btn btn-mini" data-regver="'+idx+'" type="button" style="color:#0E9A9C">Conciliar</button> <button class="btn btn-mini" data-regexp="'+idx+'" type="button" style="color:#6b4ba3">📁 Expediente</button> <button class="btn btn-mini" data-regdel="'+idx+'" type="button" style="color:#b23b3b">Eliminar</button></td>';
       tb.appendChild(tr);
     });
@@ -3023,6 +3045,7 @@
         (aprobado?'':' <button class="btn btn-mini" id="rc-devolver" type="button" style="color:#b9560e">↩ Devolver para corrección</button>')+
         (x.estado==='devuelto'?' <button class="btn btn-mini" id="rc-correclink" type="button" style="color:#b9560e">🔗 Liga de corrección</button>':'')+
         ' <button class="btn btn-mini" id="rc-fisico" type="button" style="color:'+(x.entregadoFisico?'#1e7e3e':'#6b4ba3')+'">'+(x.entregadoFisico?'📦 Entregado en físico ✓':'📦 Marcar entregado en físico')+'</button>'+
+        (/ferptte|préstamo|prestamo/i.test(f['Modalidad']||'')?' <button class="btn btn-mini" id="rc-ferptte" type="button" style="color:'+(x.entregadoFerptte?'#5b3fb0':'#6b4ba3')+'">'+(x.entregadoFerptte?('📤 Entregado a FERPTTE ✓'+(x.entregadoFerptteAt?(' '+esc(x.entregadoFerptteAt)):'')):'📤 Marcar entregado a FERPTTE')+'</button>':'')+
         ' <button class="btn btn-mini" id="rc-editar" type="button" style="color:#2563a6">✏️ Editar datos</button>'+
         '<span id="rc-msg" style="font-size:13px;color:var(--ink)"></span>'+
       '</div>'+
@@ -3076,6 +3099,20 @@
           '<div style="font-size:12px;color:#767676;margin-top:6px;">Compártela con el titular si no recibió el correo. Al enviar sus correcciones, el registro vuelve a “En revisión”.</div>';
         var cp=box.querySelector('#cl-copy'); cp.addEventListener('click', function(){ var i=box.querySelector('#cl-url'); i.select(); try{ document.execCommand('copy'); cp.textContent='¡Copiado!'; setTimeout(function(){cp.textContent='Copiar';},1500); }catch(e){} });
       }catch(e){ box.innerHTML='Error: '+esc(e.message); }
+    });
+    // Entregado a FERPTTE (con fecha)
+    var fpt=ov.querySelector('#rc-ferptte');
+    if(fpt) fpt.addEventListener('click', async function(){
+      if(x.entregadoFerptte){ if(!confirm('¿Quitar la marca de entregado a FERPTTE?')) return;
+        try{ var r=await api(REGISTROS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'set-ferptte', id:x.id, entregado:false})}); var d=await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
+          x.entregadoFerptte=false; x.entregadoFerptteAt=''; fpt.textContent='📤 Marcar entregado a FERPTTE'; fpt.style.color='#6b4ba3'; loadRegistros(); }catch(e){ alert('No se pudo: '+e.message); }
+        return; }
+      var hoy=new Date().toISOString().slice(0,10);
+      var fecha=prompt('Fecha en que se entregaron los formatos a FERPTTE (AAAA-MM-DD):', hoy);
+      if(fecha==null) return; fecha=String(fecha).trim(); if(!/^\d{4}-\d{2}-\d{2}$/.test(fecha)){ alert('Fecha inválida. Usa el formato AAAA-MM-DD.'); return; }
+      try{ var r=await api(REGISTROS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'set-ferptte', id:x.id, entregado:true, fecha:fecha})}); var d=await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
+        x.entregadoFerptte=true; x.entregadoFerptteAt=d.at; fpt.textContent='📤 Entregado a FERPTTE ✓ '+d.at; fpt.style.color='#5b3fb0'; loadRegistros();
+      }catch(e){ alert('No se pudo: '+e.message); }
     });
     // Editar datos del titular
     var edb=ov.querySelector('#rc-editar');

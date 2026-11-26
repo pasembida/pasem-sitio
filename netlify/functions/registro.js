@@ -180,6 +180,17 @@ export const handler = async (event) => {
     return {statusCode:200,headers,body:JSON.stringify({ ok:true, fields:rec.fields, titularSync })};
   }
 
+  // Marcar / desmarcar que los formatos se entregaron a FERPTTE (con fecha)
+  if(body.action==='set-ferptte'){
+    if(p.role!=='administracion') return {statusCode:401,headers,body:JSON.stringify({error:'Solo administración'})};
+    if(!body.id) return {statusCode:400,headers,body:JSON.stringify({error:'Falta id'})};
+    const rec=await store.get('reg:'+body.id,{type:'json'}); if(!rec) return {statusCode:404,headers,body:JSON.stringify({error:'Registro no encontrado'})};
+    rec.entregadoFerptte=!!body.entregado;
+    if(rec.entregadoFerptte){ rec.entregadoFerptteAt=String(body.fecha||'').slice(0,10)||new Date().toISOString().slice(0,10); rec.entregadoFerpttePor=p.email||'usuario'; } else { rec.entregadoFerptteAt=''; rec.entregadoFerpttePor=''; }
+    await store.setJSON('reg:'+rec.id, rec);
+    return {statusCode:200,headers,body:JSON.stringify({ok:true, entregadoFerptte:rec.entregadoFerptte, at:rec.entregadoFerptteAt})};
+  }
+
   // Marcar / desmarcar entrega de documentos en físico
   if(body.action==='set-fisico'){
     if(p.role!=='administracion') return {statusCode:401,headers,body:JSON.stringify({error:'Solo administración'})};
