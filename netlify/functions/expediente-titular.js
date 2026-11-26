@@ -36,27 +36,27 @@ export const handler = async (event) => {
     return {statusCode:200,headers,body:JSON.stringify({ ok:true, token, nombre:c.nombre||'', cert:c.cert||'' })};
   }
 
-  // --- Titular: ver su expediente ---
+  // --- Titular: ver su expediente (sin historial de servicios por ahora) ---
   if(body.action==='expediente'){
     const p=verify((event.headers.authorization||event.headers.Authorization||'').replace('Bearer ',''));
     if(!p || p.role!=='titular') return {statusCode:401,headers,body:JSON.stringify({error:'Sesión no válida'})};
-    const exp=await buildExpediente(String(p.curp||'').toUpperCase(), '');
+    const exp=await buildExpediente(String(p.curp||'').toUpperCase(), '', false);
     return {statusCode:200,headers,body:JSON.stringify(Object.assign({ok:true}, exp))};
   }
 
-  // --- Administración: ver expediente de cualquier titular (sin contraseña) ---
+  // --- Administración: ver expediente de cualquier titular (con historial de servicios) ---
   if(body.action==='expediente-admin'){
     const p=verify((event.headers.authorization||event.headers.Authorization||'').replace('Bearer ',''));
     if(!p || !(p.role==='administracion'||p.role==='operacion')) return {statusCode:401,headers,body:JSON.stringify({error:'No autorizado'})};
-    const exp=await buildExpediente(String(body.curp||'').toUpperCase(), String(body.cert||'').toUpperCase());
+    const exp=await buildExpediente(String(body.curp||'').toUpperCase(), String(body.cert||'').toUpperCase(), true);
     return {statusCode:200,headers,body:JSON.stringify(Object.assign({ok:true}, exp))};
   }
 
   return {statusCode:400,headers,body:JSON.stringify({error:'Acción no válida'})};
 };
 
-// Arma el expediente (documentos del titular + beneficiarios) por CURP y/o certificado
-async function buildExpediente(curp, cert){
+// Arma el expediente (documentos del titular + beneficiarios [+ servicios]) por CURP y/o certificado
+async function buildExpediente(curp, cert, incServicios){
   let nombre='', c=cert||'', docsTitular=[], benef=[];
   // Registro del titular (documentos de afiliación)
   try{
@@ -75,5 +75,30 @@ async function buildExpediente(curp, cert){
     benef=all.filter(d=>String(d.titularCert||'').toUpperCase()===String(c).toUpperCase())
              .map(d=>({ nombre:d.nombre, parentesco:d.parentesco, curp:d.curp, docs:(d.docs||[]).map(x=>({docId:x.docId, filename:x.filename, store:'pasem-reg-docs'})) }));
   }catch(e){} }
-  return { nombre, cert:c, curp, docsTitular, beneficiarios:benef };
+  // Historial de servicios (solicitudes/trámites) del titular — solo si se pide (administración)
+  let servicios=[];
+  if(incServicios && c){ try{
+    const ss=makeStore('pasem-solicitudes'); const {blobs}=await ss.list();
+    const all=(await Promise.all(blobs.map(b=>ss.get(b.key,{type:'json'})))).filter(Boolean);
+    // Órdenes pagadas del titular (para marcar "Pagada" + monto)
+    let ordenes=[];
+    try{ const os=makeStore('pasem-ordenes'); const ob=await os.list(); ordenes=(await Promise.all(ob.blobs.map(b=>os.get(b.key,{type:'json'})))).filter(Boolean); }catch(e){}
+    const nz=s=>String(s==null?'':s).trim().toUpperCase().replace(/\s+/g,' ');
+    const money=v=>{ const n=parseFloat(String(v==null?'':v).replace(/[^0-9.]/g,'')); return isNaN(n)?0:n; };
+    const sumOrden=o=>(Array.isArray(o.receptores)?o.receptores:[]).reduce((a,r)=>a+money(r.monto),0);
+    servicios=all.filter(s=>nz(s.certificado)===nz(c))
+      .map(function(s){
+        // ¿hay orden PAGADA que corresponda a este servicio?
+        const pagadas=ordenes.filter(o=> String(o.estado||'').toLowerCase()==='pagada'
+          && nz(o.certificado)===nz(s.certificado)
+          && nz(o.tipoTramite)===nz(s.tipoTramite)
+          && nz(o.paciente)===nz(s.beneficiarioNombre||s.nombre));
+        const pagada=pagadas.length>0;
+        const monto=pagada? pagadas.reduce((a,o)=>a+sumOrden(o),0) : 0;
+        const estado = s.cancelada? 'Cancelada' : (pagada? 'Pagada' : (s.autorizada? 'Autorizada' : 'En trámite'));
+        return { folio:s.folio||'', folioEleonor:s.folioEleonor||'', tipoTramite:s.tipoTramite||'', beneficiario:s.beneficiarioNombre||s.nombre||'', parentesco:s.beneficiarioParentesco||'', fecha:s.fechaTramite||String(s.createdAt||'').slice(0,10), estado, monto, comentarios:s.comentarios||'' };
+      })
+      .sort((a,b)=>String(b.fecha||'').localeCompare(String(a.fecha||'')));
+  }catch(e){} }
+  return { nombre, cert:c, curp, docsTitular, beneficiarios:benef, servicios };
 }

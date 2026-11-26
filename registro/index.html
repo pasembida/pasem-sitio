@@ -89,10 +89,10 @@
               <option value="Pago directo">Pago directo</option>
             </select>
           </div>
-          <div id="tipoWrap" class="field hide"><label>Tipo de plaza (Préstamo FERPTTE) <span class="req">*</span></label>
+          <div id="tipoWrap" class="field"><label>Tipo de personal de Telesecundaria <span class="req">*</span></label>
             <div class="opts">
-              <label class="opt"><input type="radio" name="Tipo de plaza" value="Estatal">Telesecundaria Estatal</label>
-              <label class="opt"><input type="radio" name="Tipo de plaza" value="Federal">Telesecundaria Federal</label>
+              <label class="opt"><input type="radio" name="Tipo de plaza" value="Estatal" required>Estatal</label>
+              <label class="opt"><input type="radio" name="Tipo de plaza" value="Federal">Federal</label>
             </div>
           </div>
         </div>
@@ -165,7 +165,6 @@
   function render(){
     var m=modalidad.value;
     var esFerptte=(m==='Préstamo FERPTTE');
-    tipoWrap.classList.toggle('hide', !esFerptte);
     var tipo=(document.querySelector('input[name="Tipo de plaza"]:checked')||{}).value||'';
     // ¿mostramos documentos?
     var lista=null, base=[];
@@ -267,8 +266,7 @@
     if(msg){ err.textContent='⚠ '+msg; inp.value=''; } else { err.textContent=''; }
     return !msg;
   }
-  modalidad.addEventListener('change', function(){ // al cambiar modalidad, limpia tipo
-    document.querySelectorAll('input[name="Tipo de plaza"]').forEach(function(r){ r.checked=false; }); render(); });
+  modalidad.addEventListener('change', render);
   document.querySelectorAll('input[name="Tipo de plaza"]').forEach(function(r){ r.addEventListener('change', render); });
 
   // ---- Subida por partes ----
@@ -292,7 +290,7 @@
     e.preventDefault();
     var form=e.target; if(!form.reportValidity()) return;
     var m=modalidad.value;
-    if(m==='Préstamo FERPTTE' && !(document.querySelector('input[name="Tipo de plaza"]:checked'))){ alert('Elige si tu plaza es Estatal o Federal.'); return; }
+    if(!(document.querySelector('input[name="Tipo de plaza"]:checked'))){ alert('Indica el tipo de personal de Telesecundaria (Estatal o Federal).'); return; }
     var btn=document.getElementById('sendBtn'); var msg=document.getElementById('msg');
     var inputs=Array.prototype.slice.call(document.querySelectorAll('#docInputs .docfile'));
     // validar tipo y tamaño

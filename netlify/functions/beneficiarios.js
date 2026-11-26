@@ -55,7 +55,7 @@ export const handler = async (event) => {
     for(const d of deps){
       if(results.length>=150) break;
       const hay=norm([d.cert,d.nombre,d.curp,d.rfc,d.titularCert,d.titularNombre,d.parentesco].join(' '));
-      if(matchAll(hay)){ results.push({cert:d.cert,tipo:'Dependiente',nombre:d.nombre,rfc:d.rfc,curp:d.curp,funcion:d.parentesco,cct:'',ct:'Titular: '+(d.titularNombre||d.titularCert),nivel:'',origen:'alta',programa:(d.programa||'telesecundaria')}); }
+      if(matchAll(hay)){ results.push({cert:d.cert,tipo:'Dependiente',nombre:d.nombre,rfc:d.rfc,curp:d.curp,funcion:d.parentesco,cct:'',ct:'Titular: '+(d.titularNombre||d.titularCert),nivel:'',origen:(d.origen||'alta'),programa:(d.programa||'telesecundaria')}); }
     }
   }catch(e){}
   return {statusCode:200,headers,body:JSON.stringify({total:DATA.length, count:results.length, results})};

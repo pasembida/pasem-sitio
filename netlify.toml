@@ -49,3 +49,9 @@
   to = "/mi-expediente/index.html"
   status = 200
   force = true
+
+[[redirects]]
+  from = "/corregir"
+  to = "/corregir/index.html"
+  status = 200
+  force = true

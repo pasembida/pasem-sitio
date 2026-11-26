@@ -122,6 +122,7 @@
 
   var DOC_IDX=[];
   function docLabel(fn){ fn=String(fn||'documento'); var parts=fn.split(' — '); if(parts.length>1 && /\.(pdf|jpe?g|png|docx?|xlsx?|heic)$/i.test(parts[parts.length-1].trim())){ parts.pop(); return parts.join(' — '); } return fn; }
+  function fileSafe(s){ return (String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,60))||'titular'; }
   function docRow(d){ var i=DOC_IDX.push(d)-1; return '<div class="doc"><span class="nm" title="'+esc(d.filename||'')+'">'+esc(docLabel(d.filename))+'</span><button class="mini-v" data-v="'+i+'" type="button">👁 Consultar</button><button class="mini-d" data-d="'+i+'" type="button">⬇ Descargar</button></div>'; }
 
   function cargar(){
@@ -145,8 +146,9 @@
         document.querySelectorAll('[data-v]').forEach(function(bt){ bt.addEventListener('click', function(){ var w=window.open('','_blank'); verDoc(DOC_IDX[Number(bt.getAttribute('data-v'))], w); }); });
         document.querySelectorAll('[data-d]').forEach(function(bt){ bt.addEventListener('click', function(){ bajarDoc(DOC_IDX[Number(bt.getAttribute('data-d'))]); }); });
         // ZIP titular / beneficiarios
-        var zt=document.getElementById('zipTit'); zt.onclick=function(){ bajarZip(d.docsTitular||[], 'Expediente-'+(d.cert||d.curp||'titular')+'-titular.zip', zt); };
-        var zb=document.getElementById('zipBen'); zb.onclick=function(){ var all=[]; (d.beneficiarios||[]).forEach(function(b){ (b.docs||[]).forEach(function(x){ all.push(x); }); }); bajarZip(all, 'Expediente-'+(d.cert||d.curp||'titular')+'-beneficiarios.zip', zb); };
+        var nm=fileSafe(d.nombre||d.cert||d.curp);
+        var zt=document.getElementById('zipTit'); zt.onclick=function(){ bajarZip(d.docsTitular||[], 'Expediente-'+nm+'-titular.zip', zt); };
+        var zb=document.getElementById('zipBen'); zb.onclick=function(){ var all=[]; (d.beneficiarios||[]).forEach(function(b){ (b.docs||[]).forEach(function(x){ all.push(x); }); }); bajarZip(all, 'Expediente-'+nm+'-beneficiarios.zip', zb); };
       })
       .catch(function(){ sessionStorage.removeItem('exp_tk'); TK=''; show('login'); });
   }

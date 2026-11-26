@@ -133,6 +133,112 @@ export const handler = async (event) => {
     return {statusCode:200,headers,body:JSON.stringify({ok:true, checks:rec.checks, estado:rec.estado})};
   }
 
+  // Obtener / generar la liga de corrección (para copiar/compartir desde el panel)
+  if(body.action==='gen-correclink'){
+    if(p.role!=='administracion') return {statusCode:401,headers,body:JSON.stringify({error:'Solo administración'})};
+    if(!body.id) return {statusCode:400,headers,body:JSON.stringify({error:'Falta id'})};
+    const rec=await store.get('reg:'+body.id,{type:'json'}); if(!rec) return {statusCode:404,headers,body:JSON.stringify({error:'Registro no encontrado'})};
+    if(!rec.correcToken){
+      rec.correcToken=crypto.randomBytes(12).toString('hex'); await store.setJSON('reg:'+rec.id, rec);
+      try{ const cl=makeStore('pasem-correc'); await cl.setJSON('tok:'+rec.correcToken, { token:rec.correcToken, registroId:rec.id, createdAt:new Date().toISOString() }); }catch(e){}
+    }
+    const base=(process.env.SITE_URL||'https://pasem.com').replace(/\/$/,'');
+    return {statusCode:200,headers,body:JSON.stringify({ ok:true, url:base+'/corregir?t='+rec.correcToken })};
+  }
+
+  // Editar datos del titular (completar/corregir registros)
+  if(body.action==='edit-fields'){
+    if(p.role!=='administracion') return {statusCode:401,headers,body:JSON.stringify({error:'Solo administración'})};
+    if(!body.id) return {statusCode:400,headers,body:JSON.stringify({error:'Falta id'})};
+    const rec=await store.get('reg:'+body.id,{type:'json'}); if(!rec) return {statusCode:404,headers,body:JSON.stringify({error:'Registro no encontrado'})};
+    const nf=body.fields||{}; rec.fields=rec.fields||{};
+    ['Nombre completo','Teléfono de contacto','Correo electrónico','CURP','RFC','Tipo de plaza','Modalidad','Forma de pago PASEM'].forEach(function(k){ if(nf[k]!==undefined) rec.fields[k]=String(nf[k]); });
+    if(nf['CURP']!==undefined) rec.curp=String(nf['CURP']||'').trim().toUpperCase();
+    rec.editadoAt=new Date().toISOString(); rec.editadoPor=p.email||'usuario';
+    await store.setJSON('reg:'+rec.id, rec);
+    // Si el registro ya fue aprobado (tiene titular en el padrón), sincronizar ese titular
+    let titularSync=false;
+    if(rec.titularId || rec.cert){
+      try{
+        const ts=makeStore('pasem-titulares'); let tit=null, tkey=null;
+        if(rec.titularId){ try{ tit=await ts.get(rec.titularId,{type:'json'}); tkey=rec.titularId; }catch(e){} }
+        if(!tit && rec.cert){ const {blobs}=await ts.list(); for(const bb of blobs){ const t=await ts.get(bb.key,{type:'json'}); if(t && String(t.cert||'').toUpperCase()===String(rec.cert).toUpperCase()){ tit=t; tkey=bb.key; break; } } }
+        if(tit && tkey){
+          const f2=rec.fields;
+          if(f2['Nombre completo']!==undefined) tit.nombre=f2['Nombre completo'];
+          if(f2['CURP']!==undefined) tit.curp=String(f2['CURP']||'').trim().toUpperCase();
+          if(f2['RFC']!==undefined) tit.rfc=f2['RFC'];
+          if(f2['Teléfono de contacto']!==undefined) tit.telefono=f2['Teléfono de contacto'];
+          if(f2['Correo electrónico']!==undefined) tit.correo=f2['Correo electrónico'];
+          if(f2['Tipo de plaza']!==undefined) tit.personalTelesecundaria=f2['Tipo de plaza'];
+          if(f2['Modalidad']!==undefined) tit.modalidadPago=f2['Modalidad'];
+          if(f2['Forma de pago PASEM']!==undefined) tit.formaPago=f2['Forma de pago PASEM'];
+          await ts.setJSON(tkey, tit); titularSync=true;
+        }
+      }catch(e){}
+    }
+    return {statusCode:200,headers,body:JSON.stringify({ ok:true, fields:rec.fields, titularSync })};
+  }
+
+  // Marcar / desmarcar entrega de documentos en físico
+  if(body.action==='set-fisico'){
+    if(p.role!=='administracion') return {statusCode:401,headers,body:JSON.stringify({error:'Solo administración'})};
+    if(!body.id) return {statusCode:400,headers,body:JSON.stringify({error:'Falta id'})};
+    const rec=await store.get('reg:'+body.id,{type:'json'}); if(!rec) return {statusCode:404,headers,body:JSON.stringify({error:'Registro no encontrado'})};
+    rec.entregadoFisico=!!body.entregado;
+    if(rec.entregadoFisico){ rec.entregadoFisicoAt=new Date().toISOString(); rec.entregadoPor=p.email||'usuario'; } else { rec.entregadoFisicoAt=''; rec.entregadoPor=''; }
+    await store.setJSON('reg:'+rec.id, rec);
+    return {statusCode:200,headers,body:JSON.stringify({ok:true, entregadoFisico:rec.entregadoFisico, at:rec.entregadoFisicoAt})};
+  }
+
+  // Devolver el trámite al maestro para corrección (con observaciones + liga de corrección)
+  if(body.action==='devolver'){
+    if(p.role!=='administracion') return {statusCode:401,headers,body:JSON.stringify({error:'Solo administración'})};
+    if(!body.id) return {statusCode:400,headers,body:JSON.stringify({error:'Falta id'})};
+    const rec=await store.get('reg:'+body.id,{type:'json'}); if(!rec) return {statusCode:404,headers,body:JSON.stringify({error:'Registro no encontrado'})};
+    const f=rec.fields||{};
+    rec.estado='devuelto'; rec.observaciones=String(body.observaciones||''); rec.docsRechazados=Array.isArray(body.docsRechazados)?body.docsRechazados:[];
+    rec.devueltoAt=new Date().toISOString(); rec.devueltoPor=p.email||'usuario';
+    rec.historial=Array.isArray(rec.historial)?rec.historial:[]; rec.historial.push({ tipo:'devuelto', at:rec.devueltoAt, por:rec.devueltoPor, obs:rec.observaciones });
+    if(!rec.correcToken){ rec.correcToken=crypto.randomBytes(12).toString('hex'); try{ const cl=makeStore('pasem-correc'); await cl.setJSON('tok:'+rec.correcToken, { token:rec.correcToken, registroId:rec.id, createdAt:new Date().toISOString() }); }catch(e){} }
+    await store.setJSON('reg:'+rec.id, rec);
+    const base=(process.env.SITE_URL||'https://pasem.com').replace(/\/$/,'');
+    const corregirUrl=base+'/corregir?t='+rec.correcToken;
+    const correo=String(f['Correo electrónico']||'').trim(); const nombre=String(f['Nombre completo']||'').trim();
+    const key=process.env.RESEND_API_KEY; let correoEnviado=false, reason='';
+    // nombres legibles de los documentos rechazados
+    const labelOf=(dId)=>{ const d=(rec.docs||[]).find(x=>x.docId===dId); const fn=d?String(d.filename||''):''; const parts=fn.split(' — '); if(parts.length>1 && /\.(pdf|jpe?g|png)$/i.test(parts[parts.length-1].trim())) parts.pop(); return parts.join(' — ')||fn; };
+    const listaRech=(rec.docsRechazados||[]).map(labelOf).filter(Boolean);
+    if(key && correo && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)){
+      try{
+        const snte=base+'/img/snte26.jpg', bida=base+'/img/bida.png';
+        const items=listaRech.length? ('<ul style="margin:8px 0 10px 18px;padding:0;">'+listaRech.map(x=>'<li style="margin:4px 0;">'+esc(x)+'</li>').join('')+'</ul>') : '';
+        const html='<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;background:#EAF6F6;font-family:Arial,Helvetica,sans-serif;color:#1f3442;">'+
+          '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EAF6F6;padding:20px 10px;"><tr><td align="center">'+
+          '<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border:1px solid #D9E9E9;border-radius:12px;overflow:hidden;">'+
+            '<tr><td style="padding:14px 18px;"><table role="presentation" width="100%"><tr><td align="left"><img src="'+snte+'" height="42"></td><td align="right"><img src="'+bida+'" height="42"></td></tr></table></td></tr>'+
+            '<tr><td style="background:#DD6B20;padding:16px 18px;text-align:center;color:#fff;font-size:19px;font-weight:800;">Tu registro necesita una corrección</td></tr>'+
+            '<tr><td style="height:4px;background:#14B4B6;font-size:0;line-height:0;">&nbsp;</td></tr>'+
+            '<tr><td style="padding:20px 22px;font-size:15px;line-height:1.7;color:#1f3442;">'+
+              (nombre?('Estimado(a) <b>'+esc(nombre)+'</b>,<br><br>'):'¡Hola!<br><br>')+
+              'Revisamos tu registro al PASEM y necesitamos que <b>corrijas o reenvíes</b> lo siguiente:'+
+              (items||'<br>')+
+              (rec.observaciones?('<div style="background:#FFF7EF;border:1px solid #f1cba6;border-radius:10px;padding:12px 14px;margin:6px 0;"><b>Observaciones:</b><br>'+esc(rec.observaciones)+'</div>'):'')+
+              '<br>Entra a tu <b>liga de corrección</b> y vuelve a subir únicamente los documentos indicados. No necesitas volver a llenar todo:<br>'+
+              '<div style="margin:10px 0;"><a href="'+corregirUrl+'" style="display:inline-block;background:#DD6B20;color:#fff;text-decoration:none;font-weight:800;border-radius:10px;padding:12px 20px;">Corregir mi registro →</a></div>'+
+              '<div style="color:#767676;font-size:13px;">O copia esta liga: '+corregirUrl+'</div><br>'+
+              'En cuanto lo recibamos, lo revisaremos de nuevo.<br><br>Atentamente,<br><b>Equipo PASEM · Sección 26 del SNTE</b>'+
+            '</td></tr>'+
+            '<tr><td style="padding:0 22px 20px;color:#767676;font-size:11px;">PASEM · Sección 26 del SNTE · San Luis Potosí · Administrado por MULTICATERIN, S.A. de C.V. con respaldo de BIDA Seguros.</td></tr>'+
+          '</table></td></tr></table></body></html>';
+        const from=process.env.REGISTRO_FROM||process.env.MAIL_FROM||'PASEM <asistenciaseccion26@pasem.com>';
+        const r=await fetch('https://api.resend.com/emails',{ method:'POST', headers:{ 'Authorization':'Bearer '+key, 'Content-Type':'application/json' }, body:JSON.stringify({ from, to:[correo], subject:'PASEM — Tu registro necesita una corrección', html, text:'Tu registro al PASEM necesita corrección: '+(listaRech.join(', ')||'')+'. '+(rec.observaciones||'')+' Corrige en: '+corregirUrl }) });
+        const rd=await r.json().catch(()=>({})); correoEnviado=r.ok; if(!r.ok) reason=(rd&&(rd.message||rd.name))||('HTTP '+r.status);
+      }catch(e){ reason=String(e&&e.message?e.message:e); }
+    } else { reason = !correo?'sin-correo':(!key?'sin-resend':''); }
+    return {statusCode:200,headers,body:JSON.stringify({ ok:true, estado:'devuelto', url:corregirUrl, correoEnviado, to:correo, reason })};
+  }
+
   // Aprobar registro: notifica al maestro (entrega física + liga de alta de beneficiarios)
   if(body.action==='aprobar'){
     if(p.role!=='administracion') return {statusCode:401,headers,body:JSON.stringify({error:'Solo administración puede aprobar'})};

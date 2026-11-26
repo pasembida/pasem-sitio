@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PASEM · Corregir registro</title>
+<style>
+  :root{ --orange:#DD6B20; --teal:#14B4B6; --teal-soft:#0E9A9C; --ink:#333333; --muted:#767676; --border:#CFDADD; --bg:#EAF6F6; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);}
+  .topbar{height:8px;background:var(--orange);}
+  .wrap{max-width:720px;margin:0 auto;padding:22px 16px 56px;}
+  .brand{background:#fff;border:1px solid #D9E9E9;border-radius:16px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;}
+  .brand img{height:46px}.brand .center{text-align:center;flex:1}
+  .brand .pasem{font-size:26px;font-weight:900;color:var(--orange);letter-spacing:1px;line-height:1}
+  .brand .sub{font-size:12px;color:var(--muted);margin-top:2px}
+  h1{font-size:25px;margin:4px 0 6px;color:var(--ink);font-weight:900}
+  .lead{color:var(--muted);font-size:15px;margin:0 0 12px}
+  .sec{background:#fff;border:1px solid #D9E9E9;border-radius:16px;padding:18px;margin-bottom:16px}
+  .sec-h{font-weight:900;color:var(--orange);font-size:16px;margin:0 0 12px}
+  .obs{background:#FFF7EF;border:1px solid #f1cba6;border-radius:12px;padding:12px 14px;color:#8a4b12;font-size:14px;margin-bottom:14px}
+  .obs ul{margin:6px 0 0 18px;padding:0}
+  .doc{border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px;background:#FBFDFD}
+  .doc .dl-h{font-weight:700;font-size:14px;margin-bottom:4px}
+  .flag{display:inline-block;background:#FDECEA;color:#b23b3b;border:1px solid #f1b8b0;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:800;margin-left:6px}
+  .hint{font-size:12px;color:#767676;margin-bottom:4px}
+  .ferr{color:#b23b3b;font-size:12px;margin-top:4px}
+  input[type=file]{width:100%;font-size:15px;padding:11px;border:1px solid var(--border);border-radius:11px;background:#fff}
+  .btn{display:block;width:100%;background:var(--orange);color:#fff;border:0;border-radius:12px;padding:15px;font-size:17px;font-weight:800;cursor:pointer}
+  .btn:disabled{opacity:.6}
+  #msg{font-size:14px;margin-top:10px}
+  .hide{display:none}
+  .foot{color:var(--muted);font-size:12px;text-align:center;margin-top:18px;line-height:1.6}
+  .okbox{display:none;background:#E8F8EE;border:1px solid #bfe6cc;border-radius:14px;padding:20px;color:#1e5e37;font-size:16px;line-height:1.7}
+</style>
+</head>
+<body>
+  <div class="topbar"></div>
+  <div class="wrap">
+    <div class="brand">
+      <img src="/img/snte26.jpg" alt="SNTE Seccion 26">
+      <div class="center"><div class="pasem">PASEM</div><div class="sub">Programa de Apoyo de Servicios Médicos · Sección 26 del SNTE · San Luis Potosí</div></div>
+      <img src="/img/bida.png" alt="BIDA Seguros">
+    </div>
+
+    <div id="bad" class="obs hide" style="background:#FDECEA;border-color:#f1b8b0;color:#a3342a;">Esta liga de corrección no es válida o ya no está disponible. Contacta a la oficina del PASEM.</div>
+    <div id="okbox" class="okbox"></div>
+
+    <div id="app" class="hide">
+      <h1>Corrige tu registro</h1>
+      <p class="lead">Titular: <b id="titNombre"></b>. Vuelve a subir únicamente los documentos indicados; no necesitas llenar todo de nuevo.</p>
+      <div id="obs" class="obs"></div>
+      <div class="sec">
+        <div class="sec-h">Documentos a corregir</div>
+        <div class="hint" style="font-weight:700;color:#8a4b12;background:#FFF7EF;border:1px solid #f1cba6;border-radius:10px;padding:8px 10px;margin-bottom:10px;">PDF o imagen (JPG/PNG), máx. 10 MB cada uno.</div>
+        <div id="docInputs"></div>
+        <button type="button" class="btn" id="sendBtn">Enviar correcciones</button>
+        <div id="msg"></div>
+      </div>
+    </div>
+
+    <div class="foot">PASEM · Sección 26 del SNTE · Administrado por MULTICATERIN, S.A. de C.V. con respaldo de BIDA Seguros.</div>
+  </div>
+
+<script>
+  var FN='/.netlify/functions/';
+  var TOKEN=new URLSearchParams(location.search).get('t')||'';
+  var MAX_BYTES=10*1024*1024, ALLOWED=['pdf','jpg','jpeg','png'];
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function fileErr(file){ if(!file) return ''; var ext=(file.name||'').split('.').pop().toLowerCase(); if(ALLOWED.indexOf(ext)<0 && !/^(image\/(jpeg|png)|application\/pdf)$/.test(file.type||'')) return 'Formato no permitido (PDF, JPG o PNG).'; if(file.size>MAX_BYTES) return 'Máximo 10 MB.'; return ''; }
+  function validar(inp){ var e=inp.parentNode.querySelector('.ferr'); var m=fileErr(inp.files&&inp.files[0]); if(m){ e.textContent='⚠ '+m; inp.value=''; } else e.textContent=''; return !m; }
+  var CHUNK=700000;
+  function fileToDoc(file){ return new Promise(function(res,rej){ var r=new FileReader(); r.onload=function(){ res({filename:file.name||'archivo',type:file.type||'application/octet-stream',b64:String(r.result).split(',')[1]||''}); }; r.onerror=function(){ rej(new Error('No se pudo leer')); }; r.readAsDataURL(file); }); }
+  function uploadDoc(doc){ var total=Math.max(1,Math.ceil(doc.b64.length/CHUNK));
+    return fetch(FN+'registro-upload',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'init',filename:doc.filename,type:doc.type,size:doc.b64.length,chunks:total})}).then(function(r){return r.json();}).then(function(init){
+      if(!init.docId) throw new Error('Error al iniciar la subida'); var chain=Promise.resolve();
+      for(var i=0;i<total;i++){(function(idx){ chain=chain.then(function(){ return fetch(FN+'registro-upload',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'chunk',docId:init.docId,index:idx,data:doc.b64.slice(idx*CHUNK,(idx+1)*CHUNK)})}).then(function(r){return r.json();}); }); })(i);}
+      return chain.then(function(){ return {docId:init.docId, filename:doc.filename}; }); }); }
+
+  function cargar(){
+    fetch(FN+'registro-correccion?t='+encodeURIComponent(TOKEN)).then(function(r){ if(!r.ok) throw new Error('liga'); return r.json(); }).then(function(d){
+      document.getElementById('app').classList.remove('hide');
+      document.getElementById('titNombre').textContent=d.titularNombre||'(titular)';
+      var obs=document.getElementById('obs');
+      var html='';
+      if(d.docsRechazados && d.docsRechazados.length){ html+='<b>Documentos a corregir:</b><ul>'+d.docsRechazados.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>'; }
+      if(d.observaciones){ html+='<div style="margin-top:6px;"><b>Observaciones:</b><br>'+esc(d.observaciones)+'</div>'; }
+      obs.innerHTML=html||'Vuelve a subir los documentos indicados por la oficina del PASEM.';
+      // inputs: uno por cada documento rechazado (o uno general si no hay lista)
+      var labels=(d.docsRechazados&&d.docsRechazados.length)?d.docsRechazados:['Documento corregido'];
+      document.getElementById('docInputs').innerHTML=labels.map(function(l){
+        return '<div class="doc"><div class="dl-h">'+esc(l)+' <span class="flag">corregir</span></div><input type="file" class="docfile" data-label="'+esc(l)+'" accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png"><div class="ferr"></div></div>';
+      }).join('');
+      document.querySelectorAll('.docfile').forEach(function(inp){ inp.addEventListener('change', function(){ validar(inp); }); });
+    }).catch(function(){ document.getElementById('bad').classList.remove('hide'); });
+  }
+
+  document.getElementById('sendBtn').addEventListener('click', function(){
+    var inputs=Array.prototype.slice.call(document.querySelectorAll('#docInputs .docfile'));
+    var pend=inputs.filter(function(i){ return i.files && i.files[0]; });
+    if(!pend.length){ alert('Adjunta al menos un documento corregido.'); return; }
+    for(var k=0;k<pend.length;k++){ var fe=fileErr(pend[k].files[0]); if(fe){ pend[k].parentNode.querySelector('.ferr').textContent='⚠ '+fe; return; } }
+    var btn=document.getElementById('sendBtn'); var msg=document.getElementById('msg'); btn.disabled=true;
+    var docs=[]; var chain=Promise.resolve();
+    pend.forEach(function(inp,i){ chain=chain.then(function(){ btn.textContent='Subiendo '+(i+1)+' de '+pend.length+'…';
+      return fileToDoc(inp.files[0]).then(function(doc){ doc.filename=inp.getAttribute('data-label')+' — '+(doc.filename||'archivo'); return uploadDoc(doc); }).then(function(m){ docs.push(m); }); }); });
+    chain.then(function(){ btn.textContent='Enviando…';
+      return fetch(FN+'registro-correccion',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({t:TOKEN,action:'corregir',docs:docs})}).then(function(r){return r.json();});
+    }).then(function(res){ if(!res.ok) throw new Error(res.error||'Error');
+      document.getElementById('app').style.display='none'; var ok=document.getElementById('okbox'); ok.style.display='block';
+      ok.innerHTML='<div style="font-size:20px;font-weight:900;margin-bottom:8px;">✓ ¡Correcciones enviadas!</div>Recibimos tus documentos corregidos. Los revisaremos de nuevo y te avisaremos. Gracias.';
+      window.scrollTo({top:0,behavior:'smooth'});
+    }).catch(function(err){ msg.innerHTML='<span style="color:#b23b3b">Error: '+esc(err.message)+'</span>'; btn.disabled=false; btn.textContent='Enviar correcciones'; });
+  });
+
+  if(!TOKEN){ document.getElementById('bad').classList.remove('hide'); } else cargar();
+</script>
+</body>
+</html>
