@@ -933,6 +933,7 @@
             <option value="aprobado">Aprobado</option>
           </select>
           <button class="btn btn-ghost" id="reg-refresh" type="button">Actualizar</button>
+          <select id="reg-alcance" style="min-width:160px;"><option value="acumulado">Reporte acumulado</option><option value="dia">Reporte del día</option></select>
           <button class="btn btn-ghost" id="reg-xls" type="button">⬇ Excel</button>
           <button class="btn btn-ghost" id="reg-pdf" type="button">⬇ PDF</button>
         </div>
@@ -2849,27 +2850,55 @@
     var q=(document.getElementById('reg-q')||{}).value||''; var fe=(document.getElementById('reg-filtro')||{}).value||'';
     return REG_CACHE.filter(function(x){ var f=x.fields||{}; return matchQ(q,[f['Nombre completo'],f['CURP'],f['Correo electrónico']]) && (!fe || (x.estado||'recibido')===fe); });
   }
+  function ymd(iso){ return String(iso||'').slice(0,10); }
   function reporteData(){
     function estLabel(e){ return e==='aprobado'?'Aprobado':(e==='devuelto'?'Devuelto':(e==='en-revision'?'En revisión':'Recibido')); }
-    return filteredRegs().map(function(x){ var f=x.fields||{}; return [
-      f['Nombre completo']||'', f['CURP']||'', f['Tipo de plaza']||'', f['Modalidad']||'', f['Forma de pago PASEM']||'',
-      estLabel(x.estado||'recibido'), x.entregadoFisico?'Sí':'No' ]; });
+    var scope=(document.getElementById('reg-alcance')||{}).value||'acumulado';
+    var hoy=new Date().toISOString().slice(0,10);
+    var list=filteredRegs();
+    if(scope==='dia'){ list=list.filter(function(x){ return ymd(x.createdAt)===hoy || ymd(x.aprobadoAt||x.conciliadoAt)===hoy; }); }
+    return list.map(function(x,i){ var f=x.fields||{}; return [
+      String(i+1), f['Nombre completo']||'', f['CURP']||'', f['Tipo de plaza']||'', f['Modalidad']||'', f['Forma de pago PASEM']||'',
+      estLabel(x.estado||'recibido'), x.entregadoFisico?'Sí':'No', ymd(x.createdAt), ymd(x.aprobadoAt||x.conciliadoAt) ]; });
   }
-  var REPORTE_COLS=['Nombre','CURP','Tipo Telesecundaria','Modalidad de pago','Forma de pago','Expediente digital','Entregado físico'];
+  var REPORTE_COLS=['#','Nombre','CURP','Tipo Telesecundaria','Modalidad de pago','Forma de pago','Expediente digital','Entregado físico','Fecha recibido','Fecha conciliado'];
+  function reporteResumen(rows){
+    var cnt=function(idx,val){ return rows.filter(function(r){ return r[idx]===val; }).length; };
+    return [
+      ['Total de maestros', rows.length],
+      ['Telesecundaria Estatal', cnt(3,'Estatal')],
+      ['Telesecundaria Federal', cnt(3,'Federal')],
+      ['Préstamo FERPTTE', cnt(4,'Préstamo FERPTTE')],
+      ['Pago directo', cnt(4,'Pago directo')],
+      ['Aprobados', cnt(6,'Aprobado')],
+      ['En revisión', cnt(6,'En revisión')],
+      ['Devueltos', cnt(6,'Devuelto')],
+      ['Recibidos (sin revisar)', cnt(6,'Recibido')],
+      ['Entregaron en físico', cnt(7,'Sí')]
+    ];
+  }
+  function alcanceLabel(){ return ((document.getElementById('reg-alcance')||{}).value==='dia')?'Del día ('+new Date().toLocaleDateString('es-MX')+')':'Acumulado'; }
   function exportRegCSV(){
-    var rows=reporteData(); if(!rows.length){ alert('No hay registros para exportar.'); return; }
+    var rows=reporteData(); if(!rows.length){ alert('No hay registros para exportar con ese alcance.'); return; }
     var esc=function(v){ v=String(v==null?'':v); return /[",\n]/.test(v)?('"'+v.replace(/"/g,'""')+'"'):v; };
-    var csv=REPORTE_COLS.join(',')+'\n'+rows.map(function(r){ return r.map(esc).join(','); }).join('\n');
-    var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}); var url=URL.createObjectURL(blob);
+    var lines=[]; lines.push('PASEM - Reporte de maestros ('+alcanceLabel()+')'); lines.push('');
+    lines.push(REPORTE_COLS.join(','));
+    rows.forEach(function(r){ lines.push(r.map(esc).join(',')); });
+    lines.push(''); lines.push('RESUMEN');
+    reporteResumen(rows).forEach(function(s){ lines.push(esc(s[0])+','+s[1]); });
+    var blob=new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8;'}); var url=URL.createObjectURL(blob);
     var a=document.createElement('a'); a.href=url; a.download='Reporte-maestros-PASEM.csv'; a.click(); setTimeout(function(){URL.revokeObjectURL(url);},4000);
   }
   async function exportRegPDF(){
-    var rows=reporteData(); if(!rows.length){ alert('No hay registros para exportar.'); return; }
+    var rows=reporteData(); if(!rows.length){ alert('No hay registros para exportar con ese alcance.'); return; }
     var ok=await ensureJsPDF(); if(!ok){ alert('No se pudo cargar el generador de PDF.'); return; }
     var jsPDF=window.jspdf.jsPDF; var doc=new jsPDF({unit:'mm', format:'letter', orientation:'landscape'}); var M=12;
     doc.setFontSize(14); doc.setTextColor('#DD6B20'); doc.text('PASEM · Reporte de maestros', M, 14);
-    doc.setFontSize(9); doc.setTextColor('#555'); doc.text('Sección 26 del SNTE · '+new Date().toLocaleDateString('es-MX')+' · '+rows.length+' maestro(s)', M, 20);
-    doc.autoTable({ startY:25, head:[REPORTE_COLS], body:rows, margin:{left:M,right:M}, styles:{fontSize:8, cellPadding:2}, headStyles:{fillColor:[221,107,32]}, alternateRowStyles:{fillColor:[245,249,249]} });
+    doc.setFontSize(9); doc.setTextColor('#555'); doc.text('Sección 26 del SNTE · '+alcanceLabel()+' · Generado: '+new Date().toLocaleString('es-MX'), M, 20);
+    doc.autoTable({ startY:25, head:[REPORTE_COLS], body:rows, margin:{left:M,right:M}, styles:{fontSize:7.5, cellPadding:1.5}, headStyles:{fillColor:[221,107,32]}, alternateRowStyles:{fillColor:[245,249,249]} });
+    var y=(doc.lastAutoTable?doc.lastAutoTable.finalY:30)+8;
+    doc.setFontSize(11); doc.setTextColor('#0E9A9C'); doc.text('Resumen', M, y);
+    doc.autoTable({ startY:y+2, body:reporteResumen(rows).map(function(s){ return [s[0], String(s[1])]; }), margin:{left:M, right:160}, styles:{fontSize:9, cellPadding:2}, theme:'plain', columnStyles:{0:{fontStyle:'bold', textColor:[80,80,80]}, 1:{halign:'right'}} });
     doc.save('Reporte-maestros-PASEM.pdf');
   }
   (function(){ var bx=document.getElementById('reg-xls'); if(bx) bx.addEventListener('click', exportRegCSV); var bp=document.getElementById('reg-pdf'); if(bp) bp.addEventListener('click', exportRegPDF); })();
@@ -2941,8 +2970,8 @@
       if(d.servicios && d.servicios.length){
         var money=function(n){ n=Number(n)||0; return '$'+n.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}); };
         var estChip=function(e){ if(e==='Cancelada') return '<span style="color:#b23b3b;font-weight:700;">Cancelada</span>'; if(e==='Pagada') return '<span style="color:#1e7e3e;font-weight:800;">✓ Pagada</span>'; if(e==='Autorizada') return '<span style="color:#1e7e3e;font-weight:700;">Autorizada</span>'; return '<span style="color:#b9770e;font-weight:700;">En trámite</span>'; };
-        html+='<div class="table-wrap" style="margin-top:6px;"><table class="dtable" style="font-size:12.5px;"><thead><tr><th>Folio</th><th>Trámite</th><th>Para</th><th>Fecha</th><th>Estado</th><th>Monto pagado</th></tr></thead><tbody>'+
-          d.servicios.map(function(s){ return '<tr><td>'+esc(s.folio||'')+'</td><td>'+esc(s.tipoTramite||'')+'</td><td>'+esc(s.beneficiario||'')+(s.parentesco?(' ('+esc(s.parentesco)+')'):'')+'</td><td>'+esc(s.fecha||'')+'</td><td>'+estChip(s.estado)+'</td><td>'+(s.estado==='Pagada'&&s.monto?money(s.monto):'—')+'</td></tr>'; }).join('')+
+        html+='<div class="table-wrap" style="margin-top:6px;"><table class="dtable" style="font-size:12.5px;"><thead><tr><th>Folio</th><th>Trámite</th><th>Para</th><th>Fecha</th><th>Estado</th><th>Reserva</th></tr></thead><tbody>'+
+          d.servicios.map(function(s){ return '<tr><td>'+esc(s.folio||'')+'</td><td>'+esc(s.tipoTramite||'')+'</td><td>'+esc(s.beneficiario||'')+(s.parentesco?(' ('+esc(s.parentesco)+')'):'')+'</td><td>'+esc(s.fecha||'')+'</td><td>'+estChip(s.estado)+'</td><td>'+(s.reserva?money(s.reserva):'—')+'</td></tr>'; }).join('')+
           '</tbody></table></div>';
       } else html+='<div style="color:var(--ink);font-size:13px;margin-top:4px;">Sin servicios registrados.</div>';
       ov.querySelector('#ea-body').innerHTML=html;

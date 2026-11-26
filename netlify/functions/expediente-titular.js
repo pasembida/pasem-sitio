@@ -96,7 +96,7 @@ async function buildExpediente(curp, cert, incServicios){
         const pagada=pagadas.length>0;
         const monto=pagada? pagadas.reduce((a,o)=>a+sumOrden(o),0) : 0;
         const estado = s.cancelada? 'Cancelada' : (pagada? 'Pagada' : (s.autorizada? 'Autorizada' : 'En trámite'));
-        return { folio:s.folio||'', folioEleonor:s.folioEleonor||'', tipoTramite:s.tipoTramite||'', beneficiario:s.beneficiarioNombre||s.nombre||'', parentesco:s.beneficiarioParentesco||'', fecha:s.fechaTramite||String(s.createdAt||'').slice(0,10), estado, monto, comentarios:s.comentarios||'' };
+        return { folio:s.folio||'', folioEleonor:s.folioEleonor||'', tipoTramite:s.tipoTramite||'', beneficiario:s.beneficiarioNombre||s.nombre||'', parentesco:s.beneficiarioParentesco||'', fecha:s.fechaTramite||String(s.createdAt||'').slice(0,10), estado, monto, reserva:money(s.reserva), comentarios:s.comentarios||'' };
       })
       .sort((a,b)=>String(b.fecha||'').localeCompare(String(a.fecha||'')));
   }catch(e){} }
